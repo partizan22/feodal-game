@@ -19,8 +19,9 @@
 3. **Movement Direction Revealed**
    - Тип: trigger.
    - Умова: Movement проходить встановлену частку шляху через поточну Region.
-   - Наслідок: напрямок виходу з Region стає відкритим для тих, хто має право його бачити.
+   - Наслідок: напрямок виходу з Region стає відкритим для тих, хто має право його бачити. Фактично зміни backend ігрового стану тут не відбувається, відправляються notifications та змінюється відображення руху армії на фронт-енді.
    - Модель: `Movement`
+   
 
 4. **Next Region Reached**
    - Тип: trigger.
@@ -36,21 +37,21 @@
 
 6. **Enter Castle**
    - Тип: дія користувача.
-   - Умова: Unit/Army перебуває у відповідній Castle Region і для всіх потрібних солдатів є місце.
+   - Умова: Unit перебуває у відповідній Castle Region і для всіх потрібних солдатів є місце.
    - Наслідок: відповідні війська переходять зі стану Camp до Castle housing.
-   - Модель: `Army`
+   - Модель: `Knight`
 
 7. **Leave Castle**
    - Тип: дія користувача.
-   - Умова: війська перебувають у Castle.
+   - Умова: Unit перебуває у Castle.
    - Наслідок: війська переходять із Castle housing до Camp.
-   - Модель: `Army`
+   - Модель: `Knight`
 
 8. **Stop Transit for Defense**
    - Тип: дія користувача.
    - Умова: Transit Army має право зупинитися для захисту до battle start.
    - Наслідок: Army припиняє Transit і додається до оборони.
-   - Модель: `CombatSituation`
+   - Модель: `CombatSituation` або Movement, треба подумати
 
 ## Army / Unit organization
 
@@ -77,6 +78,8 @@
    - Умова: Knight/Units перебувають у home Castle і реорганізація дозволена.
    - Наслідок: солдати перерозподіляються між Knights.
    - Модель: `Knight`
+	У нас немає "перерозподілення між Knights", є тільки резерв <--> Knights
+
 
 13. **Change Combat Thresholds**
    - Тип: дія користувача.
@@ -88,7 +91,7 @@
    - Тип: дія користувача.
    - Умова: власник змінює правило проходу через свою територію.
    - Наслідок: змінюється характеристика Allow Transit.
-   - Модель: `Player`
+   - Модель: Allow_Transit виставляється для кожної області, то ж модель Region, або, за потреби - нова модель [RegionOwnership]
 
 ## Combat
 
@@ -108,7 +111,7 @@
    - Тип: дія користувача.
    - Умова: Army знаходиться в Camp тієї самої Neutral Region і атака дозволена.
    - Наслідок: миттєво розв'язується бій із Neutral Defense.
-   - Модель: `CombatSituation`
+   - Модель: `CombatSituation`  CombatSituation спочатку треба створити, тому цю дію буде починати RegionControl, яка вже створить CombatSituation
 
 18. **Regrouping Complete**
    - Тип: timer / trigger.
@@ -136,7 +139,7 @@
    - Тип: дія користувача.
    - Умова: Knight і Region відповідають умовам founding; витрати можуть бути сплачені.
    - Наслідок: створюється процес CastleFounding і починається накопичення progress.
-   - Модель: `CastleFounding`
+   - Модель: `CastleFounding`. Знов модель, якої ще не існує на момерт події 
 
 22. **Castle Founding Complete**
    - Тип: trigger.
@@ -150,7 +153,7 @@
    - Тип: дія користувача.
    - Умова: Army знаходиться в Camp тієї самої Region і raid дозволений.
    - Наслідок: нараховується raid reward і змінюється стан City/Region відповідно до правил raid.
-   - Модель: `City`
+   - Модель:  Army або RegionControl
 
 ## Buildings і Castle development
 
@@ -166,11 +169,13 @@
    - Наслідок: рівень будівлі збільшується і upgrade process завершується.
    - Модель: `Castle`
 
-26. **Knight Replacement Complete**
+26. **Knight Replacement Complete** - а яка подія його починає?
    - Тип: timer / trigger.
    - Умова: сплив час відновлення вільного Palace slot після загибелі Knight.
    - Наслідок: створюється новий Knight у відповідному Castle.
    - Модель: `Castle`
+   
+   
 
 ## Resource Sources
 
@@ -192,7 +197,7 @@
    - Тип: дія користувача.
    - Умова: recruitment дозволений, є ресурси і немає blocking `empty_food` / `empty_coins`.
    - Наслідок: витрати списуються, order додається до recruitment queue.
-   - Модель: `Recruitment`
+   - Модель: Castle, `Recruitment` ще може не існувати
 
 30. **Current Recruit Finished**
    - Тип: trigger.
@@ -242,3 +247,5 @@
 - створення retreat Movement після battle resolution;
 - смерть Knight, розпуск Army або зміна occupation як безпосередній результат combat;
 - створення/видалення process-model, якщо це лише внутрішній наслідок іншої GameEvent.
+
+Частина з них (як мінімум ми обговорювали "перерахунок `is_connection_valid` у Castle після territorial change") - хоча і є наслідками інших подій, але обробляються як окремий gameEvent.
