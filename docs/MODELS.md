@@ -44,7 +44,7 @@ Wood / Stone / Iron зберігаються як одна характерис�
 - `player` — власник Castle.
 - `region` — Castle Region.
 - `name`
-- `buildings` — рівні всіх Building Castle як одна структурна характеристика.
+- `levels` — рівні всіх Building Castle як одна структурна характеристика.
 - `soldier_reserve` — не призначені Knight Soldier за типами.
 
 ### Динамічні характеристики
@@ -63,14 +63,14 @@ Wood / Stone / Iron зберігаються як одна характерис�
 
 ### Прямі характеристики
 
-- `coordinates` — положення Region на hex map.
-- `player` — формальний owner; `null` для Neutral Region.
+- `coordinates` — положення Region на hex map. -не впевнений, що вона взагалі потрібна, а якщо й так - то це скоріщ буде system-computet.
+- `player` — формальний owner; `null` для Neutral Region. - взагалі-то з Player пов'язується через Castle. Може бути обчислювальна характеристика, але можна залишити й так. Подумай.
 - `castle` — Castle, до якого Region приєднана; `null`, якщо не належить Castle.
 - `resource_sites` — структура ResourceSite за типами ресурсів і рівнями.
 - `allow_transit` — правило Transit для Owned Region.
 - `is_connection_valid` — чи має Owned Region чинний зв'язок зі своїм Castle.
 - `neutral_defense` — актуальний стан Neutral Defense.
-- `neutral_defense_recovery_started_at` — Game Time початку очікування повного відновлення Neutral Defense, якщо recovery активний.
+- `neutral_defense_recovery_started_at` — Game Time початку очікування повного відновлення Neutral Defense, якщо recovery активний. - можливо варто  виділити окрему модель
 
 ### Динамічні характеристики
 
@@ -137,7 +137,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики для dynamic
 
-- `regrouping_progress_rate` — effective rate Regrouping progress.
+- `regrouping_progress_rate` — effective rate Regrouping progress. - навіщо ця характеристика і від чого вона залежить? Час regrouping фіксований
 
 ---
 
@@ -148,10 +148,10 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Прямі характеристики
 
 - `region`
-- `attackers` — зафіксований набір сторони attacker.
+- `attacker` — зафіксований набір сторони attacker.  - атакуючий один
 - `defenders` — зафіксований набір сторони defender.
 - `combat_type` / context — потрібний контекст combat.
-- `attacker_retreat_decisions` / інші зафіксовані pre-battle decisions.
+- `defenders_retreat_decisions` / інші зафіксовані pre-battle decisions.
 - `locked_combat_parameters` — параметри, які за правилами фіксуються до resolve і не повинні змінитися від пізніших user changes.
 - `status`
 
@@ -161,7 +161,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики для dynamic
 
-- `battle_start_progress_rate` — effective rate progress до battle start.
+- `battle_start_progress_rate` — effective rate progress до battle start. - навіщо ця характеристика і від чого вона залежить? Час до початку бою від входу в region фіксований.
 
 ---
 
@@ -181,7 +181,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики для dynamic
 
-- `control_progress_rate` — effective rate накопичення control progress; стає нульовим, коли умови накопичення не виконуються.
+- `control_progress_rate` — effective rate накопичення control progress; стає нульовим, коли умови накопичення не виконуються. 
 
 ---
 
@@ -209,7 +209,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Прямі характеристики
 
-- `army`
+- `army` - здається, логічніше в Army мати посилання на її Movement як пряму характеристику, а тут - system-computet. Подумай, як краще
 - `route` — запланована послідовність Region.
 - `current_region`
 - `next_region`
@@ -258,7 +258,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `castle`
 - `building_type`
 - `from_level`
-- `target_level`
+- `target_level` - навіщо окрема характеристика? ми оновлюєм на один рівень. Хоча логічніше, якраз мати target_level а не from.
 - `status`
 
 ### Динамічні характеристики
@@ -281,7 +281,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `region`
 - `resource_type`
-- `from_level`
+- `from_level` - аналогічно
 - `target_level`
 - `quantity`
 - `status`
