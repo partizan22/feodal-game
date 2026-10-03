@@ -5,9 +5,9 @@
 - прямі характеристики;
 - динамічні характеристики;
 - тільки ті обчислювальні характеристики, які безпосередньо використовуються для обчислення динамічних;
-- user actions / майбутні `user_*` methods.
+- user methods, що реалізують основну логіку відповідних user actions.
 
-Для user actions root model поки не визначена, тому вони не прив'язуються до конкретної моделі як `user_*` method. Нижче вони наведені окремо у форматі `? -> LogicModel(s)`.
+Root model для user GameEvent поки не визначена до проєктування взаємодії з frontend/API. Тому `user_*` тут означає модель, яка реалізує основну логіку дії, а не обов'язково майбутню root model. Після визначення root model префікси методів за потреби будуть змінені.
 
 Рівні всіх Building одного Castle зберігаються як одна характеристика `levels`.
 
@@ -79,6 +79,10 @@ Wood / Stone / Iron зберігаються як одна характерис�
 
 - немає.
 
+### User methods
+
+- `user_change_allow_transit()` — змінює правило Transit для Owned Region.
+
 ---
 
 ## 4. `City`
@@ -94,6 +98,10 @@ Wood / Stone / Iron зберігаються як одна характерис�
 ### Обчислювальні характеристики для dynamic
 
 - `wealth_balance` — effective rate зміни Wealth з урахуванням поточного стану Region/Player та правил City.
+
+### User methods
+
+- `user_raid_city()` — виконує raid City: застосовує наслідки до Wealth і пов'язаних результатів raid.
 
 ---
 
@@ -117,6 +125,12 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `experience_balance` — effective passive rate зміни Experience.
 
+### User methods
+
+- `user_enter_castle()` — переводить Unit з Camp у Castle після перевірки можливості входу.
+- `user_leave_castle()` — переводить Unit з Castle у Camp.
+- `user_change_unit_composition()` — змінює склад Soldier Unit через обмін із reserve його Castle.
+
 ---
 
 ## 6. `Army`
@@ -137,6 +151,13 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Обчислювальні характеристики для dynamic
 
 - `regrouping_progress_rate` — rate Regrouping progress; у поточних правилах константа, визначена конфігурацією.
+
+### User methods
+
+- `user_merge_armies()` — об'єднує сумісні Army.
+- `user_split_army()` — розділяє Army на окремі Army.
+- `user_change_commander()` — змінює Commander-in-Chief.
+- `user_change_combat_thresholds()` — змінює налаштовувані combat thresholds Army.
 
 ---
 
@@ -162,6 +183,12 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `battle_start_progress_rate` — rate progress до battle start; у поточних правилах константа, визначена конфігурацією.
 
+### User methods
+
+- `user_stop_transit_for_defense()` — фіксує рішення зупинити Transit для участі в defense та застосовує пов'язані зміни до combat/movement state.
+- `user_set_pre_battle_retreat_decision()` — задає або змінює pre-battle retreat decision.
+- `user_attack_neutral_defense()` — створює/налаштовує combat проти Neutral Defense і запускає відповідний combat process.
+
 ---
 
 ## 8. `RegionControl`
@@ -182,6 +209,10 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `control_progress_rate` — effective rate накопичення control progress; стає нульовим, коли умови накопичення не виконуються.
 
+### User methods
+
+- `user_annex_region()` — виконує Annexation після перевірки накопиченого control progress та інших актуальних умов, включно з вибором Castle.
+
 ---
 
 ## 9. `CastleFounding`
@@ -201,6 +232,10 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Обчислювальні характеристики для dynamic
 
 - `progress_rate` — effective rate Founding progress; враховує pause conditions.
+
+### User methods
+
+- `user_start_castle_founding()` — створює та запускає процес Founding з вибраним founder Knight і параметрами нового Castle.
 
 ---
 
@@ -223,6 +258,11 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `progress_rate` — effective rate Movement progress.
 
+### User methods
+
+- `user_start_movement()` — створює та запускає Movement для Army за заданим route.
+- `user_change_planned_route()` — змінює ще не пройдений запланований route Movement.
+
 ---
 
 ## 11. `Recruitment`
@@ -243,6 +283,10 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Обчислювальні характеристики для dynamic
 
 - `progress_rate` — effective recruitment rate; `0`, коли Recruitment paused через Food, Coins, Barracks capacity або іншу блокуючу умову.
+
+### User methods
+
+- `user_add_recruitment_order()` — додає нове замовлення в Recruitment Queue.
 
 ---
 
@@ -266,6 +310,10 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Обчислювальні характеристики для dynamic
 
 - `progress_rate` — rate Building upgrade progress; у поточних правилах визначається конфігурацією.
+
+### User methods
+
+- `user_start_building_upgrade()` — створює та запускає upgrade вибраної Building до наступного level.
 
 ---
 
@@ -291,6 +339,10 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `progress_rate` — rate ResourceSite upgrade progress; у поточних правилах визначається конфігурацією.
 
+### User methods
+
+- `user_start_resource_site_upgrade()` — створює та запускає upgrade вибраної кількості ResourceSite.
+
 ---
 
 ## 14. `KnightReplacement`
@@ -311,29 +363,3 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Обчислювальні характеристики для dynamic
 
 - `progress_rate` — effective rate Knight replacement progress; для процесів, що очікують своєї черги, дорівнює `0`.
-
----
-
-# User actions / майбутні `user_*` methods
-
-Root model для user GameEvent поки не визначена до проєктування взаємодії з frontend/API. Тому цей список не означає, що `user_*` method уже належить першій LogicModel після `->`.
-
-- `user_start_movement` — `? -> Army, Movement`
-- `user_change_planned_route` — `? -> Movement`
-- `user_enter_castle` — `? -> Knight, Castle`
-- `user_leave_castle` — `? -> Knight, Castle`
-- `user_stop_transit_for_defense` — `? -> CombatSituation, Movement, Army`
-- `user_merge_armies` — `? -> Army`
-- `user_split_army` — `? -> Army`
-- `user_change_commander` — `? -> Army`
-- `user_change_unit_composition` — `? -> Castle, Knight`
-- `user_change_combat_thresholds` — `? -> Army`
-- `user_change_allow_transit` — `? -> Region`
-- `user_set_pre_battle_retreat_decision` — `? -> CombatSituation`
-- `user_attack_neutral_defense` — `? -> RegionControl, CombatSituation`
-- `user_annex_region` — `? -> RegionControl, Region, Castle`
-- `user_start_castle_founding` — `? -> Player, CastleFounding`
-- `user_raid_city` — `? -> RegionControl, City`
-- `user_start_building_upgrade` — `? -> Castle, BuildingUpgrade`
-- `user_start_resource_site_upgrade` — `? -> Region, ResourceSiteUpgrade`
-- `user_add_recruitment_order` — `? -> Castle, Recruitment`
