@@ -45,7 +45,7 @@ Wood / Stone / Iron зберігаються як одна характерис�
 
 ### Triggers
 
-- `empty_coins` `[двонаправлений]` — спрацьовує при зміні стану `empty_coins`; потрібний як temporal boundary для залежних processes/rates і пов'язаних зовнішніх ефектів.
+- `empty_coins` `[state trigger]` — спрацьовує при зміні стану `empty_coins`; потрібний як temporal boundary для залежних processes/rates і пов'язаних зовнішніх ефектів.
 
 ---
 
@@ -79,8 +79,8 @@ Wood / Stone / Iron зберігаються як одна характерис�
 
 ### Triggers
 
-- `empty_food` `[двонаправлений]` — спрацьовує при зміні стану `empty_food`; потрібний як temporal boundary для Recruitment та інших залежних rates/processes.
-- `storage_capacity` `[однонаправлений]` — прогнозує найближчий момент, коли Food або один із `resources` досягне відповідної Capacity; у цій точці effective growth для заповненого storage перераховується.
+- `empty_food` `[state trigger]` — спрацьовує при зміні стану `empty_food`; потрібний як temporal boundary для Recruitment та інших залежних rates/processes.
+- `storage_capacity` `[state trigger]` — окремо для Food і кожного компонента `resources` відстежує стан досягнення відповідної Capacity; при заповненні storage припиняється його effective growth, а коли місце знову з'являється — growth може відновитися.
 
 ---
 
@@ -113,7 +113,7 @@ Wood / Stone / Iron зберігаються як одна характерис�
 
 ### Triggers
 
-- `neutral_defense_recovery_complete` `[однонаправлений]` — спрацьовує, коли активний recovery досягає `neutral_defense_recovery_at` і умови recovery все ще виконуються; Neutral Defense відновлюється повністю.
+- `neutral_defense_recovery_complete` `[event trigger]` — спрацьовує, коли активний recovery досягає `neutral_defense_recovery_at` і умови recovery все ще виконуються; Neutral Defense відновлюється повністю.
 
 ---
 
@@ -203,7 +203,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Triggers
 
-- `regrouping_complete` `[однонаправлений]` — спрацьовує, коли `regrouping_progress` досягає завершення; Army виходить із Regrouping.
+- `regrouping_complete` `[event trigger]` — спрацьовує, коли `regrouping_progress` досягає завершення; Army виходить із Regrouping.
 
 ---
 
@@ -238,7 +238,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Triggers
 
-- `battle_start` `[однонаправлений]` — спрацьовує, коли `battle_start_progress` досягає завершення і `is_battle_valid`; виконується Battle Start / Resolve.
+- `battle_start` `[event trigger]` — спрацьовує, коли `battle_start_progress` досягає завершення і `is_battle_valid`; виконується Battle Start / Resolve.
 
 ---
 
@@ -273,8 +273,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Triggers
 
-- `can_progress` `[двонаправлений]` — спрацьовує при зміні стану `can_progress`; при втраті умов progress зупиняється, при їх відновленні — продовжується.
-- `ready` `[однонаправлений]` — спрацьовує при досягненні `required_control_progress`; `RegionControl` переходить у стан готовності до Annexation.
+- `can_progress` `[state trigger]` — спрацьовує при зміні стану `can_progress`; при втраті умов progress зупиняється, при їх відновленні — продовжується.
+- `ready` `[event trigger]` — спрацьовує при досягненні `required_control_progress`; `RegionControl` переходить у стан готовності до Annexation.
 
 ---
 
@@ -307,8 +307,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Triggers
 
-- `can_progress` `[двонаправлений]` — спрацьовує при зміні стану `can_progress`; при втраті умов Founding призупиняється, при їх відновленні — продовжується.
-- `complete` `[однонаправлений]` — спрацьовує при завершенні progress, якщо Founding все ще валідний; створюється новий Castle та застосовуються наслідки Founding.
+- `can_progress` `[state trigger]` — спрацьовує при зміні стану `can_progress`; при втраті умов Founding призупиняється, при їх відновленні — продовжується.
+- `complete` `[event trigger]` — спрацьовує при завершенні progress, якщо Founding все ще валідний; створюється новий Castle та застосовуються наслідки Founding.
 
 ---
 
@@ -341,9 +341,9 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Triggers
 
-- `direction_revealed` `[однонаправлений]` — спрацьовує, коли transit progress досягає `direction_reveal_progress` і `direction_revealed == false`; фіксує reveal для поточної фази та запускає frontend/notification effect.
-- `next_region_reached` `[однонаправлений]` — спрацьовує при завершенні transit-фази; Army входить у `next_region`, Movement переходить до наступної фази.
-- `camp_reached` `[однонаправлений]` — спрацьовує при завершенні локального руху до Camp/interaction point; Army завершує цю Movement phase і переходить до відповідного локального стану/interaction.
+- `direction_revealed` `[state trigger]` — відстежує стан досягнення `direction_reveal_progress`; при вході в revealed-state фіксує `direction_revealed = true` та запускає frontend/notification effect, а при переході до нової transit-фази стан trigger-а повертається назад.
+- `next_region_reached` `[event trigger]` — спрацьовує при завершенні transit-фази; Army входить у `next_region`, Movement переходить до наступної фази.
+- `camp_reached` `[event trigger]` — спрацьовує при завершенні локального руху до Camp/interaction point; Army завершує цю Movement phase і переходить до відповідного локального стану/interaction.
 
 ---
 
@@ -375,8 +375,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Triggers
 
-- `can_progress` `[двонаправлений]` — спрацьовує при зміні стану `can_progress`; при появі блокуючої умови Recruitment призупиняється, при її зникненні — продовжується.
-- `current_recruit_finished` `[однонаправлений]` — спрацьовує при завершенні поточного Soldier; Soldier додається до Castle reserve, queue переходить до наступного елемента, progress скидається для наступного Soldier.
+- `can_progress` `[state trigger]` — спрацьовує при зміні стану `can_progress`; при появі блокуючої умови Recruitment призупиняється, при її зникненні — продовжується.
+- `current_recruit_finished` `[event trigger]` — спрацьовує при завершенні поточного Soldier; Soldier додається до Castle reserve, queue переходить до наступного елемента, progress скидається для наступного Soldier.
 
 ---
 
@@ -409,7 +409,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Triggers
 
-- `complete` `[однонаправлений]` — спрацьовує при завершенні progress; Castle отримує `target_level`, а BuildingUpgrade переходить у terminal status.
+- `complete` `[event trigger]` — спрацьовує при завершенні progress; Castle отримує `target_level`, а BuildingUpgrade переходить у terminal status.
 
 ---
 
@@ -443,7 +443,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Triggers
 
-- `complete` `[однонаправлений]` — спрацьовує при завершенні progress; Region оновлює відповідні ResourceSite, а ResourceSiteUpgrade переходить у terminal status.
+- `complete` `[event trigger]` — спрацьовує при завершенні progress; Region оновлює відповідні ResourceSite, а ResourceSiteUpgrade переходить у terminal status.
 
 ---
 
@@ -474,4 +474,4 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Triggers
 
-- `complete` `[однонаправлений]` — спрацьовує при завершенні progress; Castle створює replacement Knight, поточний KnightReplacement переходить у terminal status, а наступний waiting process за потреби стає активним.
+- `complete` `[event trigger]` — спрацьовує при завершенні progress; Castle створює replacement Knight, поточний KnightReplacement переходить у terminal status, а наступний waiting process за потреби стає активним.
