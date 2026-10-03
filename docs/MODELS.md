@@ -107,6 +107,8 @@ Wood / Stone / Iron зберігаються як одна характерис�
 
 - `*neighbors[]` — шість сусідніх Region, визначені топологією карти.
 - `*armies[]` — Army, що поточно рахуються фізично присутніми в Region за правилами presence.
+- `camp_player_ids[]` — ID Player, чиї Army зараз перебувають у Camp у цій Region; це список scalar ID, а не зв'язків з Player.
+- `valid_connected_neighbor_player_ids[]` — ID Player, для яких серед `neighbors[]` є Owned Region з `is_connection_valid == true`; це список scalar ID, а не зв'язків з Player.
 - `has_any_troops` — чи є в `armies[]` будь-які війська, що блокують початок/завершення Neutral Defense recovery.
 - `neutral_defense_recovery_at` — Game Time повного відновлення Neutral Defense, якщо recovery активний.
 
@@ -262,11 +264,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики
 
-- `*player_camp_armies[]` — eligible Camp Army цього Player у цій Region.
-- `*other_players_camp_armies[]` — eligible Camp Army інших Player у цій Region.
-- `*adjacent_regions[]` — Region, сусідні з контрольованою Region.
-- `has_valid_adjacent_owned_region` — чи є серед `adjacent_regions[]` хоча б одна `is_connection_valid` Region цього Player.
-- `can_progress` — чи зараз виконані всі умови накопичення `control_progress`; залежить від `player_camp_armies[]`, `other_players_camp_armies[]` і `has_valid_adjacent_owned_region`.
+- `has_valid_adjacent_owned_region` — чи `region.valid_connected_neighbor_player_ids[]` містить ID `player`.
+- `can_progress` — чи зараз виконані всі умови накопичення `control_progress`; присутність своїх і чужих Camp Army визначається порівнянням ID `player` з `region.camp_player_ids[]`, а географічна умова — через `has_valid_adjacent_owned_region`.
 - `control_progress_rate` — effective rate накопичення control progress; ненульовий лише коли `can_progress == true`.
 - `required_control_progress` — необхідний control progress для поточного типу Region/контролю за конфігурацією.
 - `is_ready` — чи `control_progress` досяг `required_control_progress`.
@@ -298,9 +297,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики
 
-- `*foreign_camp_armies[]` — eligible Camp Army інших Player у Region Founding.
 - `founder_valid` — founder Knight живий, залишається у потрібному стані/Region та не має Soldier.
-- `can_progress` — чи зараз виконані всі умови продовження Founding; залежить від `founder_valid` і `foreign_camp_armies[]`.
+- `can_progress` — чи зараз виконані всі умови продовження Founding; присутність foreign Camp Army визначається через `region.camp_player_ids[]`, а решта умов — через `founder_valid` та прямі характеристики процесу.
 - `progress_rate` — effective rate Founding progress; ненульовий лише коли `can_progress == true`.
 - `required_progress` — progress, потрібний для завершення Founding за конфігурацією.
 - `is_complete` — чи `progress` досяг `required_progress`.
