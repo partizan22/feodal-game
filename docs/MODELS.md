@@ -10,7 +10,7 @@
 
 Root model для user GameEvent поки не визначена до проєктування взаємодії з frontend/API. Тому `user_*` тут означає модель, яка реалізує основну логіку дії, а не обов'язково майбутню root model. Після визначення root model префікси методів за потреби будуть змінені.
 
-Обчислювальна характеристика, позначена `*`, є **system-computed**: її значення не зберігається прямо і не обчислюється game logic самої Model, а надається infrastructure. Типові приклади — reverse relations, вибірки пов'язаних Model та топологічні зв'язки карти.
+Обчислювальна характеристика, позначена `*` перед назвою, є **system-computed**: її значення не зберігається прямо і не обчислюється game logic самої Model, а надається infrastructure. Типові приклади — reverse relations, вибірки пов'язаних Model та топологічні зв'язки карти. Характеристики, що містять список посилань на Model, мають `[]` у кінці назви.
 
 Рівні всіх Building одного Castle зберігаються як одна характеристика `levels`.
 
@@ -34,9 +34,11 @@ Wood / Stone / Iron зберігаються як одна характерис�
 
 ### Обчислювальні характеристики
 
-- `coin_balance` — effective rate зміни Coins.
-- `gold_balance` — effective rate зміни Gold.
-- `silver_balance` — effective rate зміни Silver.
+- `*regions[]` — Region, формальним owner яких є цей Player.
+- `*castles[]` — Castle цього Player.
+- `coin_balance` — effective rate зміни Coins; залежить від економічних характеристик `regions[]` і `castles[]`.
+- `gold_balance` — effective rate зміни Gold; залежить від економічних характеристик `regions[]` і `castles[]`.
+- `silver_balance` — effective rate зміни Silver; залежить від економічних характеристик `regions[]` і `castles[]`.
 - `empty_coins` — `coins == 0 && coin_balance <= 0`.
 
 ### User methods
@@ -66,12 +68,13 @@ Wood / Stone / Iron зберігаються як одна характерис�
 
 ### Обчислювальні характеристики
 
-- `resource_balance` — один клас із effective rate для `wood`, `stone`, `iron`; враховує production/flows і межі Warehouse.
-- `food_balance` — effective rate зміни Food; враховує production/flows, consumption і межі Granary/zero.
+- `*regions[]` — Region, приєднані до цього Castle.
+- `*knights[]` — Knight, для яких цей Castle є home Castle.
+- `resource_balance` — один клас із effective rate для `wood`, `stone`, `iron`; залежить від `levels`, `regions[]`, їх production/flows і меж Warehouse.
+- `food_balance` — effective rate зміни Food; залежить від `levels`, `regions[]`, `knights[]`, production/flows, consumption і меж Granary/zero.
 - `warehouse_capacity` — Capacity Warehouse відповідно до `levels`.
 - `granary_capacity` — Capacity Granary відповідно до `levels`.
 - `empty_food` — `food == 0 && food_balance <= 0`.
-- `knights*` — Knight, для яких цей Castle є home Castle.
 
 ### User methods
 
@@ -102,9 +105,9 @@ Wood / Stone / Iron зберігаються як одна характерис�
 
 ### Обчислювальні характеристики
 
-- `neighbors*` — шість сусідніх Region, визначені топологією карти.
-- `armies*` — Army, що поточно рахуються фізично присутніми в Region за правилами presence.
-- `has_any_troops` — чи є в Region будь-які війська, що блокують початок/завершення Neutral Defense recovery.
+- `*neighbors[]` — шість сусідніх Region, визначені топологією карти.
+- `*armies[]` — Army, що поточно рахуються фізично присутніми в Region за правилами presence.
+- `has_any_troops` — чи є в `armies[]` будь-які війська, що блокують початок/завершення Neutral Defense recovery.
 - `neutral_defense_recovery_at` — Game Time повного відновлення Neutral Defense, якщо recovery активний.
 
 ### User methods
@@ -129,7 +132,8 @@ Wood / Stone / Iron зберігаються як одна характерис�
 
 ### Обчислювальні характеристики
 
-- `wealth_balance` — effective rate зміни Wealth з урахуванням поточного стану Region/Player та правил City.
+- `*player` — поточний Player-owner Region міста; `null` для Neutral Region.
+- `wealth_balance` — effective rate зміни Wealth з урахуванням характеристик `region`, `player` та правил City.
 
 ### User methods
 
@@ -159,7 +163,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики
 
-- `experience_balance` — effective passive rate зміни Experience.
+- `experience_balance` — effective passive rate зміни Experience; залежить від характеристик поточного `army`/стану Knight за правилами Experience.
 
 ### User methods
 
@@ -190,9 +194,9 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики
 
+- `*knights[]` — Knight, які поточно входять до Army.
+- `*movement` — поточний active Movement цієї Army; визначається reverse lookup за `Movement.army`.
 - `regrouping_progress_rate` — rate Regrouping progress; у поточних правилах константа, визначена конфігурацією.
-- `knights*` — Knight, які поточно входять до Army.
-- `movement*` — поточний active Movement цієї Army; визначається reverse lookup за `Movement.army`.
 
 ### User methods
 
@@ -228,7 +232,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Обчислювальні характеристики
 
 - `battle_start_progress_rate` — rate progress до battle start; у поточних правилах константа, визначена конфігурацією.
-- `is_battle_valid` — чи CombatSituation все ще має актуальні сторони/умови для Battle Start / Resolve.
+- `is_battle_valid` — чи CombatSituation все ще має актуальні сторони/умови для Battle Start / Resolve; залежить від зафіксованих `attacker`, `defenders` і їх актуального стану.
 
 ### User methods
 
@@ -258,11 +262,11 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики
 
-- `player_camp_armies*` — eligible Camp Army цього Player у цій Region.
-- `other_players_camp_armies*` — eligible Camp Army інших Player у цій Region.
-- `adjacent_regions*` — Region, сусідні з контрольованою Region.
-- `has_valid_adjacent_owned_region` — чи є хоча б одна сусідня `is_connection_valid` Region цього Player.
-- `can_progress` — чи зараз виконані всі умови накопичення `control_progress`.
+- `*player_camp_armies[]` — eligible Camp Army цього Player у цій Region.
+- `*other_players_camp_armies[]` — eligible Camp Army інших Player у цій Region.
+- `*adjacent_regions[]` — Region, сусідні з контрольованою Region.
+- `has_valid_adjacent_owned_region` — чи є серед `adjacent_regions[]` хоча б одна `is_connection_valid` Region цього Player.
+- `can_progress` — чи зараз виконані всі умови накопичення `control_progress`; залежить від `player_camp_armies[]`, `other_players_camp_armies[]` і `has_valid_adjacent_owned_region`.
 - `control_progress_rate` — effective rate накопичення control progress; ненульовий лише коли `can_progress == true`.
 - `required_control_progress` — необхідний control progress для поточного типу Region/контролю за конфігурацією.
 - `is_ready` — чи `control_progress` досяг `required_control_progress`.
@@ -294,9 +298,9 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики
 
-- `foreign_camp_armies*` — eligible Camp Army інших Player у Region Founding.
+- `*foreign_camp_armies[]` — eligible Camp Army інших Player у Region Founding.
 - `founder_valid` — founder Knight живий, залишається у потрібному стані/Region та не має Soldier.
-- `can_progress` — чи зараз виконані всі умови продовження Founding.
+- `can_progress` — чи зараз виконані всі умови продовження Founding; залежить від `founder_valid` і `foreign_camp_armies[]`.
 - `progress_rate` — effective rate Founding progress; ненульовий лише коли `can_progress == true`.
 - `required_progress` — progress, потрібний для завершення Founding за конфігурацією.
 - `is_complete` — чи `progress` досяг `required_progress`.
@@ -330,7 +334,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики
 
-- `progress_rate` — effective rate Movement progress.
+- `progress_rate` — effective rate Movement progress; залежить від характеристик `army` та поточної Movement phase/Region.
 - `direction_reveal_progress` — progress boundary, після якого відкривається напрямок виходу з поточної Region.
 - `phase_completion_progress` — progress boundary завершення поточної Movement phase.
 
@@ -364,7 +368,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики
 
-- `can_progress` — чи зараз виконані всі умови Recruitment поточного Soldier: є активний order і немає блокуючих умов.
+- `can_progress` — чи зараз виконані всі умови Recruitment поточного Soldier: є активний order і немає блокуючих умов; залежить від характеристик `castle` і поточного order.
 - `progress_rate` — effective recruitment rate; ненульовий лише коли `can_progress == true`.
 - `required_progress` — progress, потрібний для завершення поточного Soldier відповідно до його Type/configuration.
 - `current_recruit_finished` — чи `progress` досяг `required_progress`.
@@ -464,7 +468,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики
 
-- `progress_rate` — effective rate Knight replacement progress; для процесів, що очікують своєї черги, дорівнює `0`.
+- `*castle_replacements[]` — усі KnightReplacement цього Castle, потрібні для визначення черги процесів.
+- `progress_rate` — effective rate Knight replacement progress; залежить від стану `castle_replacements[]`; для процесів, що очікують своєї черги, дорівнює `0`.
 - `required_progress` — progress, потрібний для створення replacement Knight за конфігурацією.
 - `is_complete` — чи `progress` досяг `required_progress`.
 
