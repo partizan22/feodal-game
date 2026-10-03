@@ -12,8 +12,8 @@
 | Occupation | окупація | Тимчасовий військовий контроль чужої Region. |
 | Region Upkeep | утримання області | Регулярна плата за Owned Region. |
 | Territorial Connectivity | територіальна зв'язність | Безперервний ланцюг Owned Region до Castle. |
-| Resource Source | джерело ресурсу | Природне джерело конкретного ресурсу в Region. |
-| Resource Potential | ресурсний потенціал | Природна кількість/цінність Source у Region. |
+| ResourceSite | джерело ресурсу | Природне джерело конкретного ресурсу в Region. |
+| Resource Potential | ресурсний потенціал | Природна кількість/цінність ResourceSite у Region. |
 | Wood | дерево | Базовий локальний ресурс. |
 | Stone | камінь | Базовий локальний ресурс. |
 | Iron | залізо | Базовий локальний ресурс, важливий для війська. |
@@ -24,7 +24,7 @@
 | Warehouse | склад | Зберігає Wood, Stone та Iron. |
 | Granary | амбар | Зберігає Food. |
 | Building | будівля | Розвиваний об'єкт Castle. |
-| Upgrade | покращення / апгрейд | Підвищення level Building або Source. |
+| Upgrade | покращення / апгрейд | Підвищення level Building або ResourceSite. |
 | Palace | палац | Визначає кількість Knight slots Castle. |
 | Governor's House | будинок губернатора | Обмежує кількість зовнішніх Region Castle. |
 | Forge | кузня | У V1 передумова для Barracks. |
@@ -79,6 +79,6 @@
 | City Raid | рейд / пограбування міста | Локальна дія Army/Unit у Camp у Region з City для отримання Coins та виснаження City. |
 | Founding | заснування замку | Процес створення нового Castle у Neutral Region або у власній уже Annexed Region. |
 | Founding Knight | лицар-засновник | Knight без Soldier, прив'язаний до Founding до його завершення. |
-| Founding Timer | таймер заснування | Ігровий час, який має накопичитися за виконання умов Founding до створення Castle. |
+| Founding Progress | прогрес заснування | Накопичений прогрес Founding до створення Castle. |
 | Game Time | ігровий час | Єдина шкала часу всіх процесів гри. |
 | AI Player | віртуальний гравець | Програмний гравець для тестування/прототипу. |
