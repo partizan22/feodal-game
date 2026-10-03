@@ -9,7 +9,7 @@
 
 Для user actions root model поки не визначена, тому вони не прив'язуються до конкретної моделі як `user_*` method. Нижче вони наведені окремо у форматі `? -> LogicModel(s)`.
 
-Рівні всіх Building одного Castle зберігаються як одна характеристика `buildings`.
+Рівні всіх Building одного Castle зберігаються як одна характеристика `levels`.
 
 Wood / Stone / Iron зберігаються як одна характеристика `resources` — один value object / helper class із трьома значеннями.
 
@@ -44,7 +44,7 @@ Wood / Stone / Iron зберігаються як одна характерис�
 - `player` — власник Castle.
 - `region` — Castle Region.
 - `name`
-- `buildings` — рівні всіх Building Castle як одна структурна характеристика.
+- `levels` — рівні всіх Building Castle як одна структурна характеристика.
 - `soldier_reserve` — не призначені Knight Soldier за типами.
 
 ### Динамічні характеристики
@@ -63,7 +63,6 @@ Wood / Stone / Iron зберігаються як одна характерис�
 
 ### Прямі характеристики
 
-- `coordinates` — положення Region на hex map.
 - `player` — формальний owner; `null` для Neutral Region.
 - `castle` — Castle, до якого Region приєднана; `null`, якщо не належить Castle.
 - `resource_sites` — структура ResourceSite за типами ресурсів і рівнями.
@@ -137,7 +136,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики для dynamic
 
-- `regrouping_progress_rate` — effective rate Regrouping progress.
+- `regrouping_progress_rate` — rate Regrouping progress; у поточних правилах константа, визначена конфігурацією.
 
 ---
 
@@ -148,10 +147,10 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Прямі характеристики
 
 - `region`
-- `attackers` — зафіксований набір сторони attacker.
+- `attacker` — зафіксований attacker.
 - `defenders` — зафіксований набір сторони defender.
 - `combat_type` / context — потрібний контекст combat.
-- `attacker_retreat_decisions` / інші зафіксовані pre-battle decisions.
+- `defenders_retreat_decisions` / інші зафіксовані pre-battle decisions.
 - `locked_combat_parameters` — параметри, які за правилами фіксуються до resolve і не повинні змінитися від пізніших user changes.
 - `status`
 
@@ -161,7 +160,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики для dynamic
 
-- `battle_start_progress_rate` — effective rate progress до battle start.
+- `battle_start_progress_rate` — rate progress до battle start; у поточних правилах константа, визначена конфігурацією.
 
 ---
 
@@ -257,7 +256,6 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `castle`
 - `building_type`
-- `from_level`
 - `target_level`
 - `status`
 
@@ -267,7 +265,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики для dynamic
 
-- `progress_rate` — effective rate Building upgrade progress.
+- `progress_rate` — rate Building upgrade progress; у поточних правилах визначається конфігурацією.
 
 ---
 
@@ -281,7 +279,6 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `region`
 - `resource_type`
-- `from_level`
 - `target_level`
 - `quantity`
 - `status`
@@ -292,7 +289,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики для dynamic
 
-- `progress_rate` — effective rate ResourceSite upgrade progress.
+- `progress_rate` — rate ResourceSite upgrade progress; у поточних правилах визначається конфігурацією.
 
 ---
 
@@ -313,7 +310,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики для dynamic
 
-- `progress_rate` — effective rate Knight replacement progress.
+- `progress_rate` — effective rate Knight replacement progress; для процесів, що очікують своєї черги, дорівнює `0`.
 
 ---
 
