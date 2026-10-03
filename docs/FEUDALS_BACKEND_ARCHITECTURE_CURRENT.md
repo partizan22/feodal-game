@@ -291,7 +291,7 @@ Commit повинен:
 - перерахувати та зберегти актуальні computed characteristics;
 - синхронізувати FK/junction projections relationships;
 - записати history snapshot, якщо history mode увімкнений;
-- зафіксувати службові записи GameEvent/scheduled events в одній узгодженій операції.
+- зафіксувати службові записи GameEvent/scheduled trigger checks в одній узгодженій операції.
 
 Computed characteristics є частиною persisted state після commit і використовуються як зафіксовані параметри наступного часового інтервалу.
 
@@ -388,7 +388,7 @@ Model A змінила структурний state
 6. Зробити snapshot поточного `initialized_models`.
 7. Для кожної Model зі snapshot викликати `dfs()`.
 8. Після DFS взяти новий повний `initialized_models`.
-9. Для кожної initialized Model перевірити її triggers і створити/оновити потрібні technical scheduled events.
+9. Для кожної initialized Model перевірити її triggers і створити/оновити потрібні scheduled trigger checks.
 10. Виконати commit.
 11. Завершити GameEvent.
 
@@ -435,10 +435,6 @@ Gameplay action користувача, що виконується через w
 ### `on_trigger_{name}()`
 
 Game action при фактичному спрацюванні trigger-а. Виконується лише в окремій GameEvent trigger-а.
-
-### `on_timer_{name}()`
-
-Обробник звичайної scheduled system event, яка не є trigger-check event.
 
 Міжмодельні game methods окремого обов'язкового prefix не мають.
 
@@ -487,19 +483,17 @@ Technical previous-state trigger-а не є domain characteristic Model.
 
 Навіть `N = 0` не запускає `on_trigger_*()` у поточній GameEvent.
 
-Замість цього створюється technical scheduled event на той самий `Te`, яка буде окремою наступною ітерацією worker-а.
+Замість цього створюється scheduled trigger check на той самий `Te`, який буде окремою наступною ітерацією worker-а.
 
-## 25. Trigger scheduled event
+## 25. Scheduled trigger check
 
-Scheduled record trigger-а означає: у цей Game Time створити GameEvent і повторно перевірити trigger.
+Scheduled record означає: у заданий Game Time створити GameEvent і повторно перевірити trigger.
 
-Він не означає: безумовно виконати trigger action.
+Він не означає безумовне виконання trigger action.
 
-Тому якщо до прогнозованого моменту умови змінилися, scheduled event не треба обов'язково видаляти. При її обробці `check_trigger_*()` може показати, що action більше не актуальна.
+Якщо до прогнозованого моменту умови змінилися, scheduled check не треба обов'язково видаляти. При його обробці `check_trigger_*()` може показати, що action більше не актуальна.
 
-Це дозволяє обійтися без складного механізму скасування trigger timers.
-
-Усі trigger-и поки працюють однаково. Поділу на "активні" й "пасивні" немає.
+Усі trigger-и працюють однаково. Поділу на "активні" й "пасивні" немає.
 
 ## 26. Trigger action як окрема GameEvent
 
@@ -507,7 +501,7 @@ Scheduled record trigger-а означає: у цей Game Time створити
 
 1. GameEvent A змінює світ.
 2. Після DFS `check_trigger_X()` повертає `0`.
-3. Створюється scheduled event X на `Te`.
+3. Створюється scheduled trigger check X на `Te`.
 4. GameEvent A commit-иться.
 5. Worker окремою наступною ітерацією бере X.
 6. Model ініціалізується на тому ж `Te`.
@@ -517,29 +511,19 @@ Scheduled record trigger-а означає: у цей Game Time створити
 
 Це прибирає необхідність другого trigger cascade в одній worker iteration і значно зменшує залежність результату від порядку одночасно готових trigger-actions.
 
-## 27. Gameplay timer і technical scheduled event
+## 27. Довготривалі процеси
 
-Треба чітко розділяти два поняття.
+Часові межі довготривалих процесів задаються через trigger-механізм.
 
-У game rules "таймер" може означати просто тривалість ігрового процесу для гравця.
-
-У backend technical scheduler — інфраструктурний механізм, який створює майбутню GameEvent або wake-up/check.
-
-Це не обов'язково одна і та сама сутність.
-
-У реалізації бажано використовувати окрему назву на кшталт `ScheduledEvent`, `ScheduledAction` або `TimeoutEvent`, щоб не змішувати її з gameplay-поняттям "таймер". Точну назву можна зафіксувати в ТЗ.
-
-## 28. Довготривалі процеси
-
-Якщо майбутній момент завершення процесу може змінитися, pause/resume або стати неактуальним, бажаний патерн:
-- dynamic progress;
+Типовий патерн:
+- dynamic progress або інша dynamic characteristic;
 - computed current rate;
 - trigger на boundary/completion;
-- technical scheduled event лише як wake-up для trigger check.
+- scheduled trigger check у прогнозований момент.
 
-Якщо подія справді безумовна після її постановки, допускається звичайний `on_timer_*` / scheduled system event.
+Scheduled record є лише інфраструктурним способом повернутися до перевірки trigger-а в потрібний Game Time. Перед виконанням будь-якої trigger action умова завжди перевіряється повторно.
 
-## 29. Cycle protection
+## 28. Cycle protection
 
 DFS не зациклюється завдяки `dfs_visited`.
 
@@ -556,7 +540,7 @@ EventContext повинен мати аварійний guard:
 
 При перевищенні guard GameEvent повинна бути aborted без partial commit, а diagnostic information — записана.
 
-## 30. Game Time
+## 29. Game Time
 
 Game Time зберігається як integer у мікросекундах.
 
@@ -585,7 +569,7 @@ Real time для sync — integer у мілісекундах.
 
 Normal GameClock не рухається назад.
 
-## 31. Історія станів
+## 30. Історія станів
 
 Для debugging першого прототипу передбачається можливість зберігати повну історію committed state Model.
 
@@ -602,7 +586,7 @@ Snapshot не містить runtime caches, EventContext, службові tran
 
 Історія лінійна. Паралельних history branches немає.
 
-## 32. Debug rewind
+## 31. Debug rewind
 
 Debug rewind — окремий інструмент поверх history, а не звичайна операція GameClock.
 
@@ -611,7 +595,7 @@ Debug rewind — окремий інструмент поверх history, а н
 Необхідно узгоджено відновити весь persistent game state, зокрема:
 - states Model;
 - lifecycle created/deleted Model;
-- active scheduled events;
+- active scheduled trigger checks;
 - черги gameplay actions, якщо вони persistent;
 - persistent process/interaction state;
 - Game Time sync state;
@@ -621,7 +605,7 @@ Debug rewind — окремий інструмент поверх history, а н
 
 Точна техніка поводження з history після точки rewind може бути визначена в ТЗ: видалити майбутнє або позначити його неактуальним. Але нові паралельні history branches не створюються.
 
-## 33. Replay і randomness
+## 32. Replay і randomness
 
 Для точного debugging/replay випадкові результати повинні бути відтворюваними.
 
@@ -629,18 +613,18 @@ Debug rewind — окремий інструмент поверх history, а н
 
 При однаковому вході й однаковому RNG context replay повинен давати той самий game result.
 
-## 34. Persistence consistency і transaction
+## 33. Persistence consistency і transaction
 
 Одна GameEvent — логічна атомарна операція.
 
 У разі exception або action-cycle guard failure:
 - не можна залишати partial model state;
 - не можна частково commit-ити тільки частину взаємопов'язаних змін;
-- scheduled records, snapshots і model states повинні лишитися узгодженими.
+- scheduled trigger checks, snapshots і model states повинні лишитися узгодженими.
 
 Точна SQL transaction strategy, lock strategy, retry та idempotency визначаються в ТЗ реалізації.
 
-## 35. User actions і черга worker
+## 34. User actions і черга worker
 
 Gameplay user action проходить через worker і стає GameEvent.
 
@@ -648,9 +632,9 @@ API method `api_*` відповідає за зовнішню точку вхо�
 
 `user_*` — domain entry point самої GameEvent.
 
-Точний arbitration між user request queue і system scheduled events, а також точний момент присвоєння `Te` user request можна визначити при реалізації worker queue, але всі GameEvent у підсумку мають єдиний детермінований порядок.
+Точний arbitration між user request queue і scheduled trigger checks, а також точний момент присвоєння `Te` user request можна визначити при реалізації worker queue, але всі GameEvent у підсумку мають єдиний детермінований порядок.
 
-## 36. Realtime / API — тільки архітектурна межа
+## 35. Realtime / API — тільки архітектурна межа
 
 Моделі не повинні знати:
 - хто зараз підключений;
@@ -662,7 +646,7 @@ Gameplay state змінюється в domain layer, а зовнішня дос�
 
 Конкретний frontend protocol, subscriptions, frontend representation і UI в цьому документі не визначаються.
 
-## 37. Конфігурація game parameters
+## 36. Конфігурація game parameters
 
 Числові gameplay constants та функції балансу не повинні бути hardcoded у domain methods.
 
@@ -674,7 +658,7 @@ Gameplay state змінюється в domain layer, а зовнішня дос�
 
 Domain code читає параметри конфігурації, але сама структура event processing, relationships, triggers, Game Time та persistence не залежить від конкретних балансних чисел.
 
-## 38. Підсумковий pipeline
+## 37. Підсумковий pipeline
 
 ```text
 Worker:
@@ -715,7 +699,6 @@ DFS:
 ```text
 if dfs_visited:
     return
-
 dfs_visited = true
 
 if external_signature == initial_external_signature:
@@ -741,12 +724,12 @@ persist direct state
 persist dynamic state
 recompute + persist computed state
 sync relationship projections
-persist scheduler/GameEvent changes
+persist trigger-check/GameEvent changes
 write history snapshot where enabled
 commit atomically
 ```
 
-## 39. Ключові інваріанти
+## 38. Ключові інваріанти
 
 1. Одна worker iteration = одна GameEvent.
 2. Всі Model однієї GameEvent використовують один `Te`.
