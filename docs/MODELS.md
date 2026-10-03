@@ -262,7 +262,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `other_players_camp_armies*` — eligible Camp Army інших Player у цій Region.
 - `adjacent_regions*` — Region, сусідні з контрольованою Region.
 - `has_valid_adjacent_owned_region` — чи є хоча б одна сусідня `is_connection_valid` Region цього Player.
-- `control_progress_rate` — effective rate накопичення control progress; ненульовий лише коли є власна eligible Camp presence, немає competing Camp presence та виконується вимога сусідньої власної Region.
+- `can_progress` — чи зараз виконані всі умови накопичення `control_progress`.
+- `control_progress_rate` — effective rate накопичення control progress; ненульовий лише коли `can_progress == true`.
 - `required_control_progress` — необхідний control progress для поточного типу Region/контролю за конфігурацією.
 - `is_ready` — чи `control_progress` досяг `required_control_progress`.
 
@@ -272,6 +273,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Triggers
 
+- `can_progress` `[двонаправлений]` — спрацьовує при зміні стану `can_progress`; при втраті умов progress зупиняється, при їх відновленні — продовжується.
 - `ready` `[однонаправлений]` — спрацьовує при досягненні `required_control_progress`; `RegionControl` переходить у стан готовності до Annexation.
 
 ---
@@ -294,7 +296,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `foreign_camp_armies*` — eligible Camp Army інших Player у Region Founding.
 - `founder_valid` — founder Knight живий, залишається у потрібному стані/Region та не має Soldier.
-- `progress_rate` — effective rate Founding progress; ненульовий лише коли `founder_valid` і немає blocking `foreign_camp_armies`.
+- `can_progress` — чи зараз виконані всі умови продовження Founding.
+- `progress_rate` — effective rate Founding progress; ненульовий лише коли `can_progress == true`.
 - `required_progress` — progress, потрібний для завершення Founding за конфігурацією.
 - `is_complete` — чи `progress` досяг `required_progress`.
 
@@ -304,6 +307,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Triggers
 
+- `can_progress` `[двонаправлений]` — спрацьовує при зміні стану `can_progress`; при втраті умов Founding призупиняється, при їх відновленні — продовжується.
 - `complete` `[однонаправлений]` — спрацьовує при завершенні progress, якщо Founding все ще валідний; створюється новий Castle та застосовуються наслідки Founding.
 
 ---
@@ -360,7 +364,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Обчислювальні характеристики
 
-- `progress_rate` — effective recruitment rate; `0`, коли Recruitment paused через Food, Coins, Barracks capacity або іншу блокуючу умову.
+- `can_progress` — чи зараз виконані всі умови Recruitment поточного Soldier: є активний order і немає блокуючих умов.
+- `progress_rate` — effective recruitment rate; ненульовий лише коли `can_progress == true`.
 - `required_progress` — progress, потрібний для завершення поточного Soldier відповідно до його Type/configuration.
 - `current_recruit_finished` — чи `progress` досяг `required_progress`.
 
@@ -370,6 +375,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Triggers
 
+- `can_progress` `[двонаправлений]` — спрацьовує при зміні стану `can_progress`; при появі блокуючої умови Recruitment призупиняється, при її зникненні — продовжується.
 - `current_recruit_finished` `[однонаправлений]` — спрацьовує при завершенні поточного Soldier; Soldier додається до Castle reserve, queue переходить до наступного елемента, progress скидається для наступного Soldier.
 
 ---
