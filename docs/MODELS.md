@@ -184,6 +184,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Прямі характеристики
 
 - `current_region` — поточна Region Army.
+- `camp` — поточний `CampInRegion`, якщо Army перебуває в Camp; встановлюється при вході в Camp і очищується при виході.
 - `commander` — Commander-in-Chief.
 - `defense_loss_threshold`
 - `target_combat_threshold`
@@ -248,9 +249,11 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ---
 
-## 8. `RegionControl`
+## 8. `CampInRegion`
 
-Один instance представляє стан контролю конкретного `Player` у конкретній `Region`; control progress не прив'язаний до Castle.
+Один active instance представляє один безперервний епізод присутності Army конкретного `Player` у Camp конкретної `Region`. Модель використовується для Camp-level interaction незалежно від того, чи Region є власною, чужою або Neutral, і бере на себе функції накопичення можливості Annexation.
+
+Модель створюється при вході першої Army цього Player у Camp. Коли остання Army залишає Camp, instance логічно видаляється / деактивується, але фізичний запис зберігається для history/rollback. Наступна поява Army цього Player у Camp створює новий instance.
 
 ### Прямі характеристики
 
@@ -260,15 +263,16 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Динамічні характеристики
 
-- `control_progress`
+- `control_progress` — progress можливості Annexation; не накопичується, якщо немає Army цього Player у Camp.
 
 ### Обчислювальні характеристики
 
+- `*armies[]` — Army, для яких цей active `CampInRegion` є прямою характеристикою `camp`.
 - `has_valid_adjacent_owned_region` — чи `region.valid_connected_neighbor_player_ids[]` містить ID `player`.
-- `can_progress` — чи зараз виконані всі умови накопичення `control_progress`; присутність своїх і чужих Camp Army визначається порівнянням ID `player` з `region.camp_player_ids[]`, а географічна умова — через `has_valid_adjacent_owned_region`.
+- `can_progress` — чи зараз виконані всі умови накопичення `control_progress`; присутність чужих Camp Army визначається через `region.camp_player_ids[]`, а географічна умова — через `has_valid_adjacent_owned_region`.
 - `control_progress_rate` — effective rate накопичення control progress; ненульовий лише коли `can_progress == true`.
 - `required_control_progress` — необхідний control progress для поточного типу Region/контролю за конфігурацією.
-- `is_ready` — чи `control_progress` досяг `required_control_progress`.
+- `is_ready_for_annexation` — чи `control_progress` досяг `required_control_progress`.
 
 ### User methods
 
@@ -277,7 +281,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Triggers
 
 - `can_progress` `[state trigger]` — спрацьовує при зміні стану `can_progress`; при втраті умов progress зупиняється, при їх відновленні — продовжується.
-- `ready` `[event trigger]` — спрацьовує при досягненні `required_control_progress`; `RegionControl` переходить у стан готовності до Annexation.
+- `ready_for_annexation` `[event trigger]` — спрацьовує при досягненні `required_control_progress`; `CampInRegion` переходить у стан готовності до Annexation.
 
 ---
 
@@ -345,7 +349,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `direction_revealed` `[state trigger]` — відстежує стан досягнення `direction_reveal_progress`; при вході в revealed-state фіксує `direction_revealed = true` та запускає frontend/notification effect, а при переході до нової transit-фази стан trigger-а повертається назад.
 - `next_region_reached` `[event trigger]` — спрацьовує при завершенні transit-фази; Army входить у `next_region`, Movement переходить до наступної фази.
-- `camp_reached` `[event trigger]` — спрацьовує при завершенні локального руху до Camp/interaction point; Army завершує цю Movement phase і переходить до відповідного локального стану/interaction.
+- `camp_reached` `[event trigger]` — спрацьовує при завершенні локального руху до Camp/interaction point; Army завершує цю Movement phase, отримує пряме посилання `camp` на відповідний `CampInRegion` і переходить до Camp state; якщо active `CampInRegion` для цієї пари Player/Region ще немає, він створюється.
 
 ---
 
