@@ -16,6 +16,8 @@ Root model для user GameEvent поки не визначена до проє�
 
 Для computed characteristics діє правило: якщо `A.computed` потрібне значення з `A -> B -> C`, відповідна інформація зазвичай піднімається в computed characteristic Model `B`, а `A` читає вже її. Прямий system-computed зв'язок `A -> C` додається лише коли він сам є природною характеристикою `A`.
 
+Це обмеження не поширюється на domain/user methods: method може обходити потрібні relationships і читати характеристики пов'язаних Model без створення проміжних computed characteristics лише заради такого обходу.
+
 Рівні всіх Building одного Castle зберігаються як одна характеристика `levels`.
 
 Wood / Stone / Iron зберігаються як одна характеристика `resources` — один value object / helper class із трьома значеннями.
@@ -24,7 +26,7 @@ Food consumption одного Soldier не залежить від Soldier Type.
 
 У секціях methods:
 
-- **Використовує** — характеристики цієї Model та безпосередньо пов'язаних Model, які потрібні method.
+- **Використовує** — характеристики цієї Model та relationships/характеристики пов'язаних Model, які потрібні method.
 - **Викликає** — інші domain methods, якщо вони потрібні. Характеристики іншої Model напряму не змінюються.
 
 ---
@@ -50,8 +52,8 @@ Food consumption одного Soldier не залежить від Soldier Type.
 - `*armies[]` — Army цього Player за прямим `Army.player`.
 - `*camps[]` — active CampInRegion цього Player за прямим `CampInRegion.player`.
 - `coin_balance` — effective rate зміни Coins. Складає region/castle income та upkeep, звичайний `Army.coin_upkeep`, `Army.food_coin_compensation` для Army у Movement, `CampInRegion.food_coin_compensation` поза Castle Region і `Castle.food_coin_compensation` при нестачі Food у Castle.
-- `gold_balance` — effective rate зміни Gold; агрегує Gold production з `regions[]`.
-- `silver_balance` — effective rate зміни Silver; агрегує Silver production з `regions[]`.
+- `gold_balance` — effective rate зміни Gold; агрегує `Region.gold_income_for_owner` з `regions[]`, тому Occupied/disconnected Region не дають Gold формальному owner.
+- `silver_balance` — effective rate зміни Silver; агрегує `Region.silver_income_for_owner` з `regions[]`, тому Occupied/disconnected Region не дають Silver формальному owner.
 - `empty_coins` — `coins == 0 && coin_balance <= 0`.
 
 ### User methods
@@ -133,7 +135,7 @@ Food consumption одного Soldier не залежить від Soldier Type.
 - `create_knight_for_palace_slot()` — створює нового Knight у вільному Palace slot. **Використовує:** `player`, `palace_capacity`, `knights[]`. **Викликає:** initialization нового `Knight` і його початкової одиночної Army у Camp Castle Region.
 - `create_knight_replacement()` — створює KnightReplacement після смерті home Knight. **Використовує:** `knight_replacements[]`, `palace_capacity`. **Викликає:** initialization нового `KnightReplacement`.
 - `complete_knight_replacement(replacement)` — створює replacement Knight і завершує відповідний Palace slot replacement. **Використовує:** `active_knight_replacement_id`, `knights[]`, `palace_capacity`. **Викликає:** `create_knight_for_palace_slot()`.
-- `can_annex_region(region, camp)` — перевіряє Governor Capacity, допустимий зв'язок Region з цим Castle і наявність у Camp хоча б одного Unit з home Castle = цей Castle. **Використовує:** `governor_capacity`, `external_region_count`, `regions[]`, `region`, `CampInRegion.home_castle_ids[]`. **Викликає:** нічого.
+- `can_annex_region(region, camp)` — перевіряє Governor Capacity, допустимий зв'язок Region з цим Castle і наявність у `camp` хоча б одного Knight, чия Army має `state == Camp` і чий home Castle дорівнює цьому Castle. Method напряму обходить `CampInRegion -> armies[] -> knights[]`; окрема computed характеристика з ID Castle для цього не потрібна. **Використовує:** `governor_capacity`, `external_region_count`, `regions[]`, `region`, `camp.armies[]`, `Army.state`, `Army.knights[]`, `Knight.castle`. **Викликає:** нічого.
 - `recalculate_region_connections()` — централізовано перераховує `Region.is_connection_valid` після occupation/loss/restore/annexation і переводить остаточно disconnected Region у Neutral за правилами гри. **Використовує:** `region`, `regions[]`, топологію через `Region.neighbors[]`, їх ownership/occupation. **Викликає:** `Region.set_connection_valid()`, `Region.become_neutral()` для Region, які юридично втрачаються.
 
 ### Triggers
@@ -163,7 +165,7 @@ Food consumption одного Soldier не залежить від Soldier Type.
 
 ### Динамічні характеристики
 
-- `neutral_defense` — поточна сила Neutral Defense. Після успішного combat на знищення стає `0`; поступово відновлюється тільки коли в Region немає військ жодного Player.
+- `neutral_defense` — поточна сила Neutral Defense. Після успішного combat на знищення стає `0`; поступово відновлюється тільки в Neutral Region, коли в ній немає військ жодного Player.
 
 ### Обчислювальні характеристики
 
@@ -188,11 +190,13 @@ Food consumption одного Soldier не залежить від Soldier Type.
 - `gold_production` — Gold production за `resource_sites`.
 - `silver_production` — Silver production за `resource_sites`.
 - `resource_surplus_to_castle` — позитивний потік Wood/Stone/Iron до attached Castle з урахуванням `is_connection_valid`, occupation та DistanceEfficiency.
-- `food_surplus_to_castle` — тільки позитивний `food_balance`, переданий attached Castle з DistanceEfficiency; для Castle Region коефіцієнт 1. Негативний balance звичайної Region ніколи не створює Food demand із Castle.
+- `food_surplus_to_castle` — `0`, якщо Region Occupied або її зв'язок із Castle нечинний; інакше тільки позитивний `food_balance`, переданий attached Castle з DistanceEfficiency; для Castle Region коефіцієнт `1`. Негативний balance звичайної Region ніколи не створює Food demand із Castle.
+- `gold_income_for_owner` — `gold_production`, тільки якщо Region має owner, не Occupied і `is_connection_valid == true`; інакше `0`. DistanceEfficiency не застосовується.
+- `silver_income_for_owner` — `silver_production`, тільки якщо Region має owner, не Occupied і `is_connection_valid == true`; інакше `0`. DistanceEfficiency не застосовується.
 - `coin_balance_for_owner` — recurring Coin effect Region для формального owner: upkeep, City income та інші region-level effects.
 - `city_wealth_growth_enabled` — true лише для Owned, non-Occupied Region і коли owner Player не має `empty_coins`.
 - `neutral_defense_full_strength` — нормальна повністю відновлена сила Neutral Defense Region за конфігурацією/властивостями Region.
-- `neutral_defense_recovery_rate` — `0`, якщо `has_any_troops == true` або `neutral_defense >= neutral_defense_full_strength`; інакше конфігураційний позитивний rate поступового recovery.
+- `neutral_defense_recovery_rate` — `0`, якщо Region не Neutral (`player != null`), якщо `has_any_troops == true` або `neutral_defense >= neutral_defense_full_strength`; інакше конфігураційний позитивний rate поступового recovery.
 
 ### User methods
 
@@ -205,19 +209,19 @@ Food consumption одного Soldier не залежить від Soldier Type.
 - `find_pending_combat_for_player(player)` — знаходить pending CombatSituation, у якій війська Player мають автоматично долучитися до defense/interaction при arrival. **Використовує:** `combat_situations[]`, їх `status` і сторони. **Викликає:** нічого.
 - `resolve_arrival(army, movement)` — визначає актуальний Arrival Resolution: Camp, combat із owner/occupier, автоматичне приєднання reinforcement до pending defense або continuation за route context. У Neutral Region сам вхід у Camp не запускає combat із Neutral Defense або City Defense. **Використовує:** `player`, `occupier_player_id`, `camps[]`, `combat_situations[]`, Castle Region status, `allow_transit`, `Army.player`, Movement local context. **Викликає:** `find_pending_combat_for_player()`, `get_or_create_camp()`, `Army.enter_camp()`, `CombatSituation.add_defender()` або initialization нового `CombatSituation`.
 - `set_occupied_by(player)` — встановлює Occupation після переходу переможця в Camp чужої Owned Region. **Використовує:** `player`, `castle`, `occupier_player_id`. **Викликає:** `Castle.recalculate_region_connections()` у attached Castle.
-- `restore_owner_control(expected_occupier_player)` — очищує Occupation тільки якщо `occupier_player_id` досі відповідає очікуваному occupier; це не дозволяє виходу старого occupier стерти вже встановленого нового. **Використовує:** `occupier_player_id`, `castle`. **Викликає:** `Castle.recalculate_region_connections()`.
+- `restore_owner_control(expected_occupier_player)` — очищує Occupation тільки якщо `occupier_player_id` досі відповідає очікуваному occupier; Occupation припиняється одразу після виходу останньої Army occupier із Camp, не після фізичного перетину межі Region. **Використовує:** `occupier_player_id`, `castle`. **Викликає:** `Castle.recalculate_region_connections()`.
 - `annex_to(player, castle)` — змінює formal owner/attached Castle, очищує occupation і завершує Neutral/Occupied state transition. **Використовує:** `player`, `castle`, `occupier_player_id`, `neutral_defense`. **Викликає:** `Castle.recalculate_region_connections()` для старого й нового Castle за потреби.
 - `become_neutral()` — остаточно прибирає ownership при втраті connectivity. **Використовує:** `player`, `castle`, `occupier_player_id`, `neutral_defense`. **Викликає:** нічого в City; `wealth` та `active_wealth_ratio` City зберігаються й реагують через свої rates.
 - `become_castle_region(new_castle, player)` — робить Region Castle Region після Founding. **Використовує:** `player`, `castle`, occupation state. **Викликає:** `Castle.recalculate_region_connections()` старого Castle, якщо Region була від'єднана від нього.
 - `set_connection_valid(value)` — змінює збережений structural connectivity flag. **Використовує:** `is_connection_valid`. **Викликає:** нічого.
 - `apply_resource_site_upgrade(resource_type, target_level, quantity)` — переносить `quantity` ResourceSite у наступний level. **Використовує:** `resource_sites`, `resource_site_upgrades[]`. **Викликає:** нічого.
 - `can_start_resource_site_upgrade(resource_type, quantity)` — перевіряє layered-upgrade rule та concurrent upgrades. **Використовує:** `resource_sites`, `resource_site_upgrades[]`, `castle`, `player`. **Викликає:** `Castle.can_pay_local_cost()`, `Player.can_pay_global_cost()`.
-- `on_army_presence_changed()` — не змінює Neutral Defense напряму; зміна `has_any_troops` автоматично переводить `neutral_defense_recovery_rate` між `0` і позитивним значенням. **Використовує:** `has_any_troops`, `neutral_defense`, `neutral_defense_full_strength`, `neutral_defense_recovery_rate`. **Викликає:** нічого.
+- `on_army_presence_changed()` — не змінює Neutral Defense напряму; зміна ownership/`has_any_troops` автоматично визначає `neutral_defense_recovery_rate`. **Використовує:** `player`, `has_any_troops`, `neutral_defense`, `neutral_defense_full_strength`, `neutral_defense_recovery_rate`. **Викликає:** нічого.
 - `destroy_neutral_defense()` — після перемоги у combat на знищення встановлює `neutral_defense = 0`. City Defense, якщо City є, не змінюється. **Використовує:** `neutral_defense`, `city`. **Викликає:** нічого.
 
 ### Triggers
 
-- `neutral_defense_recovery_complete` `[event trigger]` — досягнення `neutral_defense_full_strength` під час поступового recovery.
+- `neutral_defense_recovery_complete` `[event trigger]` — досягнення `neutral_defense_full_strength` під час поступового recovery; trigger потрібний тільки як boundary для точного припинення dynamic growth на максимумі.
 
 ### Trigger methods
 
@@ -248,7 +252,7 @@ Food consumption одного Soldier не залежить від Soldier Type.
 
 ### User methods
 
-- `user_raid_city(camp)` — ініціює Raid локальними військами цього Player у Camp тієї самої Region. Regrouping Army не може бути raid source. Neutral Defense не бере участі в Raid. Для захисту використовується тільки `city_defense` з raid-specific defender threshold із конфігурації. **Використовує:** `region`, `city_defense`, `raid_reward`, `CampInRegion.player`, `CampInRegion.region`, Camp active-action eligibility. **Викликає:** initialization `CombatSituation` з `combat_type = city_raid` і прямим `city`.
+- немає; City Raid ініціює конкретна `Army` через `Army.user_raid_city()`.
 
 ### Domain methods
 
@@ -343,7 +347,6 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `*knights[]` — Knight, які входять до Army.
 - `*movement` — поточний active Movement цієї Army або `null`.
-- `home_castle_ids[]` — унікальні ID home Castle усіх `knights[]`; scalar IDs.
 - `soldier_count` — загальна кількість Soldier.
 - `food_consumption` — сума `Knight.food_consumption`; використовується CampInRegion або як food-equivalent consumption у Movement.
 - `attack_strength` — сума `Knight.unit_attack_strength` з Commander coefficient.
@@ -358,12 +361,14 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `user_split_army(groups)` — розділяє Army на нові Army, які успадковують current thresholds, `player`, `current_region` і `camp`. **Використовує:** `player`, `camp`, `state`, `knights[]`, thresholds. **Викликає:** `CampInRegion.validate_reorganization()`, `Knight.set_army()`; створює нові Army.
 - `user_change_commander(knight)` — змінює Commander-in-Chief. **Використовує:** `knights[]`, `commander`, `state`. **Викликає:** нічого.
 - `user_change_combat_thresholds(values)` — змінює три thresholds; дозволено також у Movement/Regrouping, але вже started CombatSituation використовує locked values. **Використовує:** threshold characteristics. **Викликає:** нічого.
+- `user_attack_player(target_camp)` — ініціює player-vs-player combat у Neutral Region саме цією Army як Attacker. Дозволено тільки коли Army має `state == Camp`, її `camp` active, target Camp належить іншому Player і знаходиться в тій самій Neutral Region. Defender side складається з усіх defensive-eligible Army target Camp; війська третіх Player не зачіпаються. **Використовує:** `player`, `state`, `camp`, `current_region`, `target_camp`, `target_camp.armies[]`. **Викликає:** `CampInRegion.get_defending_armies()`, initialization `CombatSituation` з `combat_type = neutral_camp_player_combat` і `attacker = this`.
+- `user_raid_city(city)` — ініціює City Raid саме цією Army. Дозволено тільки для `state == Camp`, коли `camp.region == city.region`, Army не заблокована іншою active CombatSituation та інші raid conditions виконані. Neutral Defense не бере участі. City Defense є abstract Defender, defender threshold береться з raid config, а Attacker використовує звичайний `target_combat_threshold` цієї Army. **Використовує:** `player`, `state`, `camp`, `current_region`, `target_combat_threshold`, `city.region`, `city.city_defense`, `city.raid_reward`, active combat context Region. **Викликає:** initialization `CombatSituation` з `combat_type = city_raid`, `attacker = this`, `city = city`.
 
 ### Domain methods
 
 - `enter_region(region)` — фіксує фізичний вхід Army у Region. **Використовує:** `current_region`. **Викликає:** `Region.on_army_presence_changed()` для old/new Region.
 - `enter_camp(camp)` — переводить Army у Camp і встановлює прямий `camp`. **Використовує:** `player`, `current_region`, `camp`, `state`. **Викликає:** `CampInRegion.accept_army()` і `Region.on_army_presence_changed()` за потреби.
-- `leave_camp()` — очищує `camp` перед Movement/Retreat/іншим виходом. **Використовує:** `camp`, `state`. **Викликає:** `CampInRegion.on_army_left()` після зміни relationship.
+- `leave_camp()` — очищує `camp` перед Movement/Retreat/іншим виходом. Якщо це остання Army occupier у Camp, Occupation припиняється саме в цей момент через CampInRegion lifecycle. **Використовує:** `camp`, `state`. **Викликає:** `CampInRegion.on_army_left()` після зміни relationship.
 - `start_movement(movement)` — переводить Army у Movement. Усі Knight із `location_state == Castle` автоматично виходять із Barracks у Camp-state перед початком руху. **Використовує:** `state`, `camp`, `current_region`, `movement`, `knights[]`. **Викликає:** `Knight.leave_castle_for_movement()` для потрібних Knight, `leave_camp()`.
 - `finish_movement()` — завершує Movement-side state перед Camp/interaction. **Використовує:** `state`, `movement`. **Викликає:** нічого.
 - `stop_transit_for_defense(combat)` — спеціальний виняток: припиняє Transit і долучає Army до defense до battle start. **Використовує:** `state`, `movement`, `current_region`, `player`. **Викликає:** `Movement.stop_for_defense()`, `CombatSituation.add_defender()`.
@@ -409,7 +414,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `required_battle_start_progress` — progress boundary Battle Start.
 - `is_battle_valid` — чи сторони та умови combat все ще актуальні.
 - `defender_loss_threshold` — для player combat мінімальний ненульовий Defense Loss Threshold після pre-battle zero-threshold retreats і forced-max cases; для `neutral_defense_destruction` примусово `1.0`; для `city_raid` — raid-specific fixed threshold із конфігурації.
-- `attacker_loss_threshold` — Target або Incidental threshold Attacker із parameters, locked на Battle Start.
+- `attacker_loss_threshold` — для `neutral_defense_destruction` і `city_raid` завжди `attacker.target_combat_threshold`; для player-vs-player combat — Target або Incidental threshold відповідно до звичайної classification. Значення lock-иться на Battle Start.
 - `attacker_strength` — strength Attacker у locked Battle Start state для потрібного combat mode.
 - `defender_strength` — для player combat сума strength Defender Army; для `neutral_defense_destruction` дорівнює `region.neutral_defense + city.city_defense` якщо City є, інакше тільки `region.neutral_defense`; для `city_raid` дорівнює `city.city_defense`.
 
@@ -417,13 +422,13 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `user_stop_transit_for_defense(army)` — додає допустиму own Transit Army до defense до Battle Start. **Використовує:** `region`, `defenders[]`, `status`, `battle_start_progress`, `Army.player`. **Викликає:** `Army.stop_transit_for_defense()` і `add_defender()`.
 - `user_set_pre_battle_retreat_decision(army, retreat)` — фіксує або скасовує рішення Retreat до Battle Start; destination користувач не задає. **Використовує:** `defenders[]`, `defenders_retreat_decisions`, `status`, `region`. **Викликає:** нічого.
-- `user_attack_neutral_defense(attacker, region)` — ініціалізує combat для знищення поточної Neutral Defense. Якщо Region має City, його `city_defense` автоматично додається до Defender strength, але не стає окремою persistent ціллю. **Використовує:** `attacker`, `region.neutral_defense`, `region.city`, Camp presence Attacker. **Викликає:** initialization `CombatSituation` з `combat_type = neutral_defense_destruction`; parameters ще не lock-аються.
+- `user_attack_neutral_defense(attacker, region)` — ініціалізує combat для знищення поточної Neutral Defense. Якщо Region має City, його `city_defense` автоматично додається до Defender strength, але не стає окремою persistent ціллю. Attacker використовує свій звичайний `target_combat_threshold`. **Використовує:** `attacker`, `attacker.target_combat_threshold`, `region.neutral_defense`, `region.city`, Camp presence Attacker. **Викликає:** initialization `CombatSituation` з `combat_type = neutral_defense_destruction`; parameters ще не lock-аються.
 
 ### Domain methods
 
 - `add_defender(army)` — додає Army до Defender side до Battle Start, зокрема reinforcement, що автоматично прибув у final Region. **Використовує:** `defenders[]`, `status`, `region`, `Army.player`. **Викликає:** нічого.
-- `lock_combat_parameters()` — викликається тільки в момент Battle Start; фіксує thresholds, Target/Incidental classification, participating defenders, strength inputs, abstract City/Neutral Defense values і retreat destinations. Для `neutral_defense_destruction` defender threshold = `1.0`; для `city_raid` — конфігураційний City Defense threshold. **Використовує:** `attacker`, `defenders[]`, current thresholds/states, `region`, `city`, Movement destination context. **Викликає:** `select_retreat_region()` для сторін, які можуть Retreat.
-- `get_legal_retreat_regions(army, role)` — визначає legal Retreat destinations за геометрією й current Region states. **Використовує:** `region.neighbors[]`, combat context, Army source/entry direction, сусідні Region ownership/occupation/presence. **Викликає:** нічого.
+- `lock_combat_parameters()` — викликається тільки в момент Battle Start; фіксує thresholds, Target/Incidental classification, participating defenders, strength inputs, abstract City/Neutral Defense values і retreat destinations. Для `neutral_defense_destruction` defender threshold = `1.0`; для `city_raid` — конфігураційний City Defense threshold; Attacker обох abstract combats використовує `target_combat_threshold`. **Використовує:** `attacker`, `defenders[]`, current thresholds/states, `region`, `city`, Movement destination context. **Викликає:** `select_retreat_region()` для сторін, які можуть Retreat.
+- `get_legal_retreat_regions(army, role)` — визначає legal Retreat destinations за геометрією й current Region states. Method напряму перевіряє військову присутність у сусідніх Region через їх `armies[]`/Camp/Movement context: Transit Army, що лише проходить Region і не створює примусової взаємодії, сама по собі не блокує Retreat; локальна Camp/Regrouping/інша presence, яка спричинила б примусовий combat для retreating Army, блокує відповідну Region. Окрема computed характеристика для цього не потрібна. **Використовує:** `region.neighbors[]`, combat context, Army source/entry direction, ownership/occupation сусідніх Region, їх `armies[]`, `Army.state`, `Army.camp`, active Movement context. **Викликає:** нічого.
 - `select_retreat_region(army, role)` — застосовує правила пріоритету Retreat; при рівнозначних candidates використовує deterministic RNG. Якщо legal Region немає, threshold цієї Army для combat стає максимальним. **Використовує:** результат `get_legal_retreat_regions()`, home-territory/distance context, deterministic RNG. **Викликає:** `get_legal_retreat_regions()`.
 - `resolve_combat()` — виконує combat calculation, Luck reroll on exact tie, loss fractions, casualties Attacker і winner/loser consequences. Abstract Neutral Defense/City Defense не отримують persistent partial casualties. **Використовує:** `combat_type`, `locked_combat_parameters`, `attacker_strength`, `defender_strength`, thresholds, `region`, `city`. **Викликає:** `apply_casualties()`, `apply_result()`.
 - `apply_casualties(result)` — розподіляє casualties між реальними Unit/Soldier сторін, виконує Soldier-before-Knight rule і battle Experience. Для abstract Defender (`neutral_defense_destruction`, `city_raid`) persistent Defender casualties не записуються: при програші Attacker Neutral Defense лишається на pre-combat current value, City Defense завжди незмінна. **Використовує:** `attacker`, `defenders[]`, combat result, `combat_type`, deterministic RNG context. **Викликає:** `Knight.apply_casualties()`, `Knight.add_battle_experience()`, після повного distribution `Army.remove_dead_knights()`.
@@ -457,7 +462,6 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Обчислювальні характеристики
 
 - `*armies[]` — Army, для яких цей active CampInRegion є `Army.camp`.
-- `home_castle_ids[]` — унікальні scalar ID home Castle, присутні серед `Army.home_castle_ids[]`.
 - `food_consumption` — сума `Army.food_consumption` усіх `armies[]`, включно з Regrouping Army.
 - `has_eligible_presence` — чи є хоча б одна Army з `state == Camp`; Regrouping не рахується eligible presence для Annexation/Founding.
 - `food_coin_compensation` — `0` у Castle Region; `0`, якщо `region.food_balance >= 0`; інакше частка дефіциту Region пропорційно `food_consumption`: `(-region.food_balance) * food_consumption / region.camp_food_consumption * coins_per_food`. Таким чином у Neutral Region дефіцит розподіляється між Player, а не між окремими Army.
@@ -469,16 +473,15 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### User methods
 
-- `user_attack_player(target_camp)` — ініціює player-vs-player combat у Neutral Region проти іншого CampInRegion; Defender side включає всі eligible для defense Army target Camp, третіх Player не зачіпає. **Використовує:** `player`, `region`, `armies[]`, `target_camp.player`, `target_camp.region`, target defensive presence. **Викликає:** `get_defending_armies()`, initialization `CombatSituation` з `combat_type = neutral_camp_player_combat`.
-- `user_annex_region(castle)` — виконує ручну Annexation. **Використовує:** `player`, `region`, `is_ready_for_annexation`, `home_castle_ids[]`, `region.eligible_camp_player_ids[]`, `region.has_active_founding`, `castle`. **Викликає:** `can_annex_to()`, `Castle.can_annex_region()`, `Region.annex_to()`.
+- `user_annex_region(castle)` — виконує ручну Annexation. **Використовує:** `player`, `region`, `is_ready_for_annexation`, `region.eligible_camp_player_ids[]`, `region.has_active_founding`, `castle`. **Викликає:** `can_annex_to()`, `Castle.can_annex_region()`, `Region.annex_to()`.
 
 ### Domain methods
 
 - `accept_army(army)` — validation, що Army має той самий `player` і знаходиться в `region`; actual relationship встановлює сама Army. **Використовує:** `player`, `region`, `armies[]`, `Army.player`, `Army.current_region`. **Викликає:** нічого.
-- `on_army_left(army)` — після очищення `Army.camp` перевіряє, чи Camp спорожнів; якщо так — деактивує instance, а control progress нового епізоду почнеться з нуля. **Використовує:** `player`, `armies[]`, `status`, `control_progress`, `region`. **Викликає:** `Region.restore_owner_control(player)` якщо цей Player досі є occupier і це був останній його Camp presence.
+- `on_army_left(army)` — після очищення `Army.camp` перевіряє, чи Camp спорожнів; якщо так — деактивує instance, а control progress нового епізоду почнеться з нуля. Якщо цей Player є occupier, вихід останньої його Army з Camp одразу припиняє Occupation. **Використовує:** `player`, `armies[]`, `status`, `control_progress`, `region`. **Викликає:** `Region.restore_owner_control(player)` якщо цей Player досі є occupier.
 - `get_defending_armies()` — повертає Army цього Camp, які фізично можуть брати участь у defense; Regrouping Army включаються, Movement Army не входять до `armies[]`. **Використовує:** `armies[]`, їх `state`. **Викликає:** нічого.
 - `validate_reorganization(armies)` — перевіряє, що всі Army належать цьому Camp і не перебувають у забороненому стані; Regrouping не дозволяє merge/split. **Використовує:** `armies[]`, input Army `state/camp/player`. **Викликає:** нічого.
-- `can_annex_to(castle)` — перевіряє Camp-level умови Annexation перед Castle-specific validation. **Використовує:** `is_ready_for_annexation`, `region.eligible_camp_player_ids[]`, `region.has_active_founding`, `home_castle_ids[]`. **Викликає:** `Castle.can_annex_region()`.
+- `can_annex_to(castle)` — перевіряє Camp-level умови Annexation перед Castle-specific validation; вимогу щодо home Castle конкретного Knight перевіряє сам `Castle.can_annex_region()` через relationships Camp/Army/Knight. **Використовує:** `is_ready_for_annexation`, `region.eligible_camp_player_ids[]`, `region.has_active_founding`, `castle`. **Викликає:** `Castle.can_annex_region()`.
 
 ### Triggers
 
