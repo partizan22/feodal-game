@@ -540,13 +540,9 @@ Attacker перед combat завжди є однією Army з одним Comma
 - поріг цільового бою (Target Combat Threshold);
 - поріг побічного бою (Incidental Combat Threshold).
 
-Класифікація визначається за актуальним станом світу безпосередньо перед combat.
+Для CombatSituation, що виникла під час Movement, використовується `target_opponent`, зафіксований для цієї CombatSituation при вході Army у Region. Якщо фактичний opponent збігається з цим `target_opponent`, combat є Target Combat; бій з будь-яким іншим Player є Incidental Combat. Подальша зміна ownership кінцевої Region сама по собі не перекласифіковує вже зареєстровану CombatSituation.
 
-Якщо opponent є гравцем, якому на цей момент формально належить кінцева Region Route, combat є Target Combat.
-
-Бій з будь-яким іншим гравцем є Incidental Combat.
-
-Якщо кінцева Region Neutral, будь-який player-vs-player combat для цієї Route є Incidental Combat.
+Для explicit player-vs-player attack між Camp у Neutral Region `target_opponent` Movement не використовується: це свідома атака на явно обраного Player, тому Attacker завжди використовує Target Combat Threshold.
 
 Incidental Combat Threshold може бути значно нижчим за Target Combat Threshold, щоб Army могла швидко залишити небажаний побічний бій.
 
@@ -633,17 +629,17 @@ Army/Unit із нульовим Defense Loss Threshold відходять до �
 
 Для решти використовується один спільний Defender threshold — мінімальний Defense Loss Threshold серед них.
 
-Якщо Defender програє, усі Army/Unit, що брали участь у combat, вважаються такими, що програли, і виконують Retreat за власними допустимими напрямками/пріоритетами. Casualties розподіляються тільки між силами, що фактично брали участь у combat; ті, що відійшли з нульовим threshold до початку розрахунку, casualties не отримують.
+Якщо Defender програє, усі Army/Unit, що брали участь у combat, вважаються такими, що програли, і виконують Retreat в **одну спільну Region**, вибрану для всієї Defender side за правилами розділу 23. Casualties розподіляються тільки між силами, що фактично брали участь у combat; ті, що відійшли до початку розрахунку, casualties не отримують.
 
 ---
 
 # 23. Retreat destination до Combat
 
-До початку combat для Attacker Army і для кожної окремої захисної Army/Unit, яка потенційно може Retreat, визначається допустима Region для Retreat.
+Для Attacker side і Defender side окремо визначається один набір допустимих сусідніх Region для Retreat. Допустимість не визначається окремо для кожної Army: усі Army однієї combat side знаходяться в тій самій combat Region, мають ту саму роль і того самого opponent, тому за правилами Retreat мають однаковий набір допустимих напрямків.
 
-Якщо для конкретної Army/Unit немає жодної допустимої Region, її loss threshold для цього combat примусово стає максимальним до визначення спільного Defender threshold.
+Якщо сторона не має жодної допустимої Region для Retreat, її loss threshold для цього combat примусово стає максимальним. Для Defender це застосовується до спільного Defender threshold.
 
-Це робиться до combat calculation, а не після нього.
+Це визначається до combat calculation, а не після нього.
 
 ## 23.1 Геометричне обмеження
 
@@ -673,7 +669,7 @@ Neutral Defense не блокує Retreat.
 2. Neutral Region;
 3. чужі Region, у які дозволено Retreat.
 
-У межах першої групи перевага надається Region, ближчій до власного Castle; у межах Neutral — ближчій до власної території; для чужих — за визначеним географічним критерієм.
+У межах першої групи кожна кандидатна Region оцінюється відносно Castle, до якого приєднана **сама ця Region**: перевага надається Region, ближчій до свого Castle. Це не home Castle конкретної Army і не Castle її Commander. У межах Neutral — ближчій до власної території; для чужих — за визначеним географічним критерієм.
 
 Для Attacker найвищий пріоритет має Region, з якої він увійшов у combat Region, якщо вона допустима. Інакше використовуються ті самі пріоритети.
 
@@ -683,7 +679,7 @@ Neutral Defense не блокує Retreat.
 
 # 24. Наслідки перемоги, поразки та Regrouping
 
-Після програного combat або добровільного Retreat для кожної Army/Unit визначається сусідня Region відходу за правилами розділу 23. У момент початку Retreat сила вважається такою, що вже залишила combat Region і увійшла в обрану сусідню Region, після чого рухається всередині неї до Camp.
+Після програного combat для сторони, що програла, визначається одна сусідня Region відходу за правилами розділу 23; усі її Army/Unit, що мають Retreat, використовують цю саму Region. Якщо до combat Retreat виконує лише частина Defender Army, для цієї Defender side так само вибирається одна Region, спільна для всіх Army, що відходять. У момент початку Retreat сила вважається такою, що вже залишила combat Region і увійшла в обрану сусідню Region, після чого рухається всередині неї до Camp.
 
 Цей рух займає той самий конфігураційний час, що й фінальна локальна ділянка від входу в Region до Camp. Поки Army рухається до Camp після Retreat, вона вже рахується фізично присутньою в Region відходу для правил, де така присутність має значення.
 
