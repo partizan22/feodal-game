@@ -22,7 +22,7 @@
 
 ```json
 {
-  "combat_start_delay_minutes": 5
+  "dt_minutes": 5
 }
 ```
 
@@ -213,13 +213,15 @@
 
 ```json
 {
-  "movement": {
-    "region_transit_minutes": null
+  "time": {
+    "dt_minutes": null
   }
 }
 ```
 
 Це не означає нуль і не повинно трактуватися runtime як робоче значення. Валідатор конфігурації має відмовитися запускати режим, який реально потребує `null`-параметра.
+
+У V1 окремі `combat_start_delay` / `regrouping_time` / `retreat_local_time` не задаються: ці фіксовані інтервали використовують одну `dt_minutes`. У майбутньому окремий speed coefficient може змінювати лише звичайний Transit.
 
 ## 5. Що перенесено зі старого simulation config
 

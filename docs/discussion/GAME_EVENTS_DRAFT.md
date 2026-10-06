@@ -15,78 +15,84 @@
 2. **Change Planned Route**
    - Тип: дія користувача.
    - Умова: Army рухається і маршрут ще можна змінити.
-   - Наслідок: змінюється майбутня частина маршруту.
+   - Наслідок: змінюється майбутня частина маршруту; вже зафіксований exit поточної Region та `Movement.target_opponent` самі не переобчислюються.
    - Модель: `? -> Movement`
 
-3. **Movement Direction Revealed**
+3. **Refresh Target Opponent**
+   - Тип: дія користувача.
+   - Умова: Army має active Movement.
+   - Наслідок: за актуальним станом final Region обчислюється pending `Movement.target_opponent`; значення застосовується при вході Army в наступну Region і не змінює вже зареєстровану CombatSituation.
+   - Модель: `? -> Movement`
+
+4. **Movement Direction Revealed**
    - Тип: trigger.
    - Умова: Movement проходить встановлену частку шляху через Region.
-   - Наслідок: backend game state не змінюється; виконується frontend update та notification для тих, хто має право бачити напрямок.
+   - Наслідок: `Movement.direction_revealed` переходить у true; projection/frontend може оновити доступний наступний exit direction і notification.
    - Модель: `Movement`
 
-4. **Next Region Reached**
+5. **Next Region Reached**
    - Тип: trigger.
    - Умова: Movement доходить до межі наступної Region.
    - Наслідок: Army входить у наступну Region; оновлюється рух і локальні процеси.
-   - Модель: `Movement -> Army, RegionControl`
+   - Модель: `Movement -> Army, Region`
 
-5. **Camp Reached**
+6. **Camp Reached**
    - Тип: trigger.
    - Умова: Army завершує локальний рух до Camp.
    - Наслідок: Army переходить у Camp; оновлюються локальна присутність і пов'язані процеси.
-   - Модель: `Movement -> Army, RegionControl`
+   - Модель: `Movement -> Army, Region, CampInRegion`
 
-6. **Enter Castle**
+7. **Enter Castle**
    - Тип: дія користувача.
    - Умова: Unit перебуває у відповідній Castle Region і є місце.
    - Наслідок: Unit переходить із Camp до Castle housing.
    - Модель: `? -> Knight, Castle`
 
-7. **Leave Castle**
+8. **Leave Castle**
    - Тип: дія користувача.
    - Умова: Unit перебуває у Castle.
    - Наслідок: Unit переходить із Castle housing до Camp.
    - Модель: `? -> Knight, Castle`
 
-8. **Stop Transit for Defense**
+9. **Stop Transit for Defense**
    - Тип: дія користувача.
    - Умова: Transit Army може зупинитися для захисту до battle start.
-   - Наслідок: Army припиняє Transit і додається до оборони.
+   - Наслідок: active Movement/старий Route завершується, Army переходить у Camp і стає potential defender цієї CombatSituation.
    - Модель: `? -> CombatSituation, Movement, Army`
 
 ## Army / Unit organization
 
-9. **Merge Armies**
+10. **Merge Armies**
    - Тип: дія користувача.
    - Умова: Armies можна об'єднати.
    - Наслідок: створюється об'єднана Army.
    - Модель: `? -> Army`
 
-10. **Split Army**
+11. **Split Army**
    - Тип: дія користувача.
    - Умова: поточний стан Army дозволяє поділ.
    - Наслідок: Army розділяється на кілька Armies.
    - Модель: `? -> Army`
 
-11. **Change Commander**
+12. **Change Commander**
    - Тип: дія користувача.
    - Умова: зміна Commander-in-Chief дозволена.
    - Наслідок: змінюється Commander-in-Chief Army.
    - Модель: `? -> Army`
 
-12. **Change Unit Composition**
+13. **Change Unit Composition**
    - Тип: дія користувача.
    - Умова: Unit перебуває у home Castle і зміна складу дозволена.
    - Наслідок: солдати переводяться `Castle reserve <-> Knight`.
    - Модель: `? -> Castle, Knight`
 
-13. **Change Combat Thresholds**
+14. **Change Combat Thresholds**
    - Тип: дія користувача.
    - Умова: поточний стан дозволяє змінити thresholds.
-   - Наслідок: змінюються loss/retreat thresholds Army.
+   - Наслідок: змінюються три persistent combat loss thresholds Army.
    - Модель: `? -> Army`
 
-14. **Change Allow Transit**
+15. **Change Allow Transit**
    - Тип: дія користувача.
    - Умова: власник Region змінює правило проходу.
    - Наслідок: змінюється `allow_transit` Region.
@@ -94,53 +100,65 @@
 
 ## Combat
 
-15. **Set Pre-Battle Retreat Decision**
+16. **Attack Player in Neutral Region**
    - Тип: дія користувача.
-   - Умова: battle ще не почався.
-   - Наслідок: фіксується або змінюється рішення Army про відступ.
+   - Умова: attacking Army перебуває у Camp Neutral Region, не Regrouping і не command-locked; target Player має active Camp у цій самій Region.
+   - Наслідок: реєструється CombatSituation з цією Army як єдиним attacker і target Player як зафіксованим defender; Movement `target_opponent` тут не використовується.
+   - Модель: `? -> Army, Region, CombatSituation`
+
+17. **Set Transit Decision**
+   - Тип: дія користувача.
+   - Умова: Active CombatSituation є NonAggressive Transit і Battle Start ще не настав.
+   - Наслідок: defender один раз фіксує `Allow` або `Fight`; ручне рішення immutable.
    - Модель: `? -> CombatSituation`
 
-16. **Battle Start / Resolve**
+18. **Set Pre-Battle Retreat Decision**
+   - Тип: дія користувача.
+   - Умова: CombatSituation Active, Army є potential defender і Battle Start ще не настав.
+   - Наслідок: фіксується або змінюється рішення цієї Army про pre-battle Retreat; legal destination є side-level для Defender.
+   - Модель: `? -> CombatSituation`
+
+19. **Battle Start / Resolve**
    - Тип: trigger.
    - Умова: досягнуто battle start і CombatSituation досі актуальна.
-   - Наслідок: розв'язується бій і застосовуються його наслідки; Castle створює KnightReplacement для Knights, які потребують replacement.
-   - Модель: `CombatSituation -> Army, Knight, Castle, RegionControl, KnightReplacement`
+   - Наслідок: розв'язується player-vs-player battle і застосовуються його наслідки. Загиблий Knight через `Knight.die()` створює KnightReplacement у своєму Castle незалежно від типу combat.
+   - Модель: `CombatSituation -> Army, Knight, Castle, Region, CampInRegion, Movement, KnightReplacement`
 
-17. **Attack Neutral Defense**
+20. **Attack Neutral Defense**
    - Тип: дія користувача.
    - Умова: війська Player у Camp Neutral Region можуть атакувати Neutral Defense.
-   - Наслідок: RegionControl створює CombatSituation і запускається бій.
-   - Модель: `? -> RegionControl, CombatSituation`
+   - Наслідок: миттєво розраховується спеціальний combat поза player-vs-player CombatSituation queue; за наявності City до current Neutral Defense додається full City Defense.
+   - Модель: `? -> Army, Region, City, Knight, Castle, KnightReplacement`
 
-18. **Regrouping Complete**
+21. **Regrouping Complete**
    - Тип: trigger.
    - Умова: завершився період Camp-Regrouping.
    - Наслідок: Army виходить із Regrouping.
    - Модель: `Army`
 
-## Territory / RegionControl
+## Territory / CampInRegion
 
-19. **RegionControl Ready**
+22. **Annexation Ready**
    - Тип: trigger.
-   - Умова: control progress досягає потрібного порога.
-   - Наслідок: RegionControl стає готовим до annexation.
-   - Модель: `RegionControl`
+   - Умова: `CampInRegion.control_progress` досягає потрібного порога.
+   - Наслідок: CampInRegion стає ready для manual Annexation.
+   - Модель: `CampInRegion`
 
-20. **Annex Region**
+23. **Annex Region**
    - Тип: дія користувача.
    - Умова: виконані умови annexation і вибрано допустимий Castle.
    - Наслідок: Region переходить у власність Player і приєднується до Castle.
-   - Модель: `? -> RegionControl, Region, Castle`
+   - Модель: `? -> CampInRegion, Region, Castle`
 
 ## Castle founding
 
-21. **Start Castle Founding**
+24. **Start Castle Founding**
    - Тип: дія користувача.
    - Умова: виконані умови founding.
    - Наслідок: Player створює CastleFounding і починається founding progress.
    - Модель: `? -> Player, CastleFounding`
 
-22. **Castle Founding Complete**
+25. **Castle Founding Complete**
    - Тип: trigger.
    - Умова: founding progress завершений і процес валідний.
    - Наслідок: створюється Castle, Region стає Castle Region, founder переходить до нового Castle.
@@ -148,43 +166,43 @@
 
 ## City
 
-23. **Raid City**
+26. **Raid City**
    - Тип: дія користувача.
    - Умова: війська Player можуть здійснити raid City.
    - Наслідок: застосовується raid reward і наслідки для City/Region.
-   - Модель: `? -> RegionControl, City`
+   - Модель: `? -> Army, City, Knight, Castle, KnightReplacement`
 
 ## Buildings і Castle development
 
-24. **Start Building Upgrade**
+27. **Start Building Upgrade**
    - Тип: дія користувача.
    - Умова: upgrade дозволений і є потрібні ресурси.
    - Наслідок: списуються витрати і створюється окремий BuildingUpgrade для цього будівництва.
    - Модель: `? -> Castle, BuildingUpgrade`
 
-25. **Building Upgrade Complete**
+28. **Building Upgrade Complete**
    - Тип: trigger.
    - Умова: BuildingUpgrade досягає завершення.
    - Наслідок: рівень будівлі збільшується; BuildingUpgrade переходить у завершений стан.
    - Модель: `BuildingUpgrade -> Castle`
 
-26. **Knight Replacement Complete**
+29. **Knight Replacement Complete**
    - Тип: trigger.
    - Умова: KnightReplacement досягає завершення.
    - Наслідок: створюється новий Knight у відповідному Castle; KnightReplacement переходить у завершений стан.
    - Модель: `KnightReplacement -> Castle, Knight`
 
-Початок Knight replacement не є окремою root GameEvent: це наслідок **Battle Start / Resolve**. За створення відповідного `KnightReplacement` відповідає `Castle`.
+Початок Knight replacement не є окремою root GameEvent: будь-який `Knight.die()` викликає створення відповідного `KnightReplacement` у home Castle, незалежно від того, чи death сталася в player-vs-player battle, Neutral Defense attack або City Raid.
 
 ## Resource Sites
 
-27. **Start ResourceSite Upgrade**
+30. **Start ResourceSite Upgrade**
    - Тип: дія користувача.
    - Умова: ResourceSite можна підвищити і є потрібні ресурси.
    - Наслідок: списуються витрати і створюється окремий ResourceSiteUpgrade для цього будівництва.
    - Модель: `? -> Region, ResourceSiteUpgrade`
 
-28. **ResourceSite Upgrade Complete**
+31. **ResourceSite Upgrade Complete**
    - Тип: trigger.
    - Умова: ResourceSiteUpgrade досягає завершення.
    - Наслідок: рівень ResourceSite збільшується; ResourceSiteUpgrade переходить у завершений стан.
@@ -192,13 +210,13 @@
 
 ## Recruitment
 
-29. **Add Recruitment Order**
+32. **Add Recruitment Order**
    - Тип: дія користувача.
    - Умова: recruitment дозволений і є потрібні ресурси.
    - Наслідок: order додається до recruitment queue; за потреби створюється Recruitment.
    - Модель: `? -> Castle, Recruitment`
 
-30. **Current Recruit Finished**
+33. **Current Recruit Finished**
    - Тип: trigger.
    - Умова: progress поточного recruit досяг завершення.
    - Наслідок: recruit завершується і queue переходить до наступного елемента.
@@ -206,19 +224,19 @@
 
 ## Economy boundaries
 
-31. **Food Empty Boundary**
+34. **Food Empty Boundary**
    - Тип: двонаправлений trigger.
    - Умова: стан `empty_food` змінюється.
    - Наслідок: перераховуються залежні rates/processes.
    - Модель: `Castle`
 
-32. **Coins Empty Boundary**
+35. **Coins Empty Boundary**
    - Тип: двонаправлений trigger.
    - Умова: стан `empty_coins` змінюється.
    - Наслідок: перераховуються залежні rates/processes.
    - Модель: `Player`
 
-33. **Storage Capacity Boundary**
+36. **Storage Capacity Boundary**
    - Тип: trigger.
    - Умова: ресурс досягає storage capacity.
    - Наслідок: подальший effective growth стає нульовим до зміни умов.
@@ -226,7 +244,7 @@
 
 ## Neutral Defense recovery
 
-34. **Neutral Defense Recovery Complete**
+37. **Neutral Defense Recovery Complete**
    - Тип: trigger.
    - Умова: виконані умови повного відновлення Neutral Defense.
    - Наслідок: Neutral Defense відновлюється до повного значення.
@@ -236,8 +254,8 @@
 
 Наступні зміни відбуваються як наслідки перелічених вище GameEvent і окремими root-подіями не вважаються:
 
-- створення/завершення RegionControl після movement/combat;
+- створення/завершення CampInRegion після Camp presence;
 - відновлення owner control після виходу occupier;
 - перерахунок `is_connection_valid` після зміни occupation/ownership;
-- створення KnightReplacement після загибелі Knight у battle;
+- створення KnightReplacement після будь-якого `Knight.die()`;
 - інші внутрішні виклики між моделями в межах поточної GameEvent.

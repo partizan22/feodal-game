@@ -47,23 +47,23 @@ Owned Region формально належить одному гравцю та 
 
 Власник сплачує регулярне утримання Region. Розмір утримання залежить від відстані до Castle через налаштовувану функцію.
 
+
 ## 2.3 Occupied
 
-Occupied Region формально продовжує належати попередньому власнику, але в ній перебувають у Camp війська одного ворожого гравця, які контролюють Region.
+Occupied Region формально продовжує належати попередньому власнику, але в її Camp є війська одного ворожого Player — поточного occupier.
 
 Під час Occupation:
 
-- попередній власник залишається формальним власником;
-- попередній власник продовжує сплачувати утримання Region;
-- Region не постачає власнику нормальний потік ресурсів;
-- окупант не отримує її ресурсний потік, доки не виконає Annexation;
-- якщо окупант повністю залишає Region без Annexation, контроль автоматично повертається формальному власнику.
+- формальний owner не змінюється і продовжує сплачувати утримання Region;
+- Region не дає формальному owner нормального економічного потоку;
+- occupier не отримує її економічний потік до Annexation;
+- Occupation припиняється в момент, коли **остання Army occupier залишає Camp**, а не лише після її виходу за межі Region; контроль одразу повертається формальному owner.
 
-У Region не може одночасно існувати кілька різних окупантів. Якщо інший гравець намагається перейти в Camp у вже Occupied Region, він повинен битися з поточним окупантом. Після перемоги він стає новим окупантом.
+У Region не може одночасно бути кілька occupier. Якщо третій Player входить у цю Region з локальною метою Camp, він взаємодіє з поточним occupier; після перемоги й переходу в Camp він стає новим occupier. Якщо перемагає формальний owner, Occupation припиняється й відновлюється звичайний Owned state.
 
-Звичайний Transit стороннього гравця через Occupied Region завжди дозволений; окупант не має налаштування, яке може його заборонити.
+Transit через Occupied Region не створює CombatSituation незалежно від того, хто проходить Region, включно з формальним owner. Для такого Transit не застосовуються Allow Transit та Aggressive/NonAggressive classification.
 
-Власник Occupied Region не може просто пройти через власну окуповану Region. Його вхід у неї призводить до атаки на окупанта.
+Якщо формальний owner входить у свою Occupied Region з локальною метою **Camp**, він атакує поточного occupier.
 
 ---
 
@@ -71,7 +71,7 @@ Occupied Region формально продовжує належати попе�
 
 Звичайна Region може бути Annexed до Castle лише тоді, коли вона межує принаймні з однією Region, яка вже належить цьому самому Castle. Таким чином усі звичайні володіння Castle повинні утворювати безперервний ланцюг до Castle Region.
 
-Якщо проміжна Owned Region стає Occupied, усі Owned Region за нею, що втратили безперервний шлях до Castle, не втрачаються юридично, але їх ресурсні потоки до Castle припиняються, доки зв'язок не відновиться.
+Якщо проміжна Owned Region стає Occupied, усі Owned Region за нею, що втратили безперервний шлях до Castle, не втрачаються юридично, але їх Wood/Stone/Iron/Food потоки та Gold/Silver income припиняються, доки зв'язок не відновиться.
 
 Якщо проміжна Region остаточно втрачається власником, усі його Region, які після цього не мають безперервного ланцюга власних Region до свого Castle, також автоматично втрачаються і стають Neutral.
 
@@ -123,83 +123,85 @@ Coins, Gold та Silver не мають складської місткості.
 
 ---
 
+
 # 5. ResourceSite і видобуток
 
 Region може містити кілька природних ResourceSite одного ресурсу.
 
 ResourceSite не обов'язково існують як окремі іменовані об'єкти. Для кожного ресурсу в Region достатньо зберігати кількість ResourceSite кожного рівня.
 
-Природна кількість ResourceSite є властивістю Region. Їх рівень розвитку може змінювати власник.
+Природна кількість ResourceSite є властивістю Region. Їх рівень розвитку може змінювати власник за правилами Upgrade.
 
 Для одного типу ресурсу ResourceSite розвиваються пошарово. Гравець може покращувати будь-яку кількість ResourceSite, що знаходяться на поточному мінімальному рівні. Не можна починати наступний рівень для частини ResourceSite, доки всі ResourceSite цього ресурсу в Region не досягли попереднього рівня.
 
-Структурно видобуток масового ресурсу визначається як:
+Базове виробництво визначається без distance penalty:
 
-`Production = DistanceEfficiency(distance) × Σ ResourceSiteOutput(level_i)`
+LocalProduction = Σ ResourceSiteOutput(level_i)
 
-де конкретні функції `DistanceEfficiency` та `ResourceSiteOutput` задаються конфігурацією.
+Для Wood, Stone та Iron у Owned non-Occupied Region з чинною територіальною зв'язністю позитивне виробництво надходить до Castle з коефіцієнтом відстані:
 
-Для Gold і Silver множник відстані не застосовується:
+CastleFlow = LocalProduction × DistanceEfficiency(distance)
 
-`ProductionPrecious = Σ ResourceSiteOutput(level_i)`
+Для Gold і Silver distance coefficient не застосовується. Їх production зараховується до глобального балансу Player тільки якщо Region є Owned, не Occupied і має чинну територіальну зв'язність.
+
+Occupied або disconnected Region не передає ці ресурси формальному owner.
 
 Розвиток ResourceSite має власну вартість і час, що задаються конфігурацією.
 
 ---
 
+
 # 6. Food та населення
 
-Будівлі Castle створюють населення (Population) відповідно до конфігурації. Population у V1 не є окремою складною системою і впливає насамперед на постійне споживання Food у Castle.
+Будівлі Castle створюють Population відповідно до конфігурації. Population у V1 не є окремою складною системою і впливає насамперед на постійне споживання Food у Castle.
 
-Population не визначає виробництво, податки, кількість робітників або максимальну чисельність армії.
+Один Soldier незалежно від Type споживає однакову кількість Food. Один Knight також рахується як одна food-consumption unit.
 
-## 6.1 Food в Owned Region
+Food shortage не замінює звичайний Coin upkeep військ: компенсація нестачі Food у Coins додається поверх нього. Для всієї гри використовується один конфігураційний курс coins_per_food.
 
-Region виробляє Food через свої ResourceSite.
+## 6.1 Army у Camp звичайної Region
 
-Війська, які перебувають у Camp у Region, спочатку споживають локальне виробництво Food.
+Army у Camp або Regrouping споживають локальне Food production Region.
 
-Нехай:
+Якщо Food достатньо, локальне production покриває весь Camp consumption. Якщо Food недостатньо, доступна кількість ділиться між Player пропорційно сумарному Food consumption їхніх Camp-військ у цій Region. Жоден Player або Army не має пріоритету.
 
-`LocalBalance = LocalFoodProduction - LocalTroopConsumption`
+Непокритий дефіцит кожного Player компенсується Coins за coins_per_food.
 
-Якщо `LocalBalance >= 0`, до Castle надходить надлишок із поправкою на відстань:
+Для звичайної Owned non-Occupied Region з чинною територіальною зв'язністю тільки **позитивний** залишок Food після Camp consumption передається до Castle з DistanceEfficiency(distance). Castle не постачає Food назад у звичайні Region. Негативний локальний balance ніколи не перетворюється на demand до Castle.
 
-`CastleFlow = LocalBalance × DistanceEfficiency(distance)`
+У Neutral, foreign, Occupied або disconnected Region діє та сама локальна Camp-consumption логіка, але позитивний залишок не надходить до Castle формального owner.
 
-Якщо `LocalBalance < 0`, Region потребує постачання з Castle, причому відстань збільшує необхідний обсяг:
+## 6.2 Castle Region
 
-`CastleFlow = LocalBalance / DistanceEfficiency(distance)`
+Castle Region є спеціальним випадком.
 
-Це не означає фізичне моделювання обозів: логістика агрегована формулою.
+Food consumption Army у Camp/Regrouping Castle Region не віднімається від локального production самої Region. Уся позитивна Food production Castle Region надходить у Castle з coefficient 1.
 
-## 6.2 Food у Neutral та чужих Region
+Food consumption усіх Army у Camp/Regrouping Castle Region віднімається вже на рівні Food balance Castle разом із non-military consumption.
 
-Війська в Camp у Neutral або чужій Region також використовують локальне виробництво Food.
+Якщо запас Food Castle дорівнює 0 і його Food balance від'ємний, непокрита частина компенсується Coins за тим самим coins_per_food.
 
-Якщо його недостатньо, дефіцит у V1 замінюється додатковою витратою Coins за налаштовуваним правилом. Окрема система постачання Food у чужі або нейтральні Region не моделюється.
+## 6.3 Army у Movement
 
-## 6.3 Війська в Movement
+Army у Movement не використовує Food жодної Region або Castle.
 
-Під час Movement війська не створюють локального споживання Food.
-
-Замість цього їх Coin upkeep вищий, ніж у Camp. Конкретні ставки є балансними параметрами.
+Увесь її Food-equivalent consumption повністю компенсується Coins за coins_per_food протягом усіх movement phases, включно з Transit, final-local, retreat-local та paused-for-combat Movement.
 
 ## 6.4 Дефіцит
 
-Фактичний запас Food і Coins не може ставати від'ємним. Від'ємний розрахунковий баланс сам по собі не забороняє будівництво, Upgrade або інші дії, якщо для їх одноразової вартості достатньо фактично наявних ресурсів.
+Фактичний запас Food і Coins не може ставати від'ємним. Від'ємний розрахунковий balance сам по собі не забороняє Building Upgrade або іншу одноразову дію, якщо для її upfront cost достатньо фактичних ресурсів.
 
-Castle перебуває у стані нестачі Food, коли запас Food дорівнює нулю і поточний Food balance непозитивний. У цьому стані Recruitment у Castle не може починатися або продовжуватися. Якщо Food balance від'ємний, фактична нестача Food компенсується додатковою витратою Coins за налаштовуваним правилом; при нульовому Food balance додаткової нестачі немає.
+Castle має empty_food, коли Food == 0 && food_balance <= 0. У цьому стані Recruitment не може починатися або продовжуватися. Додаткова Coin compensation виникає тільки при food_balance < 0.
 
-Player перебуває у стані нестачі Coins, коли запас Coins дорівнює нулю і поточний Coin balance непозитивний. У цьому стані:
+Player має empty_coins, коли Coins == 0 && coin_balance <= 0. У цьому стані:
 
-- активні Recruitment Queue ставляться на pause;
-- нові Recruitment order не можна створювати;
+- active Recruitment pause-иться;
+- нові Recruitment orders не створюються;
 - Wealth City не зростає.
 
-Коли відповідний дефіцит припиняється, призупинені процеси автоматично можуть продовжитися, якщо немає інших причин блокування.
+Після зникнення блокуючої умови призупинені процеси автоматично можуть продовжитися.
 
-V1 не вводить окремих штрафів голодування, загибелі населення, автоматичного розпуску військ чи інших додаткових каскадних наслідків одночасної відсутності Food і Coins.
+V1 не вводить окремих штрафів голодування, автоматичного розпуску військ або загибелі населення через одночасну відсутність Food і Coins.
 
 ---
 
@@ -327,44 +329,30 @@ Recruitment також ставиться на pause, якщо Castle переб
 
 ---
 
+
 # 10. Unit та Army
 
-Базовий загін (Unit) складається рівно з одного Knight і нуля або більше Soldier.
+Gameplay Unit складається рівно з одного Knight і нуля або більше Soldier. Knight без Soldier є повноцінним Unit.
 
-Knight без Soldier є повноцінним Unit.
+Unit має home Castle, який збігається з home Castle його Knight. Внутрішній склад Unit можна змінювати лише у home Castle за звичайних умов Barracks.
 
-Unit має home Castle, який збігається з home Castle його Knight. Внутрішній склад Unit можна змінювати лише у home Castle.
-
-Unit може містити Soldier кількох Type.
-
-Кілька Unit можуть бути об'єднані в армію (Army).
-
-Army має одного головнокомандувача (Commander-in-Chief), вибраного серед Knight, що входять до її Unit.
-
-Постійною структурною одиницею залишається Unit. Army не містить вкладених Army: при об'єднанні попередня структура Army не зберігається.
+Кілька Unit можуть бути об'єднані в Army. Army має одного Commander-in-Chief, вибраного серед Knight цієї Army. Army не містить вкладених Army; при merge попередня Army-структура не зберігається.
 
 У V1 немає жорсткого ліміту Soldier у Unit або Unit в Army.
 
-У Camp можна:
+Merge, split і зміна Commander дозволені для Army одного Player в одному Camp, включно з Regrouping, якщо відповідні Army не command-locked активною/очікуючою CombatSituation. Сам Regrouping не забороняє реорганізацію.
 
-- об'єднувати Unit/Army, що знаходяться в одній Region;
-- розділяти Army;
-- від'єднувати частину Unit;
-- змінювати Commander-in-Chief.
+Зміна складу Soldier виконується тільки через Castle reserve <-> Knight у home Castle і також не допускається для command-locked Army.
 
-Під час Movement або Regrouping такі структурні зміни заборонені.
-
-Кожний самостійний Unit або Army має три налаштування порогів втрат:
+Кожна Army має три persistent loss threshold:
 
 - Defense Loss Threshold;
 - Target Combat Threshold;
 - Incidental Combat Threshold.
 
-Усі три значення задаються під час формування Unit або Army. Гравець може змінювати їх у будь-який момент, у тому числі під час Movement. Якщо combat уже почався, для нього використовуються значення, зафіксовані в момент початку combat; подальша зміна вплине лише на наступні combat.
+Threshold можна змінювати під час Camp, Regrouping або Movement, доки Army не command-locked CombatSituation. Після Registration attacker уже locked; potential defender отримує lock на CombatSituation Start. Значення конкретного battle остаточно фіксуються на Battle Start.
 
-При об'єднанні Army усі три threshold задаються для нової Army заново. Попередні threshold складових Unit/Army не зберігаються як приховані значення.
-
-Після розділення кожна нова частина отримує всі три поточні threshold колишньої Army і зберігає їх, доки гравець не змінить їх явно.
+При merge thresholds нової Army задаються явно. Після split нові Army отримують поточні thresholds вихідної Army, доки Player не змінить їх.
 
 ---
 
@@ -389,192 +377,171 @@ Army має одного головнокомандувача (Commander-in-Chie
 
 ---
 
+
 # 12. Upkeep військ
 
-У V1 є три базові режими upkeep Soldier:
+Soldier і Knight мають регулярний Coin upkeep, незалежний від Food. Конкретні ставки та можливі відмінності між Castle/Camp задаються конфігурацією.
 
-1. у Castle/Barracks — найнижчі регулярні витрати;
-2. у Camp поза Barracks — більше Food і Coins;
-3. у Movement — Food локально не споживається, але Coin upkeep вищий.
+Food consumption є окремою системою. Компенсація Food shortage у Coins завжди додається до звичайного Coin upkeep, а не замінює його.
 
-Knight та елітні Soldier можуть мати власні додаткові Coin upkeep за конфігурацією.
+Для Army у Movement весь її Food-equivalent consumption додатково переводиться в Coins за coins_per_food.
 
 ---
 
-# 13. Route, Movement і локальний режим
+# 13. Route, Movement, Dt і фіксація наміру
 
-Маршрут (Route) — це кінцева Region і послідовність Region, через які проходить Army до неї. Гравець задає кінцеву Region і фізичний Route, але не задає окрему команду `attack/camp/transit`: локальний режим у кожній Region і результат у кінцевій Region визначаються автоматично за актуальним станом світу.
+Player задає Army фізичний Route та кінцеву Region. Локальна мета Camp або Transit визначається самим movement order і після входу в поточну Region не переобчислюється через зміну ownership, Occupation або наявності військ.
 
-У контексті пересування Unit/Army має два базові стани:
+Проміжна Region маршруту проходиться як Transit. Якщо поточна Region є кінцевою для цього order, Army рухається до Camp. CombatSituation може pause-ити цей рух, але не змінює початкову локальну мету.
 
-- Camp;
-- Movement.
+У V1 використовується одна базова константа часу Dt:
 
-Transit не є окремим глобальним станом: це локальний режим проходження поточної Region.
+- Camp -> entry у сусідню Region: Dt;
+- entry у Region -> Camp: Dt;
+- базовий звичайний Transit однієї Region: Dt;
+- CombatSituation Start -> Battle Start: Dt;
+- звичайний Retreat entry -> Camp: Dt;
+- Regrouping: Dt.
 
-Проходження поточної Region займає налаштовуваний час `D`. У V1 базова швидкість однакова й terrain її не змінює; надалі час проходження може залежати від Army або інших правил.
+У майбутньому speed modifier може змінювати тільки звичайний Transit без CombatSituation; інші перелічені інтервали лишаються рівно Dt.
 
-## 13.1 Проходження Route
+Якщо Player змінює Route під час Transit, зміна стосується тільки майбутньої частини маршруту. Уже зафіксований exit із поточної Region не змінюється. Army не може зупинитися посеред Neutral Transit і перетворити його на Camp; щоб зупинитися там, вона повинна вийти й зайти знову з відповідною метою. Виняток — Transit Army defender, яка явно приєднується до вже Active CombatSituation за правилами розділу 17.
 
-Якщо Army знаходиться в Camp у `A0` і Route має вигляд `A1 -> A2 -> ... -> Af`, після наказу вона переходить у Movement і починає проходження `A0` у напрямку `A1`.
+Після половини поточного Transit іншим Player може бути відкритий тільки наступний exit direction, а не весь Route.
 
-Після завершення проходження поточної Region Army входить у наступну Region і починає її проходження. У проміжній Region її локальною метою є вихід у наступну Region Route.
+## 13.1 Target opponent Movement
 
-У кінцевій Region `Af` локальною метою є Camp або точка взаємодії, яка визначається актуальним станом Region. Вхід у кінцеву Region і досягнення Camp/точки взаємодії — не один момент: після входу Army ще проходить фінальну локальну ділянку. Момент її завершення надалі називається Arrival Resolution. У V1 ця ділянка використовує той самий базовий час `D`.
+При створенні Movement фіксується target_opponent за станом final Region:
 
-Таким чином початкова і фінальна Region не мають нульового часу: в початковий `D` умовно входить збір і вихід, а у фінальний — розгортання Camp або підготовка до взаємодії.
+- Neutral -> null;
+- Owned non-Occupied Player B -> B;
+- Owned Occupied Player C -> поточний occupier C.
 
-## 13.2 Фіксація локального руху після входу
+target_opponent є характеристикою **Movement**, а не Army. Подальша зміна ownership/Occupation final Region автоматично його не змінює.
 
-Після входу Army в Region її локальна мета в цій Region і напрямок виходу, якщо вона проходить Region транзитом, фіксуються. За загальним правилом Army не може миттєво зупинитися, розвернутися або змінити вже зафіксований вихід усередині Region.
-
-Якщо гравець змінює Route під час проходження проміжної Region, новий Route застосовується починаючи з наступної Region.
-
-Якщо Army вже рухається в кінцевій Region до Camp/точки взаємодії, вона повинна завершити цю локальну фазу. Гравець може заздалегідь задати наступний Route, але він почнеться лише після досягнення Camp і завершення поточної взаємодії.
-
-Спеціальний виняток із фіксації локального руху — можливість власної Transit Army зупинитися та долучитися до оборони своєї Region за правилами розділу 17.
-
-## 13.3 Відкриття напрямку руху
-
-На початку проходження Region іншим гравцям не обов'язково відомо, через яку сусідню Region Army вийде далі. Після проходження половини локального часу її напрямок виходу вважається визначеним і може використовуватися для попереджень та іншої ігрової інформації.
-
-Це не відкриває весь майбутній Route: показується лише вже визначений напрямок виходу з поточної Region.
-
-## 13.4 Кінцева Region
-
-В Arrival Resolution система використовує актуальний стан Region:
-
-- якщо Camp дозволений без бою — Army переходить у Camp;
-- якщо для переходу в Camp потрібен бій — запускається відповідний combat;
-- якщо Army виграє та результатом взаємодії є Camp — вона переходить у Camp;
-- якщо Region Neutral, присутність чужих Army у Camp сама по собі не створює автоматичного бою.
-
-Якщо кінцева Region була чужою, але до Arrival Resolution перестала вимагати бою, окремої «старої атаки» не існує: Army переходить у Camp за новим станом.
-
-Якщо Region стала ворожою вже після початку походу, combat може виникнути автоматично за її актуальним станом.
+Player може явно виконати refresh target opponent. Нове значення обчислюється в момент refresh, зберігається як pending і набуває чинності тільки при вході Army в наступну Region. Уже зареєстрована CombatSituation від цього не змінюється.
 
 ---
 
 # 14. Transit і Aggressive Transit
 
-Проміжні Region проходяться у локальному режимі Transit або агресивного транзиту (Aggressive Transit).
+Звичайний Transit через Neutral Region не створює територіальної CombatSituation.
 
-Aggressive Transit визначається автоматично, а не вибирається гравцем.
+При вході чужої Army в Owned non-Occupied Region CombatSituation реєструється і для Camp, і для Transit.
 
-При вході у чужу Owned Region транзитом система перевіряє актуальний статус кінцевої Region Route.
+Для Transit такої CombatSituation на Start використовується snapshot target_opponent, зафіксований при Registration:
 
-Якщо за незмінного поточного статусу кінцевої Region її досягнення спричинило б combat з гравцем `A`, і поточна транзитна Region належить тому самому гравцю `A`, локальний режим у цій Region — Aggressive Transit.
+- якщо formal owner поточної Region == target_opponent -> Aggressive Transit;
+- інакше -> NonAggressive Transit.
 
-В інших випадках локальний режим — Transit.
-
-Occupied Region для сторонніх гравців завжди дозволяє Transit і не переводить його в Aggressive Transit лише через присутність окупанта.
-
-Після входу в Region локальний режим і напрямок виходу з неї фіксуються до завершення її проходження, крім явно описаних винятків для оборони власної Region.
+Occupied Region є винятком: Transit через неї CombatSituation не створює взагалі, Allow Transit не застосовується, Aggressive/NonAggressive classification не визначається.
 
 ---
 
-# 15. Allow Transit для Owned Region
+# 15. Allow Transit для Owned non-Occupied Region
 
-Кожна Owned Region має налаштування рівня Region `Allow Transit`.
+Allow Transit є fallback rule тільки для NonAggressive Transit через Owned non-Occupied Region.
 
-Якщо `Allow Transit` увімкнений, чужа Army з локальним режимом Transit проходить Region без бою незалежно від наявності військ власника.
+На CombatSituation Start, якщо у defender немає жодної Army у Camp/Regrouping або вже entered-for-Camp, battle context не виникає: attacking Transit Army продовжує Route. Defender Transit Army самі по собі не створюють можливості interception.
 
-Якщо `Allow Transit` вимкнений і в Region є війська власника, Transit викликає бій.
+Якщо Camp/Camp-bound defense context є, defender протягом Dt може один раз вручну обрати:
 
-Для Aggressive Transit `Allow Transit` не застосовується.
+- Allow — CombatSituation завершується без battle, attacker продовжує Transit;
+- Fight — situation доходить до Battle Start.
 
-Для Occupied Region окупант не має такого налаштування: Transit сторонніх гравців завжди дозволений.
+Ручний вибір immutable. Якщо його немає до Battle Start, використовується поточне Allow Transit: true -> Allow, false -> Fight.
 
-При вирішенні взаємодії використовується актуальне значення `Allow Transit`, а не значення на момент видачі Route order.
-
----
-
-# 16. Попередження власника Region і уникнення бою
-
-Власник Owned Region отримує інформацію про наближення чужої Army за певний налаштовуваний час до її фактичного входу. На цьому етапі він може знати сам факт і напрямок наближення, але не обов'язково всі подальші наміри або Route противника.
-
-Якщо до моменту входу чужої Army захисний Unit уже перейшов із Camp у Movement, він не бере участі в обороні, навіть якщо фізично ще не завершив проходження Region. Такий вихід не є Retreat і не створює Regrouping.
-
-Якщо вхід чужої Army створює майбутню бойову ситуацію, combat починається не в момент входу, а у визначений правилами момент після проходження Region. Для combat, який ініціюється між Army, що вже перебувають у Camp в одній Neutral Region, використовується окремий конфігураційний Combat Start Delay.
-
-Після входу чужої Army і до моменту початку combat захисник може зафіксувати рішення про Retreat. Сам відхід починається лише в момент, коли мав початися combat. Такий Retreat прирівнюється до програного combat без втрат і використовує ті самі правила відходу та Regrouping, що й звичайна поразка.
+Для Aggressive Transit Allow Transit не застосовується. Якщо defense context є, battle відбувається.
 
 ---
 
-# 17. Власні Army, що вже рухаються через атаковану Region
+# 16. CombatSituation: Registration, Start і FIFO
 
-Якщо в момент входу чужої Army через Owned Region уже транзитом рухається Army власника, власник до початку combat може наказати їй зупинитися та долучитися до оборони.
+Одна CombatSituation завжди має рівно одну attacking Army. Дві Army одного Player створюють окремі situations.
 
-Це спеціальний виняток із загального правила, за яким локальний Transit не можна змінити після входу в Region.
+CombatSituation реєструється, коли:
 
-Зупинитися можна лише доки Army ще не завершила проходження Region і combat ще не почався.
+- чужа Army входить у Owned non-Occupied Region — Camp або Transit;
+- Army входить у Occupied Region з локальною метою Camp і не є current occupier;
+- Region стає Occupied, коли Camp-bound Army formal owner уже ввійшла в неї, але запізно для попередньої defense;
+- Army у Camp Neutral Region явно атакує конкретного іншого Player, який має active Camp у цій самій Region.
 
-Якщо власник не скористався винятком до початку combat, Army продовжує Transit і не бере участі в бою незалежно від його результату.
+У кожній Region існує одна спільна FIFO-черга **всіх** player-vs-player CombatSituation незалежно від пар Player. Одночасно Active може бути максимум одна.
 
-Якщо власна Army була відправлена в Region ще до входу нападника, але сама входить у неї вже після нападника та до початку combat:
+Якщо черги немає, Start відбувається одразу після Registration. Інакше situation лишається Registered і Start-ує тільки після завершення попередніх. Queued attacker command-locked: Movement attacker pause-иться зі збереженням route/context, Camp attacker фізично лишається в Camp.
 
-- якщо її локальний режим — Transit, вона продовжує Transit;
-- якщо її кінцева точка — ця Region, вона автоматично долучається до оборони;
-- якщо на момент її входу Region уже стала Occupied, вона автоматично атакує окупанта незалежно від того, яким був її початковий Route intent.
+Для territorial situation defender Player визначається тільки на Start за актуальним interaction. Для explicit attack у Neutral Region конкретний defender Player фіксується вже на Registration і situation ніколи не retarget-иться на іншого Player.
 
-Після початку combat нові Army не приєднуються до вже розпочатого бою.
+Якщо на власному Start interaction уже не існує, situation завершується без battle. Queued situation не видаляється наперед лише тому, що її майбутні умови змінилися.
 
----
+Від Start до Battle Start завжди проходить повний Dt, якщо situation не завершилась достроково без battle.
 
-# 18. Combat roles і пороги втрат
-
-У кожному combat є атакуюча (Attacker) і захисна (Defender) сторона.
-
-Attacker перед combat завжди є однією Army з одним Commander-in-Chief.
-
-У Defender можуть одночасно брати участь кілька окремих Army/Unit одного гравця. Вони не об'єднуються організаційно, але для цього combat утворюють одну Defender side.
-
-Якщо в Neutral Region знаходяться війська третього гравця, combat між двома іншими гравцями їх не стосується.
-
-Усі threshold для конкретного combat фіксуються в момент його початку. Зміна налаштувань після цього не впливає на вже розпочатий combat.
-
-## 18.1 Target Combat та Incidental Combat
-
-Для Attacker існують два різні loss threshold:
-
-- поріг цільового бою (Target Combat Threshold);
-- поріг побічного бою (Incidental Combat Threshold).
-
-Для CombatSituation, що виникла під час Movement, використовується `target_opponent`, зафіксований для цієї CombatSituation при вході Army у Region. Якщо фактичний opponent збігається з цим `target_opponent`, combat є Target Combat; бій з будь-яким іншим Player є Incidental Combat. Подальша зміна ownership кінцевої Region сама по собі не перекласифіковує вже зареєстровану CombatSituation.
-
-Для explicit player-vs-player attack між Camp у Neutral Region `target_opponent` Movement не використовується: це свідома атака на явно обраного Player, тому Attacker завжди використовує Target Combat Threshold.
-
-Incidental Combat Threshold може бути значно нижчим за Target Combat Threshold, щоб Army могла швидко залишити небажаний побічний бій.
-
-## 18.2 Defense Loss Threshold при кількох захисних Army
-
-Кожна окрема захисна Army/Unit має свій Defense Loss Threshold.
-
-Перед розрахунком combat усі захисні Army/Unit із `Defense Loss Threshold = 0` виконують Retreat без casualties і не додають свою Combat Strength до Defender side.
-
-Якщо після цього захисних сил не залишилось, combat не розраховується: Attacker вважається переможцем, а всі сили, що відійшли, переходять у Regrouping за звичайними правилами.
-
-Для всіх захисних Army/Unit, що залишились, спільним threshold Defender side стає найменший із їхніх Defense Loss Threshold. Їх Combat Strength підсумовується, і вони беруть участь у combat як одна сторона до завершення всього combat.
-
-Це означає, що у V1 combat вважається програним Defender, щойно досягнуто найнижчого ненульового threshold серед його сил. Незалежного багатоетапного виходу окремих захисних Army у V1 немає.
-
-Максимальний threshold означає відсутність добровільного Retreat через втрати: сила або перемагає, або може бути знищена повністю.
+Попередження про наближення Army та UI-деталі не змінюють цих lifecycle rules.
 
 ---
 
-# 19. Combat у Neutral Region
+# 17. Defender participation і pre-battle decisions
 
-Player-vs-player combat у Neutral Region може бути ініційований лише тоді, коли обидва гравці вже мають війська в Camp у цій самій Region.
+На CombatSituation Start фіксуються potential defenders defender Player:
 
-Не можна атакувати чужу Army в Neutral Region з сусідньої Region і не можна атакувати її під час власного Transit.
+- Army у Camp;
+- Army у Regrouping;
+- Army, яка ввійшла в Region з локальною метою Camp не пізніше Start.
 
-Атака спрямовується не на окрему Army, а на гравця. Усі його Army/Unit, що перебувають у Camp у цій Region і не виключені з combat іншими правилами, входять до Defender side.
+Army, що вже вийшла з Camp, та Army, яка входить після Start, не можуть брати участі в цій CombatSituation.
 
-Після ініціювання combat він починається через конфігураційний Combat Start Delay. Якщо до моменту початку combat у Defender більше немає жодних військ у Camp, combat не відбувається.
+Окремо defender Army, яка ввійшла для Transit **до Start** і на Start ще не вийшла, стає transit defender candidate. Вона продовжує Transit і не отримує lock автоматично. До Battle Start і до фактичного виходу з Region Player може явно залишити її для defense. Тоді її старий Movement/Route припиняється, Army переходить у звичайний Camp, стає potential defender і отримує combat command-lock.
 
-У такому combat ролі Attacker і Defender зберігаються для loss threshold, Retreat logic та інших наслідків, але для розрахунку сили обидві сторони використовують Attack характеристики Soldier.
+Potential defender до Battle Start може отримати індивідуальне рішення Retreat. Це рішення не split-ить і не реорганізує Army. Destination Retreat визначається один раз для всієї Defender side за правилами розділу 23.
 
-Присутні в цій самій Neutral Region війська третіх гравців combat не зачіпає.
+За відсутності ручних Retreat decisions Camp/Regrouping/entered-for-Camp Army лишаються для battle. Transit candidates без явного join продовжують Transit.
+
+Після pre-battle decisions спільний Defender threshold дорівнює мінімальному defense_loss_threshold Army, які фактично лишилися для battle, якщо інше не випливає з відсутності legal Retreat за розділом 23. Окремого threshold, який задається на рівні CombatSituation, немає.
+
+Potential defenders після Start command-locked для Movement, merge/split, зміни Commander і composition до завершення situation. Combat-specific Retreat/join decisions залишаються доступними там, де це передбачено.
+
+Army defender Player, що входить після Start, не reinforcement. Якщо після завершення поточного battle Region уже Occupied, Camp-bound Army formal owner може створити нову CombatSituation проти occupier; Transit продовжується без CombatSituation.
+
+---
+
+# 18. Combat roles і loss thresholds
+
+Attacker у player-vs-player CombatSituation завжди одна Army. Defender може складатися з кількох Army одного Player.
+
+Attacker має Target Combat Threshold і Incidental Combat Threshold.
+
+Для CombatSituation, зареєстрованої через Movement:
+
+- якщо фактичний defender Player == snapshot target_opponent цієї situation, використовується Target Combat Threshold;
+- інакше використовується Incidental Combat Threshold.
+
+Для explicit attack між Camp у Neutral Region завжди використовується Target Combat Threshold, бо це свідома атака на явно обраного Player і Movement target_opponent тут не застосовується.
+
+Кожна defender Army приносить власний persistent Defense Loss Threshold. Після pre-battle Retreat decisions один спільний Defender threshold дорівнює мінімальному значенню серед participating Army.
+
+Defense Loss Threshold 0 **не є автоматичним pre-battle Retreat command**. Army відходить до battle тільки за explicit Retreat decision. Якщо Army з threshold 0 лишається participant, вона бере участь у спільній Defender side з цим значенням threshold.
+
+Якщо сторона не має жодної legal Retreat Region, її threshold для цього battle примусово стає максимальним. Для Defender це застосовується до спільного threshold.
+
+Фактичні thresholds, strengths та інші combat parameters lock-яться на Battle Start.
+
+---
+
+# 19. Player-vs-player combat у Neutral Region
+
+Explicit attack у Neutral Region можливий Army у Camp проти конкретного іншого Player, який має active Camp у цій самій Neutral Region. Після Registration актуальність уже зафіксованої interaction на Start перевіряється ширше: defender Player повинен мати Camp/Regrouping presence або Army, що вже entered-for-Camp.
+
+На Registration defender Player фіксується. На Start situation або лишається атакою саме проти нього, або завершується без battle; retarget на третього Player не відбувається.
+
+До defender side застосовуються ті самі правила potential defenders, Transit join, pre-battle Retreat та command-lock, що й у territorial CombatSituation.
+
+Battle Start настає через Dt і situation використовує ту саму загальну FIFO-чергу Region.
+
+Для розрахунку сили і Attacker, і Defender використовують Attack characteristics Soldier. Attacker використовує Target Combat Threshold.
+
+Для Retreat напрямкового обмеження за вектором входу немає: обидві сторони розглядають усі шість сусідніх Region за іншими правилами Retreat.
+
+Camp/Transit війська третіх Player у цей battle не включаються.
 
 ---
 
@@ -619,93 +586,86 @@ Combat завершується, коли одна зі сторін першо�
 
 ---
 
+
 # 22. Об'єднана Defender side
 
-Якщо Defender складається з кількох окремих Army/Unit, вони зберігають власну організаційну структуру, але їх сила для combat об'єднується.
+Якщо Defender складається з кількох Army, вони зберігають власну організаційну структуру, але для combat утворюють одну Defender side.
 
-Combat Strength кожної Army спочатку розраховується окремо з її власним Commander-in-Chief coefficient. Після цього сили всіх Army/Unit, що беруть участь в обороні, підсумовуються у загальну Combat Strength Defender side.
+Combat Strength кожної Army спочатку розраховується окремо з її власним Commander-in-Chief coefficient. Після цього сили всіх participating defender Army підсумовуються.
 
-Army/Unit із нульовим Defense Loss Threshold відходять до цього розрахунку і не додають сили.
+До combat можуть бути виключені тільки Army, для яких Player явно задав pre-battle Retreat або які інакше не є participant за правилами CombatSituation. Саме значення Defense Loss Threshold, включно з 0, не видаляє Army з battle автоматично.
 
-Для решти використовується один спільний Defender threshold — мінімальний Defense Loss Threshold серед них.
+Спільний Defender threshold дорівнює мінімальному Defense Loss Threshold participating Army. Якщо Defender side не має жодної legal Retreat Region, цей спільний threshold примусово стає максимальним.
 
-Якщо Defender програє, усі Army/Unit, що брали участь у combat, вважаються такими, що програли, і виконують Retreat в **одну спільну Region**, вибрану для всієї Defender side за правилами розділу 23. Casualties розподіляються тільки між силами, що фактично брали участь у combat; ті, що відійшли до початку розрахунку, casualties не отримують.
+Якщо Defender програє, усі Army, що брали участь, вважаються такими, що програли, і використовують **одну спільну Retreat Region**, вибрану для всієї Defender side. Casualties розподіляються тільки між фактичними participants; Army, що виконали pre-battle Retreat, casualties не отримують.
 
 ---
 
-# 23. Retreat destination до Combat
 
-Для Attacker side і Defender side окремо визначається один набір допустимих сусідніх Region для Retreat. Допустимість не визначається окремо для кожної Army: усі Army однієї combat side знаходяться в тій самій combat Region, мають ту саму роль і того самого opponent, тому за правилами Retreat мають однаковий набір допустимих напрямків.
+# 23. Retreat destination
 
-Якщо сторона не має жодної допустимої Region для Retreat, її loss threshold для цього combat примусово стає максимальним. Для Defender це застосовується до спільного Defender threshold.
+Legal Retreat Region визначаються окремо для Attacker side і Defender side, але **не окремо для кожної Army**. Усі Army однієї combat side знаходяться в одній combat Region, мають ту саму combat role та opponent, тому мають один side-level набір legal Retreat Region.
 
-Це визначається до combat calculation, а не після нього.
+Якщо side не має жодної legal Retreat Region, її loss threshold для цього battle примусово стає максимальним.
 
 ## 23.1 Геометричне обмеження
 
-Для Defender допустимими за геометрією є три сусідні Region на боці, протилежному напрямку входу Attacker.
+Для Defender розглядаються три сусідні Region на боці, протилежному напрямку входу Attacker.
 
 Для Attacker — три Region у бік, звідки він прийшов.
 
-Якщо combat почався між двома Army, які вже були в Camp в одній Neutral Region, напрямкового обмеження немає: розглядаються всі шість сусідніх Region.
+Для explicit player-vs-player attack між Camp в одній Neutral Region напрямкового обмеження немає: розглядаються всі шість сусідніх Region.
 
-## 23.2 Заборонені Region
+## 23.2 Presence і заборонені Region
 
-Не можна Retreat у Region, якщо це саме по собі створило б нову примусову бойову ситуацію.
+Для Retreat blocking local presence враховує Army у Camp, Regrouping та Army, що вже entered-for-Camp. Не враховуються Army, які ще не ввійшли в Region, чистий Transit або Army, що вже leaving-Camp.
 
-Зокрема, не можна Retreat:
+Не можна Retreat:
 
-- у свою Region, яку зараз Occupied інший гравець;
-- у чужу Region, де присутні війська, які не дозволяють безбойовий вхід;
-- у будь-яку Region, де знаходяться війська opponent, якому ця сторона щойно програла, навіть якщо це Neutral Region.
+- у чужу Castle Region;
+- у свою Region, яку зараз Occupied інший Player;
+- у non-Neutral Region, де foreign local presence робить Camp arrival несумісним із безбойовим Retreat;
+- у Neutral Region, де є local presence opponent, якому ця side щойно програла.
 
-Neutral Defense не блокує Retreat.
+Neutral Defense саме по собі Retreat не блокує.
+
+Порожня foreign Owned non-Occupied Region може бути legal Retreat destination. Retreat entry є спеціальною взаємодією і **не реєструє нову CombatSituation**. Після Dt до Camp така Army встановлює Occupation цієї Region.
 
 ## 23.3 Пріоритет вибору
 
-Для Defender пріоритет мають:
+Для Defender пріоритет:
 
-1. власні неокуповані Region;
+1. власні non-Occupied Region;
 2. Neutral Region;
-3. чужі Region, у які дозволено Retreat.
+3. legal foreign Region.
 
-У межах першої групи кожна кандидатна Region оцінюється відносно Castle, до якого приєднана **сама ця Region**: перевага надається Region, ближчій до свого Castle. Це не home Castle конкретної Army і не Castle її Commander. У межах Neutral — ближчій до власної території; для чужих — за визначеним географічним критерієм.
+Серед own Region кожна кандидатна Region оцінюється відносно Castle, до якого приєднана **сама ця Region**: перевага має Region, ближча до свого Castle. Це не home Castle Army і не Castle Commander.
 
-Для Attacker найвищий пріоритет має Region, з якої він увійшов у combat Region, якщо вона допустима. Інакше використовуються ті самі пріоритети.
+Серед Neutral Region перевага надається ближчій до власної territory; для foreign Region використовується визначений географічний критерій.
 
-Якщо після всіх правил кілька кандидатів рівнозначні, один вибирається випадково.
+Для Attacker найвищий пріоритет має source Region, з якої він увійшов у combat Region, якщо вона legal. Інакше використовуються ті самі групові пріоритети.
 
----
+Якщо після всіх priority rules кілька Region рівнозначні, одна вибирається випадково.
 
-# 24. Наслідки перемоги, поразки та Regrouping
+Вибір виконується один раз для відповідної side. Усі Army цієї side, що Retreat-ять у межах CombatSituation, використовують той самий destination.
 
-Після програного combat для сторони, що програла, визначається одна сусідня Region відходу за правилами розділу 23; усі її Army/Unit, що мають Retreat, використовують цю саму Region. Якщо до combat Retreat виконує лише частина Defender Army, для цієї Defender side так само вибирається одна Region, спільна для всіх Army, що відходять. У момент початку Retreat сила вважається такою, що вже залишила combat Region і увійшла в обрану сусідню Region, після чого рухається всередині неї до Camp.
+# 24. Наслідки Retreat, перемоги та Regrouping
 
-Цей рух займає той самий конфігураційний час, що й фінальна локальна ділянка від входу в Region до Camp. Поки Army рухається до Camp після Retreat, вона вже рахується фізично присутньою в Region відходу для правил, де така присутність має значення.
+При звичайному player-vs-player Retreat Army одразу вважається такою, що залишила combat Region і ввійшла в обрану сусідню Region. Нової CombatSituation на цьому entry не створюється.
 
-Після досягнення Camp Army переходить у підстан перегрупування (Regrouping). Regrouping триває фіксований конфігураційний час.
+Далі Army протягом Dt рухається локально до Camp. Після Camp arrival вона входить у Regrouping ще на Dt.
 
-Під час Regrouping Army/Unit:
+Pre-battle Retreat використовує ті самі movement/Regrouping rules, але не завдає combat casualties.
 
-- не може Move;
-- не може Attack;
-- не може Merge/Split;
-- не може змінювати Commander-in-Chief або склад Unit;
-- не може виконувати City Raid;
-- не може ініціювати Annexation або Founding;
-- може Defense, якщо її атакують.
+Якщо кілька defender Army Retreat-ять, усі використовують одну Defender retreat Region. Якщо destination — empty foreign Owned non-Occupied Region, після Camp arrival створюється одна Occupation цього Player.
 
-Threshold можна змінювати й під час Regrouping; зміна впливатиме лише на combat, що почнеться після неї.
+Regrouping є звичайною Camp-presence для Food, Occupation, Annexation, Founding, defense та Camp lifecycle. Єдині загальні заборони самого Regrouping: Army не може ініціювати Movement і не може Attack. Merge/split, зміна Commander, threshold та composition дозволяються за звичайними location/combat-lock rules; наприклад composition усе одно потребує home Castle.
 
-Regrouping Army/Unit не вважається присутністю військ для прогресу, блокування або виконання Annexation і Founding. Для інших механік вона фізично залишається в Region.
+Якщо виграє Defender, participating defender Army лишаються у Camp.
 
-Додаткового штрафу до Combat Strength через сам Regrouping у V1 немає.
+Якщо виграє Camp-bound Attacker, після battle він завершує перехід у Camp; у foreign Owned Region це створює Occupation. Якщо Attacker мав Transit і виграв, він продовжує свій зафіксований Route без повторного проходження поточної Region.
 
-Якщо виграє Defender, його війська залишаються в Camp.
-
-Якщо виграє Attacker, для якого результатом взаємодії є Camp, він переходить у Camp після combat. Якщо це чужа Owned Region, перехід Attacker у Camp створює Occupation. Те саме відбувається, якщо захисних військ не було або вони виконали Retreat до combat: після Arrival Resolution Attacker переходить у Camp і Region стає Occupied.
-
-Якщо Attacker переміг під час Transit/Aggressive Transit, він не проходить поточну Region повторно: локальна фаза, яка привела до combat, уже завершена, тому після перемоги Army продовжує Movement за зафіксованим Route.
+Поразка від Neutral Defense або City Defense є спеціальним винятком: Army не Retreat-ить у сусідню Region і не має окремого retreat-local Dt; вона лишається в тому самому Camp і одразу починає Regrouping на Dt.
 
 ---
 
@@ -755,114 +715,113 @@ Commander-in-Chief використовує менший mortality coefficient, 
 
 ---
 
+
 # 26. Neutral Defense
 
-Нейтральний захист (Neutral Defense) — абстрактна сила Region, а не звичайна Army із Soldier Type.
+Neutral Defense — абстрактна поточна сила Neutral Region, а не Army.
 
-Neutral Defense ніколи не ініціює combat самостійно.
+Вхід Army у Camp Neutral Region сам по собі не запускає battle. Neutral Defense атакується окремою миттєвою дією конкретної Army у Camp; Regrouping Army не може її ініціювати. Ця дія не створює CombatSituation і не входить у player-vs-player FIFO.
 
-Region з City зазвичай має сильніший Neutral Defense, але окремого «міського» і «обласного» захисту немає: це одна характеристика Region.
+Якщо в Region є City, defender strength при атаці Neutral Defense дорівнює:
 
-## 26.1 Знищення для Annexation або Founding
+current Neutral Defense + full City Defense
 
-У V1 атакувати Neutral Defense з метою повного знищення можна тільки Army/Unit, що вже перебуває в Camp у цій самій Neutral Region.
+Для обох складових defender threshold дорівнює 100%. Attacker використовує Target Combat Threshold.
 
-Attacker використовує свій Target Combat Threshold як стандартний поріг такої атаки. Neutral Defense не відступає і має максимальний loss threshold.
+При перемозі Attacker поточна Neutral Defense стає 0; City Defense не змінюється.
 
-Якщо Attacker програв, він може Retreat у будь-яку з шести сусідніх Region, що є допустимою за загальними правилами Retreat. Напрямок попереднього входу в Neutral Region для цього combat не обмежує геометрію Retreat.
+При поразці часткові втрати Neutral Defense не зберігаються: після combat вона лишається на тому самому pre-combat current value. City Defense також не змінюється. Attacker лишається у своєму Camp і одразу починає Regrouping на Dt.
 
-Якщо Attacker програв, часткові casualties Neutral Defense не зберігаються: наступний такий combat починається з повної визначеної сили Neutral Defense.
+Neutral Defense recovery є поступовим. Recovery rate ненульовий тільки коли Region Neutral, current strength нижча за full strength і в Region немає **жодної фізично присутньої Army** будь-якого Player.
 
-Якщо Neutral Defense повністю знищено, відлік часу його відновлення не починається, поки в Region фізично перебувають будь-які війська, незалежно від того, чи вони в Camp, Regrouping чи проходять Region у Movement.
+Будь-яка Army у Camp, Regrouping або Movement всередині Region pause-ить recovery. Після виходу останньої Army recovery продовжується від уже досягнутого current value, а не починається заново.
 
-Коли всі війська залишають Region без Annexation або Founding, починається відлік конфігураційного часу відновлення. Після його завершення Neutral Defense відновлюється цілком, а не поступово.
+Player не може ініціювати Attack Neutral Defense у Region, якщо він є attacker будь-якої unresolved CombatSituation у цій Region або potential defender Active CombatSituation.
 
 ---
 
 # 27. Annexation Neutral Region
 
-Щоб Annex Neutral Region:
+Annexation progress для Player може йти, якщо одночасно:
 
-1. Neutral Defense має бути знищений;
-2. війська гравця повинні накопичити необхідний час контролю в Camp;
-3. для початку накопичення контролю Region повинна межувати принаймні з однією Region, яка вже належить цьому гравцю;
-4. у момент виконання Annexation гравець вибирає конкретний Castle, до якого Region буде приєднана; Region повинна мати допустимий безперервний зв'язок з володіннями цього Castle;
-5. у Region мають бути війська, пов'язані саме з обраним Castle, якщо це вимагається правилом приєднання;
-6. у момент Annexation Governor's House обраного Castle повинен мати вільну Capacity;
-7. у момент виконання Annexation у Region не повинно бути eligible Camp військ інших гравців;
-8. у Region не повинен бути активний Founding.
+- Neutral Defense == 0;
+- Player має в Region active Camp-presence; Regrouping рахується так само, як Camp;
+- є хоча б одна valid-connected adjacent Owned Region цього Player;
+- немає active Founding;
+- немає blocking foreign Camp-presence: foreign Camp, Regrouping або entered-for-Camp Army.
 
-Annexation не має окремої одноразової ціни ресурсів у V1.
+Foreign pure Transit не pause-ить Annexation progress, навіть якщо через цей Transit існує CombatSituation.
 
-Накопичення необхідного часу контролю не виконує Annexation автоматично. Після досягнення потрібного значення Region лише стає eligible; Annexation є окремою дією гравця.
+Поява blocking foreign Camp/Camp-bound presence pause-ить progress, але не скидає його. Якщо власний Camp episode повністю завершується до Annexation, накопичений control progress цього episode втрачається.
 
-Час контролю конкретного гравця взагалі не починає накопичуватися, доки Region не має хоча б однієї сусідньої Region цього гравця. Після цього він накопичується лише тоді, коли в Region є війська гравця у звичайному Camp і немає eligible Camp військ інших гравців. Regrouping не рахується присутністю для Annexation.
+Досягнення required control time не виконує Annexation автоматично. Region лише стає ready.
 
-Якщо в Camp присутні eligible війська кількох гравців, накопичення часу контролю для всіх них призупиняється, але вже накопичений час не скидається.
+При manual Annexation Player обирає конкретний Castle. Потрібні:
 
-Transit інших гравців через Region не призупиняє накопичення часу контролю.
+- valid territorial connection до цього Castle;
+- вільна Governor's House Capacity;
+- у Camp має бути хоча б один Knight, чия Army має Camp-presence і чий home Castle — саме обраний Castle;
+- відсутність blocking foreign Camp/Camp-bound presence;
+- відсутність active Founding.
 
-Якщо гравець повністю виводить із Region усі свої війська, що рахуються присутністю для Annexation, до виконання Annexation, його накопичений час контролю анулюється.
+Annexation не має окремої одноразової resource cost у V1.
 
-В одній Neutral Region можуть існувати накопичені значення часу контролю кількох гравців, але одночасно просуватися може лише прогрес єдиного гравця, чиї eligible Camp війська зараз самі присутні в Region.
-
-Якщо потрібний час контролю вже накопичений, поява чужих eligible Camp військ не скидає його. Annexation просто не можна виконати, доки вони не залишать Region. Після їх виходу Annexation можна виконати одразу, якщо інші умови все ще виконуються.
-
-Неважливо, хто саме знищив Neutral Defense: право накопичувати Annexation time визначається поточною eligible присутністю в Camp.
+Неважливо, хто саме знищив Neutral Defense; право на control progress визначається поточною presence та connectivity.
 
 ---
 
 # 28. Annexation Occupied Region
 
-Occupied Region може бути остаточно Annexed окупантом.
+Current occupier може Annex Occupied Region за тією самою control-progress логікою, але Neutral Defense для цього не потрібна.
 
-Умови аналогічні Annexation Neutral Region, за винятком Neutral Defense:
+Progress потребує власної Camp/Regrouping presence occupier, valid-connected adjacent Owned Region та відсутності blocking foreign Camp/Camp-bound presence. Pure Transit не блокує.
 
-- окупант повинен утримувати Region у Camp потрібний конфігураційний час;
-- час контролю не починає накопичуватися, доки Region не межує хоча б з однією Region окупанта;
-- Regrouping не рахується присутністю для накопичення часу контролю;
-- після накопичення потрібного часу гравець окремою дією вибирає Castle, до якого може бути приєднана Region;
-- Region повинна мати допустимий зв'язок із володіннями обраного Castle;
-- Governor's House Capacity обраного Castle перевіряється при виконанні Annexation;
-- Annexation не відбувається автоматично після накопичення потрібного часу.
+Після накопичення required time Annexation виконується окремою user action з вибором Castle та перевірками connection, Governor Capacity і наявності в Camp Knight з home Castle, що дорівнює обраному Castle.
 
-Для Occupied Region може використовуватися окрема конфігураційна тривалість контролю, відмінна від Neutral Region.
+До завершення Annexation формальний owner лишається owner і продовжує Region upkeep.
 
-Після успішного Annexation колишній власник остаточно втрачає Region, а вона стає Owned Region нового власника.
+Після Annexation ownership переходить occupier, Region приєднується до обраного Castle, а territorial connectivity колишнього owner перераховується. Region, які через остаточну втрату bridge більше не мають шляху до свого Castle, стають Neutral за правилами розділу 3.
 
 ---
 
 # 29. City
 
-Місто (City) є властивістю Region, а не окремою територіальною сутністю.
+City є об'єктом Region і має дві економічні характеристики:
 
-City належить тому самому гравцю, якому належить Region. Окремої механіки захоплення City немає.
+- wealth — повний довгостроковий економічний потенціал;
+- active_wealth_ratio — активна частка від 0 до 1.
 
-City має Wealth.
+effective_wealth = wealth × active_wealth_ratio.
 
-Якщо Region Owned і не Occupied, City генерує регулярний Coin income власнику, а Wealth поступово зростає за конфігураційними правилами. Якщо Player перебуває у стані нестачі Coins за правилами розділу 6.4, зростання Wealth призупиняється до виходу з цього стану.
+Коли active_wealth_ratio == 1, Region є Owned non-Occupied і Player не має empty_coins, wealth поступово зростає.
 
-Якщо Region Occupied, формальний власник не отримує Coin income від City і Wealth не зростає. Окупант також не отримує City income до Annexation.
+Після успішного Raid wealth не зменшується, а active_wealth_ratio скидається до 0. Поки ratio < 1, wealth не росте.
 
-У Neutral Region Wealth зберігається, але не зростає.
+Recovery active_wealth_ratio до 1 відбувається поступово **незалежно від ownership, Occupation та стану Coins Player**.
 
-Після Raid Wealth та/або Coin income тимчасово зменшуються відповідно до конфігурації. Raid завжди можна виконати; якщо City уже виснажене, reward може дорівнювати нулю. Окремого стану «raid заборонений» немає.
+Recurring City Coin income і Raid reward базуються на effective_wealth. Neutral або Occupied City не дає recurring income формальному owner.
+
+City має окрему City Defense = f(wealth). Вона залежить від повного wealth, не зменшується після Raid і не залежить від active ratio.
 
 ---
 
 # 30. City Raid
 
-Рейд міста (City Raid) у V1 є локальною дією Army/Unit, що вже перебуває у Camp у тій самій Region, де знаходиться City. City Raid не є Route order і не може бути запущений з іншої Region.
+City Raid — миттєва локальна Attack-дія конкретної Army у Camp тієї самої Region. Army у Movement або Regrouping не може її ініціювати.
 
-City Raid не можна виконувати під час Movement або Regrouping. Якщо проти Army уже існує бойова ситуація, яка блокує активні дії, Raid до її завершення почати не можна.
+Defender Raid — **тільки City Defense**. Neutral Defense не бере участі.
 
-У Neutral Region присутність Camp військ інших гравців сама по собі не забороняє Raid, якщо проти рейдера не ініційовано combat. Neutral Defense може чинити опір Raid за окремими raid-specific параметрами; часткові втрати Neutral Defense від такого Raid не зберігаються.
+City Defense використовує fixed raid loss threshold із configuration; Attacker використовує Target Combat Threshold.
 
-У Owned Region Raid виконується лише тоді, коли Army вже отримала можливість перебувати в Camp у цій Region за звичайними правилами війни та Occupation. Окремого автоматичного повернення після Raid немає.
+У Neutral Region можна просто ввійти в Camp і окремо Raid City без попередньої атаки Neutral Defense.
 
-City Raid дозволений незалежно від поточного Wealth City. Reward може дорівнювати нулю. Отримані Coins зараховуються одразу до глобального балансу Player; окремий вантаж або його доставка не моделюються.
+У чужій Owned Region Army спочатку повинна отримати Camp-presence за звичайними player-vs-player/Occupation rules; після цього Raid є окремою дією.
 
-Після Raid Wealth та/або Coin income City можуть тимчасово зменшуватися за конфігураційними правилами.
+При успіху reward визначається pre-raid effective_wealth, Coins одразу зараховуються Player, після чого active_wealth_ratio = 0. wealth і City Defense не змінюються. Raid при низькому ratio дозволений і знову скидає ratio до 0.
+
+При поразці Army не Retreat-ить у сусідню Region: вона лишається в тому самому Camp і одразу починає Regrouping на Dt.
+
+Player не може ініціювати City Raid у Region, якщо він є attacker будь-якої unresolved CombatSituation у цій Region або potential defender Active CombatSituation.
 
 ---
 
@@ -871,36 +830,28 @@ City Raid дозволений незалежно від поточного Weal
 Новий Castle можна заснувати:
 
 - у Neutral Region;
-- у власній Region, яка вже Annexed до іншого Castle.
+- у власній Annexed non-Castle Region.
 
-Для Founding у Neutral Region не потрібні спільний кордон з існуючими володіннями або Governor's House. Neutral Defense Region має бути попередньо усунений за звичайними правилами. Попередньо накопичувати Annexation time не потрібно.
+Для Neutral Region не потрібні contiguity, Governor Capacity або попередній Annexation progress, але Neutral Defense має бути 0.
 
-У Neutral Region Founding і Annexation взаємовиключні: поки активний Founding, Annexation цієї Region виконувати не можна.
+Founder — Knight без Soldier, фізично присутній у Camp цієї Region. Regrouping рахується Camp-presence: він не забороняє старт Founding і не pause-ить progress сам по собі.
 
-Для старту заснування гравець:
+На Start:
 
-- має мати в Region Knight без Soldier, який перебуває у звичайному Camp, а не Regrouping;
-- обирає цього Knight засновником;
-- сплачує configured founding cost;
-- задає назву нового Castle.
+- active Founding у Region не повинно бути;
+- foreign blocking Camp-presence не повинна існувати;
+- Player сплачує local founding cost із home Castle founder Knight і global cost із Player;
+- задається name нового Castle.
 
-Локальні ресурси founding cost списуються з home Castle Knight-засновника. Глобальні ресурси, якщо вони входять у cost, списуються з глобального балансу гравця.
+Foreign Camp, Regrouping або entered-for-Camp presence після Start pause-ить Founding progress. Pure Transit не pause-ить його, навіть якщо через Transit існує CombatSituation.
 
-Після цього починається накопичення Founding Progress протягом конфігураційного часу.
+Founder повинен залишатися живим, у потрібному Camp і без Soldier увесь process. Якщо він залишає Region/Camp, гине або отримує Soldier, Founding скасовується без refund.
 
-Knight-засновник повинен залишатися в Region увесь час. Якщо він залишає Region або гине, заснування скасовується, а сплачена вартість не повертається. Knight також повинен залишатися без Soldier протягом усього Founding.
+У Neutral Region active Founding і Annexation взаємовиключні.
 
-Інші власні війська можуть бути присутні або відсутні. Ініціювати Founding не можна, якщо на момент старту в Region вже є eligible Camp війська іншого гравця.
+Якщо під час завершення Founding у Region уже знаходиться foreign Transit Army, Castle все одно створюється, а ця Army має право завершити вже розпочатий Transit. Нові hostile entries у Castle Region після цього заборонені V1.
 
-Якщо Founding відбувається в Neutral Region, до завершення Castle вона продовжує діяти за правилами Neutral Region: Transit інших гравців дозволений, інші гравці можуть перейти в Camp, можливі звичайні combat між Camp Army.
-
-Якщо після старту в Region з'являються eligible Camp війська інших гравців, накопичення Founding Progress призупиняється. Regrouping не рахується присутністю для блокування Founding. Transit чужої Army не зупиняє Founding Progress. Після зникнення чужих eligible Camp військ прогрес продовжується.
-
-Якщо Knight-засновник переходить у Regrouping, він фізично залишається в Region, тому Founding не скасовується, але Founding Progress не просувається, доки Knight знову не стане звичайною Camp force.
-
-Якщо в момент завершення Founding через Region уже проходить чужа Army у Transit, Castle все одно завершується. Ця Army має право завершити вже розпочатий Transit; заборона ворожого Transit через Castle Region застосовується лише до нових входів після створення Castle.
-
-Після завершення Founding Region стає Castle Region нового Castle. Якщо до Founding вона вже належала іншому Castle цього гравця, вона перестає бути приєднаною Region попереднього Castle. Створюються обов'язкові стартові Warehouse, Granary та Palace на початковому побудованому рівні. Knight-засновник змінює home Castle на новий і займає початковий Knight slot Palace; додатковий Knight через саме створення цього стартового slot не генерується.
+Після completion Region стає Castle Region нового Castle. Якщо вона раніше належала іншому Castle цього Player, зв'язок із старим Castle припиняється. Створюються Warehouse 1, Granary 1 і Palace 1. Founder змінює home Castle на новий і займає початковий Palace slot; додатковий Knight через цей стартовий slot не генерується.
 
 ---
 
@@ -924,53 +875,47 @@ Knight-засновник повинен залишатися в Region увес
 
 ---
 
+
 # 34. Що є конфігурацією, а що логікою
 
 До конфігурації належать, зокрема:
 
-- усі ціни;
-- тривалості Construction, Recruitment, Movement, Regrouping, Annexation, Recovery і Founding;
-- функції ResourceSite production;
-- функція DistanceEfficiency;
-- Building effects та capacities;
-- Coin income;
-- Upkeep;
-- Soldier Attack/Defense;
-- Experience functions;
-- combat luck distribution;
-- combat loss function;
-- набори доступних loss threshold;
-- Combat Start Delay для атаки між Camp Army у Neutral Region;
-- Casualty Health;
-- mortality coefficients;
-- допустиме random deviation при розподілі casualties;
-- Neutral Defense strength;
-- City Wealth, income, raid reward та recovery.
+- prices, upkeep, capacities та Building effects;
+- Construction, Recruitment, Annexation, Founding і recovery rates/times;
+- одна базова game-time константа Dt;
+- ResourceSite output та DistanceEfficiency;
+- coins_per_food;
+- Soldier Attack/Defense та Experience functions;
+- combat luck/loss functions;
+- доступні loss threshold values;
+- Casualty Health, mortality coefficients і casualty randomness;
+- Neutral Defense full strength/recovery rate;
+- City wealth growth, active-ratio recovery, City Defense, Raid threshold/reward.
+
+Окремого Combat Start Delay для Neutral Camp attack немає: player-vs-player CombatSituation Start -> Battle Start завжди дорівнює Dt.
 
 До незмінної логіки V1 належать, зокрема:
 
-- поділ ресурсів на Castle-local і player-global;
-- layered upgrade ResourceSite;
-- структура Unit і Army;
-- подвійний командний рівень Knight + Commander-in-Chief;
-- серіалізація подій;
-- Camp/Movement model;
-- фіксація локального проходження після входу в Region;
-- автоматичне визначення Aggressive Transit;
-- Target/Incidental Combat classification за актуальним власником кінцевої Region;
-- об'єднання кількох Defender Army в одну сторону з мінімальним ненульовим Defense Loss Threshold;
-- розрахунок casualties лише після завершення combat;
-- приблизно пропорційний випадковий розподіл casualties;
-- Soldier before Knight casualty rule;
-- нижча mortality Commander-in-Chief і розпад Army після його смерті;
-- Retreat destination logic;
-- Regrouping після Retreat;
-- Occupation як окремий від ownership стан;
-- Annexation як окрема ручна дія після накопичення потрібного часу контролю;
-- пауза прогресу Annexation/Founding тільки через чужі війська в Camp, а не Transit;
-- City Raid як локальна дія з Camp у Region з City;
-- Founding Castle через Knight-засновника без Soldier;
-- баланси Food і Coins не опускаються нижче нуля.
+- Castle-local і Player-global ресурси;
+- layered ResourceSite upgrades;
+- Unit/Army structure та два командні рівні;
+- event serialization;
+- Camp/Movement/Regrouping presence rules;
+- фіксація Camp/Transit intent і поточного exit після входу;
+- Movement-level target_opponent та його snapshot у CombatSituation;
+- Aggressive/NonAggressive Transit classification тільки для Owned non-Occupied Region;
+- одна FIFO-черга всіх player-vs-player CombatSituation Region;
+- одна attacking Army на CombatSituation;
+- side-level Defender threshold як minimum participating Army thresholds;
+- side-level Retreat destination;
+- Occupation окремо від ownership;
+- Annexation як manual action після control progress;
+- foreign Camp/Regrouping/entered-for-Camp presence блокує Annexation/Founding, pure Transit — ні;
+- City Raid як окрема Camp action;
+- gradual Neutral Defense recovery тільки без troops;
+- Founding через Knight без Soldier;
+- Food shortage compensation у Coins;
+- balances Food/Coins не опускаються нижче 0.
 
 ---
 
