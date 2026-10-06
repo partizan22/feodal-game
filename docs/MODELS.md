@@ -31,6 +31,12 @@ Food consumption одного Soldier не залежить від Soldier Type.
 - **Використовує** — характеристики цієї Model та relationships/характеристики пов'язаних Model, які потрібні method.
 - **Викликає** — інші domain methods, якщо вони потрібні. Характеристики іншої Model напряму не змінюються.
 
+## Player-specific projections
+
+Між backend game-world models і frontend вводиться окремий шар **player-specific projections**. Frontend не отримує domain models напряму: projection збирає з них інформацію, доступну конкретному Player, застосовує правила видимості/доступу та є джерелом даних і оновлень для frontend subscriptions.
+
+Конкретний набір projection models, їх characteristics, lifecycle, dependencies та формат frontend subscriptions/updates буде визначено окремо під час проєктування frontend/API.
+
 ---
 
 # Основні game-world models
