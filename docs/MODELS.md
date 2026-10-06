@@ -153,7 +153,7 @@ Food consumption одного Soldier не залежить від Soldier Type.
 - `castle` — Castle, до якого Region приєднана; `null`, якщо не належить Castle.
 - `occupier_player_id` — ID поточного occupier; `null`, якщо Region не Occupied.
 - `resource_sites`.
-- `allow_transit` — fallback rule для неагресивного Transit через Owned Region, якщо defender не прийняв ручного рішення до Battle Start.
+- `allow_transit` — fallback rule для неагресивного Transit тільки через Owned **non-Occupied** Region, якщо defender не прийняв ручного рішення до Battle Start. Для Occupied Region ця rule не застосовується: Transit через Occupied Region не створює CombatSituation.
 - `is_connection_valid`.
 
 ### Динамічні характеристики
@@ -190,15 +190,15 @@ Food consumption одного Soldier не залежить від Soldier Type.
 
 ### User methods
 
-- `user_change_allow_transit(value)` — змінює fallback Transit rule власної Region.
+- `user_change_allow_transit(value)` — змінює fallback Transit rule власної Owned non-Occupied Region; для Occupied Region `allow_transit` не використовується.
 
 ### Domain methods
 
 - `find_active_camp(player)`, `get_or_create_camp(player)`.
 - `register_combat(attacker, registration_reason, defender_player = null)` — реєструє player-vs-player CombatSituation. На Registration фіксуються attacking Army, Region, причина та порядок реєстрації. Для explicit Neutral Camp attack переданий `defender_player` фіксується одразу; для територіальних registration reasons він має бути `null` і визначається тільки на Start. `potential_defenders[]` і `transit_defender_candidates[]` на Registration не фіксуються. Одна CombatSituation завжди має рівно одну attacking Army. Якщо в Region уже є Active або earlier Registered CombatSituation, нова стає в єдину FIFO-чергу Region. Attacker отримує combat lock очікування, але його фізичний стан не змінюється: Camp Army лишається Camp-presence, Movement Army лишається у своєму Movement context з paused progress.
 - `start_next_combat_if_possible()` — якщо Active CombatSituation немає, запускає найстарішу Registered CombatSituation Region. Саме цей момент є CombatSituation Start і початком її `Dt` до Battle Start.
-- `resolve_arrival(army, movement)` — визначає Camp/Transit context і, коли є одна з registration conditions, реєструє player-vs-player CombatSituation. Army, що входить після CombatSituation Start, не може стати defender цієї CombatSituation. У Neutral Region сам вхід у Camp не запускає combat із Neutral Defense або City Defense.
-- `set_occupied_by(player)` — встановлює Occupation. Якщо в Region вже рухаються Army формального owner, які ввійшли до Occupation, але запізно для попередньої defense, для кожної такої Army окремо реєструється CombatSituation проти актуального occupier. Кожна Army є attacker своєї окремої CombatSituation.
+- `resolve_arrival(army, movement)` — визначає Camp/Transit context і, коли є одна з registration conditions, реєструє player-vs-player CombatSituation. Transit через Occupied Region CombatSituation не реєструє і продовжується без `allow_transit`; Camp-entry в Occupied Region може створити CombatSituation проти актуального occupier за звичайними registration rules. Army, що входить після CombatSituation Start, не може стати defender цієї CombatSituation. У Neutral Region сам вхід у Camp не запускає combat із Neutral Defense або City Defense.
+- `set_occupied_by(player)` — встановлює Occupation. Якщо в Region вже рухаються Army формального owner, які ввійшли до Occupation, але запізно для попередньої defense, окрема CombatSituation проти актуального occupier реєструється тільки для Army з локальною метою Camp. Army, що проходять Region Transit-ом, після Occupation не створюють CombatSituation і продовжують Transit.
 - `restore_owner_control(expected_occupier_player)` — Occupation припиняється після виходу останньої Army occupier із Camp.
 - `annex_to(player, castle)`, `become_neutral()`, `become_castle_region(new_castle, player)`, `set_connection_valid(value)`.
 - `apply_resource_site_upgrade(...)`, `can_start_resource_site_upgrade(...)`.
@@ -383,7 +383,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `region`.
 - `attacker` — єдина attacking Army; фіксується на Registration.
-- `registration_reason` — entry into foreign Owned Region / entry into own occupied Region / own Region became occupied around already-present late Army / explicit Neutral Camp attack.
+- `registration_reason` — entry into foreign Owned non-Occupied Region / Camp entry into Occupied Region against current occupier / own Region became occupied around already-present late Camp-bound Army / explicit Neutral Camp attack.
 - `registration_order` — FIFO order у єдиній player-vs-player черзі Region.
 - `status` — `Registered / Active / Resolved`.
 - `start_time` — встановлюється тільки при CombatSituation Start; `null` для queued Registered.
@@ -392,11 +392,10 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `transit_defender_candidates[]` — Army defender Player, які ввійшли в Region для Transit до Start і на Start ще не вийшли. Вони не беруть участі автоматично й не блокуються як potential defenders, доки явно не оберуть залишитися для defense; якщо candidate виходить із Region без такого рішення, він видаляється з цього списку.
 - `transit_defender_join_decisions` — явні рішення pre-Start Transit candidates залишитися для defense; після такого рішення Army видаляється з `transit_defender_candidates[]`, додається до `potential_defenders[]` і від цього моменту отримує combat command-lock.
 - `defenders_retreat_decisions` — рішення Retreat для окремих potential defender Army; рішення не перегруповує Army і не змінює її Commander/composition.
-- `defender_combat_threshold` — один спільний Defense Loss Threshold для всіх defender Army, що залишаються для бою. На момент CombatSituation він уже визначений попередніми налаштуваннями Player під час формування/відправлення Army; CombatSituation не потребує default value. Точний UI/source mapping цих попередніх налаштувань визначається під час розробки UI.
 - `transit_decision` — `null / allow / fight` для non-aggressive Transit; після ручного вибору не змінюється.
 - `attacker_destination_mode` — `Camp | Transit`; для CombatSituation, створеної через Movement, походить із початкового Movement task для входу в цю Region і не змінюється queueing; для explicit Neutral Camp attack фіксується як `Camp`.
 - `target_opponent` — snapshot `Army.target_opponent`, чинного при вході attacker у Region / Registration цієї CombatSituation. Подальше ручне refresh ЦС не змінює вже зареєстровану CombatSituation.
-- `transit_mode` — `null` до CombatSituation Start; на Start для Transit один раз визначається за зафіксованим `target_opponent` та актуальним на Start станом current Region: Aggressive тільки якщо Region формально належить `target_opponent` і не Occupied; в усіх інших випадках NonAggressive.
+- `transit_mode` — `null` до CombatSituation Start; для Transit interaction у Owned non-Occupied Region на Start один раз визначається за зафіксованим `target_opponent`: Aggressive, якщо Region формально належить `target_opponent`, інакше NonAggressive. Transit через Occupied Region CombatSituation не створює і `transit_mode` для нього не визначається.
 - `locked_combat_parameters` — остаточно фіксуються на Battle Start.
 
 ### Динамічні характеристики
@@ -410,7 +409,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `battle_start_progress_rate` / `required_battle_start_progress` — дають рівно `Dt` від Start до Battle Start.
 - `is_battle_valid` — чи після pre-battle resolution лишилися умови реального battle.
 - `attacker_loss_threshold` — якщо фактичний `defender_player == target_opponent`, використовується `attacker.target_combat_threshold`; для бою з будь-яким іншим Player використовується `attacker.incidental_combat_threshold`. Це правило діє в будь-якій Region, включно з final Region F, якщо фактичний opponent там відрізняється від зафіксованого ЦС. Значення lock-иться на Battle Start.
-- `defender_loss_threshold` — чинне значення `defender_combat_threshold`; один спільний threshold для всіх participating defender Army. Він не є per-Army threshold і не потребує fallback/default у CombatSituation.
+- `defender_combat_threshold` — мінімальний `defense_loss_threshold` серед усіх defender Army, які після pre-battle decisions фактично залишаються для battle. Якщо жодної defender Army не лишилося, battle не відбувається і значення не потрібне.
+- `defender_loss_threshold` — чинне значення `defender_combat_threshold`; один спільний threshold для всієї defense side, що lock-иться на Battle Start.
 - `attacker_strength` — для Neutral Camp player-vs-player combat використовується Attack strength.
 - `defender_strength` — для Neutral Camp player-vs-player combat також використовується Attack strength; для invasion/occupation defense — відповідний звичайний defense mode.
 
@@ -418,9 +418,9 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 CombatSituation реєструється, коли:
 
-- Army Player A входить в Owned Region Player B;
-- Army Player A входить у свою Region, яка на цей момент Occupied іншим Player;
-- Region Player A стає Occupied, коли Army A вже рухається в цій Region, увійшла туди до Occupation, але вже не може приєднатися до попередньої defense;
+- Army Player A входить у Owned **non-Occupied** Region Player B (`A != B`); це стосується і Camp, і Transit entry;
+- Army Player A входить у Occupied Region з локальною метою Camp, якщо `A` не є current occupier; CombatSituation спрямована проти актуального occupier. Transit через Occupied Region CombatSituation не створює;
+- Region Player A стає Occupied, коли Camp-bound Army A вже рухається всередині цієї Region, увійшла туди до Occupation, але вже не може приєднатися до попередньої defense; Transit Army CombatSituation не створює;
 - Player A і B мають Camp-presence в одній Neutral Region і A через конкретну Army ініціює attack на B.
 
 На Registration фіксується `attacker`, `target_opponent` snapshot, `attacker_destination_mode` та registration metadata. Для explicit Neutral Camp attack також одразу фіксується конкретний `defender_player`, якого Player атакував. Для територіальних registration reasons `defender_player` на Registration не фіксується. `potential_defenders[]` і `transit_defender_candidates[]` формуються тільки на Start; battle thresholds lock-яться пізніше.
@@ -436,7 +436,7 @@ CombatSituation Start — це:
 
 На Start за актуальним станом Region:
 
-- для територіальних registration reasons визначається фактичний `defender_player` за current ownership/occupation interaction;
+- для територіальних registration reasons визначається фактичний `defender_player` за current ownership/occupation interaction; якщо queued Transit situation була зареєстрована в non-Occupied Region, але до її Start Region стала Occupied, situation завершується без battle, бо Transit через Occupied Region не створює CombatSituation;
 - для explicit Neutral Camp attack використовується зафіксований на Registration `defender_player` і перевіряється, чи interaction з ним досі актуальний; situation не може перенаправитися на іншого Player;
 - для Transit classification береться зафіксований `target_opponent` і current ownership/occupation Region;
 - фіксуються `potential_defenders[]` і `transit_defender_candidates[]`;
@@ -455,10 +455,12 @@ CombatSituation Start — це:
 
 Подальші зміни ownership/occupation F самі по собі ЦС не змінюють. Player може вручну запитати refresh ЦС за актуальним станом F; нове значення набуває чинності тільки при вході Army в наступну Region маршруту і не змінює CombatSituation, уже зареєстровану в поточній Region.
 
-Для Transit через конкретну Region:
+Для Transit через Owned non-Occupied Region, який створив CombatSituation:
 
-- якщо Region формально належить `target_opponent` і не Occupied -> `Aggressive`;
-- у всіх інших випадках, включно з Region іншого Player або Occupied Region -> `NonAggressive`.
+- якщо Region формально належить `target_opponent` -> `Aggressive`;
+- якщо Region належить іншому Player -> `NonAggressive`.
+
+Transit через Occupied Region CombatSituation взагалі не створює: `allow_transit`, `Aggressive/NonAggressive` classification і defender Transit decision для такого проходу не застосовуються.
 
 `attacker_destination_mode` (`Camp` або `Transit`) як і раніше визначається початковим Movement task і не переобчислюється CombatSituation.
 
@@ -485,13 +487,15 @@ Army, яка входить після Start, ніколи не reinforcement ц
 
 ### No-battle resolution for Transit
 
+Ці правила стосуються тільки Transit через Owned non-Occupied Region. Transit через Occupied Region не реєструє CombatSituation; якщо Region стала Occupied уже після Registration queued Transit situation, вона завершується без battle на власному Start.
+
 Якщо attacker має `destination_mode = Transit` і на Start немає жодної Army defender Player у Camp-presence або вже entered-for-Camp state, CombatSituation завершується без battle. Самі по собі defender Transit Army, навіть якщо вони ввійшли до Start, не створюють battle context: attacker і ці defender Transit Army продовжують рух, а defender Transit Army не отримують можливості зупинитися для interception.
 
 Якщо Transit `NonAggressive` і potential defenders є, defender протягом `Dt` може одноразово обрати `Allow` або `Fight`:
 
 - `Allow` — situation завершується без battle, attacker продовжує Transit, усі defender Army лишаються у своїх поточних states;
 - `Fight` — situation лишається active до Battle Start;
-- якщо ручного рішення немає до Battle Start, `Region.allow_transit` є fallback: `true` -> no battle, `false` -> battle.
+- якщо ручного рішення немає до Battle Start, `Region.allow_transit` є fallback: `true` -> no battle, `false` -> battle. Цей fallback існує тільки для non-Occupied Region.
 
 ### Default defender behavior at Battle Start
 
@@ -499,9 +503,9 @@ Army, яка входить після Start, ніколи не reinforcement ц
 
 - Transit Army, що ввійшли до Start і отримали можливість приєднатися до вже існуючого battle context, за відсутності явного рішення залишитися не беруть участі й продовжують Transit;
 - Camp/Regrouping/entered-for-Camp potential defender Army залишаються для battle;
-- для всіх Army, що беруть участь у defense, застосовується один спільний `defender_combat_threshold` цієї CombatSituation.
+- для всіх Army, що беруть участь у defense, застосовується один спільний `defender_combat_threshold`, рівний мінімальному `defense_loss_threshold` серед defender Army, які фактично залишилися для battle.
 
-Player може до Battle Start вибрати Retreat для всіх potential defender Army або для окремих Army. Army як контейнери не перегруповуються: заборонені merge/split, transfer Unit/Soldier і зміна Commander. Defense Loss Threshold задається один раз для CombatSituation і спільний для всіх defender Army, що залишаються в battle.
+Player може до Battle Start вибрати Retreat для всіх potential defender Army або для окремих Army. Army як контейнери не перегруповуються: заборонені merge/split, transfer Unit/Soldier і зміна Commander. Окремого налаштування Defense Loss Threshold для CombatSituation немає: кожна Army приносить свій заздалегідь встановлений `defense_loss_threshold`, а спільне значення обчислюється як їх мінімум.
 
 ### Neutral Camp attack and attack on occupier
 
@@ -515,7 +519,7 @@ Explicit attack A -> B між Camp у Neutral Region на Registration фікс�
 
 Наступна Registered situation не стартує до завершення або дострокового завершення попередньої Active situation. Після її завершення найстаріша Registered situation Start-ує одразу і отримує повний `Dt` до свого Battle Start. Таким чином між послідовними battle у цій Region не може бути менше `Dt`.
 
-Queued territorial situation ще не має `defender_player`; queued explicit Neutral Camp attack уже має зафіксованого `defender_player` з Registration. Жодна queued situation ще не має `potential_defenders[]` або `transit_defender_candidates[]`: вони формуються тільки на Start. Attacker має waiting command-lock, але зберігає фізичний Camp/Movement context; навіть звичайний Transit може бути затриманий queueing.
+Queued territorial situation ще не має `defender_player`; queued explicit Neutral Camp attack уже має зафіксованого `defender_player` з Registration. Жодна queued situation ще не має `potential_defenders[]` або `transit_defender_candidates[]`: вони формуються тільки на Start. Attacker має waiting command-lock, але зберігає фізичний Camp/Movement context; Transit через non-Occupied Owned Region може бути затриманий queueing. Transit через Occupied Region CombatSituation не створює і в queue не потрапляє.
 
 Attack на Neutral Defense та City Raid не створюють CombatSituation і не входять у цю queue.
 
@@ -526,15 +530,14 @@ Player не може атакувати Neutral Defense або City в цій Re
 - `user_set_transit_decision(decision)` — `Allow/Fight` для Active NonAggressive Transit; після вибору рішення immutable.
 - `user_set_pre_battle_retreat_decision(army, retreat)` — задає Retreat для конкретної potential defender Army до Battle Start.
 - `user_join_defense_from_transit(army)` — до Battle Start і до фактичного виходу Army з Region для Army з `transit_defender_candidates[]` фіксує рішення залишитися для defense, переносить її до `potential_defenders[]` і тим самим застосовує стандартний defender combat command-lock.
-- `user_set_defender_combat_threshold(value)` — змінює один спільний defender threshold до моменту його lock, якщо відповідна UI-дія дозволена. Незалежно від конкретного UI flow, на момент CombatSituation/Battle Start threshold уже має бути визначений попередніми Player settings.
 
 ### Domain methods
 
-- `start()` — переводить Registered situation в Active. Для territorial registration reasons визначає актуального `defender_player`; для explicit Neutral Camp attack не переобчислює його, а перевіряє актуальність interaction із зафіксованим Player. Потім визначає transit mode, формує defender sets і запускає `Dt` до Battle Start. Якщо interaction більше не існує, завершує situation через no-battle path зі статусом `Resolved`.
-- `determine_transit_mode()` — для Transit повертає Aggressive, якщо current Region формально належить зафіксованому `target_opponent` і не Occupied; інакше NonAggressive.
+- `start()` — переводить Registered situation в Active. Для territorial registration reasons визначає актуального `defender_player`; для explicit Neutral Camp attack не переобчислює його, а перевіряє актуальність interaction із зафіксованим Player. Queued Transit situation, для якої Region до Start стала Occupied, завершується без battle. Для інших чинних Transit situation визначає transit mode, формує defender sets і запускає `Dt` до Battle Start. Якщо interaction більше не існує, завершує situation через no-battle path зі статусом `Resolved`.
+- `determine_transit_mode()` — викликається тільки для Transit CombatSituation в Owned non-Occupied Region; повертає Aggressive, якщо Region формально належить зафіксованому `target_opponent`, інакше NonAggressive.
 - `collect_potential_defenders()` — на Start окремо фіксує `potential_defenders[]` для Camp/Regrouping/entered-for-Camp та `transit_defender_candidates[]` для pre-Start Transit; Army, які входять після Start, не додаються.
 - `resolve_pre_battle()` — застосовує Transit allow/fight та Retreat/default decisions.
-- `lock_combat_parameters()` — на Battle Start фіксує actual participating defenders, уже визначені attacker/defender thresholds, strengths, retreat destinations та інші battle parameters; CombatSituation не обчислює fallback threshold.
+- `lock_combat_parameters()` — на Battle Start фіксує actual participating defenders, attacker threshold, обчислює `defender_combat_threshold = min(participating_defender.defense_loss_threshold)`, після чого lock-ить обидва thresholds, strengths, retreat destinations та інші battle parameters. Default/fallback defender threshold не існує.
 - `get_legal_retreat_regions(army, role)`, `select_retreat_region(army, role)`.
 - `resolve_combat()`, `apply_casualties(result)`.
 - `apply_result(result)` — виконує Retreat, Occupation, Camp/Transit continuation. Якщо attacker мав Transit, будь-який result не змушує defender Army, що ввійшли після Start, змінювати свій route; вони завершують свій planned movement після поточного battle. Якщо attacker мав Camp і програв — так само. Якщо attacker мав Camp, виграв і встановив Occupation, Army formal owner, що входять пізніше, при актуальному arrival реєструють власні окремі CombatSituation проти occupier.
