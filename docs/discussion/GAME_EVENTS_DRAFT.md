@@ -225,14 +225,14 @@
 ## Economy boundaries
 
 34. **Food Empty Boundary**
-   - Тип: двонаправлений trigger.
-   - Умова: стан `empty_food` змінюється.
+   - Тип: `[state trigger]`.
+   - Умова: boolean-стан `empty_food` змінюється (`false <-> true`).
    - Наслідок: перераховуються залежні rates/processes.
    - Модель: `Castle`
 
 35. **Coins Empty Boundary**
-   - Тип: двонаправлений trigger.
-   - Умова: стан `empty_coins` змінюється.
+   - Тип: `[state trigger]`.
+   - Умова: boolean-стан `empty_coins` змінюється (`false <-> true`).
    - Наслідок: перераховуються залежні rates/processes.
    - Модель: `Player`
 
