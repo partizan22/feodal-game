@@ -442,7 +442,7 @@ Occupied Region є винятком: Transit через неї CombatSituation �
 
 Allow Transit є fallback rule тільки для NonAggressive Transit через Owned non-Occupied Region.
 
-На CombatSituation Start, якщо у defender немає жодної Army у Camp/Regrouping або вже entered-for-Camp, battle context не виникає: attacking Transit Army продовжує Route. Defender Transit Army самі по собі не створюють можливості interception.
+На CombatSituation Start battle context існує, якщо defender має Army у Camp/Regrouping або Army, що вже entered-for-Camp. Army, яка вже entered-for-Camp, до Battle Start гарантовано досягає Camp або переходить у Regrouping і для участі в battle еквівалентна звичайній Camp/Regrouping Army. Якщо таких Army немає, attacking Transit Army продовжує Route. Defender Transit Army самі по собі не створюють можливості interception.
 
 Якщо Camp/Camp-bound defense context є, defender протягом Dt може один раз вручну обрати:
 
@@ -464,7 +464,7 @@ CombatSituation реєструється, коли:
 - чужа Army входить у Owned non-Occupied Region — Camp або Transit;
 - Army входить у Occupied Region з локальною метою Camp і не є current occupier;
 - Region стає Occupied, коли Camp-bound Army formal owner уже ввійшла в неї, але запізно для попередньої defense;
-- Army у Camp Neutral Region явно атакує конкретного іншого Player, який має active Camp у цій самій Region.
+- Army у Camp Neutral Region явно атакує конкретного іншого Player, який має в цій самій Region принаймні одну Army саме у звичайному Camp (`state == Camp`). Regrouping або entered-for-Camp без такої Army недостатньо для ініціації explicit attack.
 
 У кожній Region існує одна спільна FIFO-черга **всіх** player-vs-player CombatSituation незалежно від пар Player. Одночасно Active може бути максимум одна.
 
@@ -482,11 +482,7 @@ CombatSituation реєструється, коли:
 
 # 17. Defender participation і pre-battle decisions
 
-На CombatSituation Start фіксуються potential defenders defender Player:
-
-- Army у Camp;
-- Army у Regrouping;
-- Army, яка ввійшла в Region з локальною метою Camp не пізніше Start.
+На CombatSituation Start фіксуються potential defenders defender Player: усі Army у Camp/Regrouping та всі Army, що вже entered-for-Camp не пізніше Start. Для battle participation entered-for-Camp не є окремою категорією: оскільки entry -> Camp і Start -> Battle Start обидва тривають рівно `Dt`, така Army гарантовано буде у Camp або Regrouping на Battle Start і бере участь на тих самих умовах. Це так само стосується Army у `retreat-local`, яка ввійшла в Region до Start.
 
 Army, що вже вийшла з Camp, та Army, яка входить після Start, не можуть брати участі в цій CombatSituation.
 
@@ -533,11 +529,11 @@ Attacker має Target Combat Threshold і Incidental Combat Threshold.
 
 # 19. Player-vs-player combat у Neutral Region
 
-Explicit attack у Neutral Region можливий Army у Camp проти конкретного іншого Player, який має active Camp у цій самій Neutral Region. Після Registration актуальність уже зафіксованої interaction на Start перевіряється ширше: defender Player повинен мати Camp/Regrouping presence або Army, що вже entered-for-Camp.
+Explicit attack у Neutral Region можливий Army у Camp проти конкретного іншого Player тільки якщо цей Player має в цій самій Neutral Region принаймні одну Army саме у звичайному Camp (`state == Camp`). Army лише у Regrouping або entered-for-Camp недостатньо для ініціації атаки. Після Registration актуальність уже зафіксованої interaction на Start перевіряється ширше: defender Player повинен мати Camp/Regrouping presence або Army, що вже entered-for-Camp.
 
 На Registration defender Player фіксується. На Start situation або лишається атакою саме проти нього, або завершується без battle; retarget на третього Player не відбувається.
 
-До defender side застосовуються ті самі правила potential defenders, Transit join, pre-battle Retreat та command-lock, що й у territorial CombatSituation.
+Усі Army зафіксованого defender Player, які на Start є у Camp/Regrouping або вже entered-for-Camp, обов'язково входять до potential defenders; для entered-for-Camp це не опціональне приєднання. До defender side застосовуються ті самі правила Transit join, pre-battle Retreat та command-lock, що й у territorial CombatSituation.
 
 Battle Start настає через Dt і situation використовує ту саму загальну FIFO-чергу Region.
 
