@@ -57,8 +57,6 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ---
 
----
-
 ## 6. `Army`
 
 ### Прямі характеристики
@@ -179,8 +177,6 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `check_trigger_can_progress()`, `on_trigger_can_progress()`.
 - `check_trigger_ready_for_annexation()`, `on_trigger_ready_for_annexation()`.
-
----
 
 ---
 
