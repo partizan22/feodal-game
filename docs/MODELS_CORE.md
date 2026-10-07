@@ -51,8 +51,6 @@ Core world/economy models.
 
 ---
 
----
-
 ## 2. `Castle`
 
 ### Прямі характеристики
@@ -114,8 +112,6 @@ Core world/economy models.
 
 - `check_trigger_empty_food()`, `on_trigger_empty_food()`.
 - `check_trigger_storage_capacity()`, `on_trigger_storage_capacity()`.
-
----
 
 ---
 
@@ -192,8 +188,6 @@ Core world/economy models.
 
 - `check_trigger_neutral_defense_recovery_complete()`.
 - `on_trigger_neutral_defense_recovery_complete()`.
-
----
 
 ---
 
