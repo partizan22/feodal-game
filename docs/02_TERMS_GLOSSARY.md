@@ -65,7 +65,7 @@
 | Target Combat | цільовий бій | Movement-combat, де фактичний defender збігається зі snapshot Target Opponent, а також explicit Camp attack у Neutral Region. |
 | Incidental Combat | побічний бій | Movement-combat із Player, який не збігається зі snapshot Target Opponent. |
 | Loss Threshold | поріг втрат | Межа втрат, після якої сила припиняє combat. |
-| Defense Loss Threshold | оборонний поріг втрат | Persistent threshold окремої defender Army; participating Defender side використовує мінімальне значення. `0` сам по собі не є pre-battle Retreat command. |
+| Defense Loss Threshold | оборонний поріг втрат | Persistent threshold defender Army; pre-battle Retreat decision локально підміняє його на `0`. Після перевірки Retreat availability Army з effective `0` відходить до combat calculation. |
 | Target Combat Threshold | поріг цільового бою | Loss Threshold Attacker у Target Combat, explicit Camp attack у Neutral Region, атаці Neutral Defense та City Raid. |
 | Incidental Combat Threshold | поріг побічного бою | Loss Threshold Attacker у Incidental Combat. |
 | Combat Strength | бойова сила | Розрахункова сила Army/Unit у combat. |
@@ -75,7 +75,7 @@
 | Casualty Health | умовне здоров'я втрат | Внутрішня величина для розподілу casualties, не persistent HP. |
 | Loss Budget | бюджет втрат | Загальний обсяг Casualty Health, який треба розподілити після combat. |
 | Retreat | відступ | Side-level відхід у одну вибрану сусідню Region; Retreat entry не створює нову CombatSituation, далі `Dt` до Camp і Regrouping. |
-| Regrouping | перегрупування | Camp-presence після Retreat/спецпоразки; сама Army не може Move або Attack, але для інших presence rules рахується як Camp. |
+| Regrouping | перегрупування | Camp-presence після Retreat/спецпоразки; Army не може Move, Attack або Merge/Split, але для інших presence rules рахується як Camp. |
 | Neutral Defense | нейтральний захист | Абстрактна оборонна сила Neutral Region. |
 | City | місто | Об'єкт Region, що має Wealth і Coin economy. |
 | Wealth | багатство міста | Параметр City, що визначає income та raid reward. |

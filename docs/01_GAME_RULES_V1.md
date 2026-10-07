@@ -340,7 +340,7 @@ Unit має home Castle, який збігається з home Castle його K
 
 У V1 немає жорсткого ліміту Soldier у Unit або Unit в Army.
 
-Merge, split і зміна Commander дозволені для Army одного Player в одному Camp, включно з Regrouping, якщо відповідні Army не command-locked активною/очікуючою CombatSituation. Сам Regrouping не забороняє реорганізацію.
+Merge і split дозволені тільки Army у звичайному Camp одного Player і одного CampInRegion, якщо вони не command-locked CombatSituation. Regrouping merge/split забороняє. Зміна Commander сама по собі під час Regrouping дозволена, якщо немає command lock.
 
 Зміна складу Soldier виконується тільки через Castle reserve <-> Knight у home Castle і також не допускається для command-locked Army.
 
@@ -492,11 +492,11 @@ Army, що вже вийшла з Camp, та Army, яка входить піс�
 
 Окремо defender Army, яка ввійшла для Transit **до Start** і на Start ще не вийшла, стає transit defender candidate. Вона продовжує Transit і не отримує lock автоматично. До Battle Start і до фактичного виходу з Region Player може явно залишити її для defense. Тоді її старий Movement/Route припиняється, Army переходить у звичайний Camp, стає potential defender і отримує combat command-lock.
 
-Potential defender до Battle Start може отримати індивідуальне рішення Retreat. Це рішення не split-ить і не реорганізує Army. Destination Retreat визначається один раз для всієї Defender side за правилами розділу 23.
+Potential defender до Battle Start може отримати індивідуальне рішення pre-battle Retreat. Воно **не виконує Retreat одразу** і не змінює persistent Army threshold: тільки локально для цієї CombatSituation підміняє effective Defense Loss Threshold цієї Army на `0`.
 
-За відсутності ручних Retreat decisions Camp/Regrouping/entered-for-Camp Army лишаються для battle. Transit candidates без явного join продовжують Transit.
+За відсутності такого рішення Army використовує свій persistent Defense Loss Threshold. Transit candidates без явного join продовжують Transit.
 
-Після pre-battle decisions спільний Defender threshold дорівнює мінімальному defense_loss_threshold Army, які фактично лишилися для battle, якщо інше не випливає з відсутності legal Retreat за розділом 23. Окремого threshold, який задається на рівні CombatSituation, немає.
+На Battle Start спочатку перевіряється наявність legal Retreat Region для обох sides. Якщо side не має legal Retreat, її effective threshold примусово стає `100%`; лише після цієї перевірки Army/side, в яких effective threshold лишився `0`, виконують Retreat. Destination визначається side-level за розділом 23.
 
 Potential defenders після Start command-locked для Movement, merge/split, зміни Commander і composition до завершення situation. Combat-specific Retreat/join decisions залишаються доступними там, де це передбачено.
 
@@ -517,13 +517,17 @@ Attacker має Target Combat Threshold і Incidental Combat Threshold.
 
 Для explicit attack між Camp у Neutral Region завжди використовується Target Combat Threshold, бо це свідома атака на явно обраного Player і Movement target_opponent тут не застосовується.
 
-Кожна defender Army приносить власний persistent Defense Loss Threshold. Після pre-battle Retreat decisions один спільний Defender threshold дорівнює мінімальному значенню серед participating Army.
+Кожна defender Army приносить власний persistent Defense Loss Threshold. Pre-battle Retreat decision локально підміняє його на `0` тільки для поточної CombatSituation.
 
-Defense Loss Threshold 0 **не є автоматичним pre-battle Retreat command**. Army відходить до battle тільки за explicit Retreat decision. Якщо Army з threshold 0 лишається participant, вона бере участь у спільній Defender side з цим значенням threshold.
+На Battle Start порядок фіксований:
 
-Якщо сторона не має жодної legal Retreat Region, її threshold для цього battle примусово стає максимальним. Для Defender це застосовується до спільного threshold.
+1. для Attacker side і Defender side визначається наявність legal Retreat;
+2. якщо side не має legal Retreat, її effective combat threshold примусово стає `100%`; для Defender жодна локальна `0`-підміна тоді не виконує Retreat;
+3. тільки після цього всі Army/side з effective threshold `0` і legal Retreat виходять до combat calculation без casualties;
+4. якщо Defender Army залишились, спільний Defender threshold стає мінімальним effective threshold серед них;
+5. після цього lock-яться strengths і виконується combat calculation.
 
-Фактичні thresholds, strengths та інші combat parameters lock-яться на Battle Start.
+Отже, звичайний persistent threshold `0` також означає відхід до combat, якщо Retreat можливий. Якщо `0` має Attacker і legal Retreat є, Attacker Retreat-ить і battle не розраховується.
 
 ---
 
@@ -593,9 +597,9 @@ Combat завершується, коли одна зі сторін першо�
 
 Combat Strength кожної Army спочатку розраховується окремо з її власним Commander-in-Chief coefficient. Після цього сили всіх participating defender Army підсумовуються.
 
-До combat можуть бути виключені тільки Army, для яких Player явно задав pre-battle Retreat або які інакше не є participant за правилами CombatSituation. Саме значення Defense Loss Threshold, включно з 0, не видаляє Army з battle автоматично.
+До combat calculation не входять Army, які після перевірки Retreat availability мають effective threshold `0` і виконали Retreat, а також Army, які інакше не є participant за правилами CombatSituation.
 
-Спільний Defender threshold дорівнює мінімальному Defense Loss Threshold participating Army. Якщо Defender side не має жодної legal Retreat Region, цей спільний threshold примусово стає максимальним.
+Якщо legal Retreat у Defender side є, спільний Defender threshold дорівнює мінімальному effective Defense Loss Threshold Army, що лишилися після zero-threshold Retreat. Якщо legal Retreat немає, спільний threshold примусово дорівнює `100%` і pre-battle Retreat не виконується.
 
 Якщо Defender програє, усі Army, що брали участь, вважаються такими, що програли, і використовують **одну спільну Retreat Region**, вибрану для всієї Defender side. Casualties розподіляються тільки між фактичними participants; Army, що виконали pre-battle Retreat, casualties не отримують.
 
@@ -624,7 +628,7 @@ Legal Retreat Region визначаються окремо для Attacker side 
 
 - у чужу Castle Region;
 - у свою Region, яку зараз Occupied інший Player;
-- у non-Neutral Region, де foreign local presence робить Camp arrival несумісним із безбойовим Retreat;
+- у чужу Owned Region, якщо туди вже ввійшла для Camp хоча б одна Army будь-якого Player або там уже є Army у Camp/Regrouping; pure Transit при цьому не блокує Retreat;
 - у Neutral Region, де є local presence opponent, якому ця side щойно програла.
 
 Neutral Defense саме по собі Retreat не блокує.
@@ -659,7 +663,7 @@ Pre-battle Retreat використовує ті самі movement/Regrouping ru
 
 Якщо кілька defender Army Retreat-ять, усі використовують одну Defender retreat Region. Якщо destination — empty foreign Owned non-Occupied Region, після Camp arrival створюється одна Occupation цього Player.
 
-Regrouping є звичайною Camp-presence для Food, Occupation, Annexation, Founding, defense та Camp lifecycle. Єдині загальні заборони самого Regrouping: Army не може ініціювати Movement і не може Attack. Merge/split, зміна Commander, threshold та composition дозволяються за звичайними location/combat-lock rules; наприклад composition усе одно потребує home Castle.
+Regrouping є звичайною Camp-presence для Food, Occupation, Annexation, Founding, defense та Camp lifecycle. Army у Regrouping не може ініціювати Movement або Attack і не може Merge/Split. Зміна Commander, threshold та composition дозволяються за звичайними location/combat-lock rules; composition усе одно потребує home Castle.
 
 Якщо виграє Defender, participating defender Army лишаються у Camp.
 
@@ -709,7 +713,7 @@ Commander-in-Chief використовує менший mortality coefficient, 
 
 Умовна шкода Knight не переноситься між combat.
 
-Якщо Commander-in-Chief гине, це визначається вже після завершення всього combat та розподілу casualties. Після цього Army розпадається на окремі Unit.
+Якщо Commander-in-Chief гине, це визначається після завершення розподілу всіх casualties. Army **не розпадається**: серед живих Knight цієї Army автоматично новим Commander-in-Chief стає Knight із найбільшим Experience. Це не змінює результат уже розрахованого combat; Army зберігає thresholds і свій подальший Retreat/Camp/Movement/Regrouping context. Якщо живих Knight в Army не лишилося, сама Army припиняє існування. При рівному Experience використовується детермінований tie-breaker.
 
 Всі випадкові рішення combat повинні бути відтворюваними при однаковому повному стані та однаковому random seed.
 
@@ -851,7 +855,7 @@ Founder повинен залишатися живим, у потрібному 
 
 Якщо під час завершення Founding у Region уже знаходиться foreign Transit Army, Castle все одно створюється, а ця Army має право завершити вже розпочатий Transit. Нові hostile entries у Castle Region після цього заборонені V1.
 
-Після completion Region стає Castle Region нового Castle. Якщо вона раніше належала іншому Castle цього Player, зв'язок із старим Castle припиняється. Створюються Warehouse 1, Granary 1 і Palace 1. Founder змінює home Castle на новий і займає початковий Palace slot; додатковий Knight через цей стартовий slot не генерується.
+Після completion Region стає Castle Region нового Castle. Якщо вона раніше належала іншому Castle цього Player, зв'язок із старим Castle припиняється. Створюються Warehouse 1, Granary 1 і Palace 1. Founder змінює home Castle на новий і займає початковий Palace slot; додатковий Knight через цей стартовий slot не генерується. У старому home Castle founder-а звільнений Palace slot запускає звичайний KnightReplacement mechanism так само, як slot після загибелі Knight.
 
 ---
 

@@ -64,13 +64,13 @@
 
 10. **Merge Armies**
    - Тип: дія користувача.
-   - Умова: Armies можна об'єднати.
+   - Умова: Armies у звичайному Camp можна об'єднати; Regrouping merge забороняє.
    - Наслідок: створюється об'єднана Army.
    - Модель: `? -> Army`
 
 11. **Split Army**
    - Тип: дія користувача.
-   - Умова: поточний стан Army дозволяє поділ.
+   - Умова: Army у звичайному Camp дозволяє поділ; Regrouping split забороняє.
    - Наслідок: Army розділяється на кілька Armies.
    - Модель: `? -> Army`
 
@@ -115,13 +115,13 @@
 18. **Set Pre-Battle Retreat Decision**
    - Тип: дія користувача.
    - Умова: CombatSituation Active, Army є potential defender і Battle Start ще не настав.
-   - Наслідок: фіксується або змінюється рішення цієї Army про pre-battle Retreat; legal destination є side-level для Defender.
+   - Наслідок: локально для цієї CombatSituation effective Defense Loss Threshold Army стає `0`; persistent threshold не змінюється. На Battle Start Retreat виконається тільки після side-level перевірки legal Retreat.
    - Модель: `? -> CombatSituation`
 
 19. **Battle Start / Resolve**
    - Тип: trigger.
    - Умова: досягнуто battle start і CombatSituation досі актуальна.
-   - Наслідок: розв'язується player-vs-player battle і застосовуються його наслідки. Загиблий Knight через `Knight.die()` створює KnightReplacement у своєму Castle незалежно від типу combat.
+   - Наслідок: спочатку перевіряється Retreat availability, застосовуються zero-threshold Retreat, потім за потреби розв'язується player-vs-player battle. Загиблий Knight створює KnightReplacement; якщо загинув Commander, після всіх casualties новим стає surviving Knight з найбільшим Experience.
    - Модель: `CombatSituation -> Army, Knight, Castle, Region, CampInRegion, Movement, KnightReplacement`
 
 20. **Attack Neutral Defense**
