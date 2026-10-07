@@ -25,19 +25,19 @@
    - Модель: `? -> Movement`
 
 4. **Movement Direction Revealed**
-   - Тип: trigger.
+   - Тип: `[state trigger]`.
    - Умова: Movement проходить встановлену частку шляху через Region.
    - Наслідок: `Movement.direction_revealed` переходить у true; projection/frontend може оновити доступний наступний exit direction і notification.
    - Модель: `Movement`
 
 5. **Next Region Reached**
-   - Тип: trigger.
+   - Тип: `[event trigger]`.
    - Умова: Movement доходить до межі наступної Region.
    - Наслідок: Army входить у наступну Region; оновлюється рух і локальні процеси.
    - Модель: `Movement -> Army, Region`
 
 6. **Camp Reached**
-   - Тип: trigger.
+   - Тип: `[event trigger]`.
    - Умова: Army завершує локальний рух до Camp.
    - Наслідок: Army переходить у Camp; оновлюються локальна присутність і пов'язані процеси.
    - Модель: `Movement -> Army, Region, CampInRegion`
@@ -119,7 +119,7 @@
    - Модель: `? -> CombatSituation`
 
 19. **Battle Start / Resolve**
-   - Тип: trigger.
+   - Тип: `[event trigger]`.
    - Умова: досягнуто battle start і CombatSituation досі актуальна.
    - Наслідок: спочатку перевіряється Retreat availability, застосовуються zero-threshold Retreat, потім за потреби розв'язується player-vs-player battle. Загиблий Knight створює KnightReplacement; якщо загинув Commander, після всіх casualties новим стає surviving Knight з найбільшим Experience.
    - Модель: `CombatSituation -> Army, Knight, Castle, Region, CampInRegion, Movement, KnightReplacement`
@@ -131,7 +131,7 @@
    - Модель: `? -> Army, Region, City, Knight, Castle, KnightReplacement`
 
 21. **Regrouping Complete**
-   - Тип: trigger.
+   - Тип: `[event trigger]`.
    - Умова: завершився період Camp-Regrouping.
    - Наслідок: Army виходить із Regrouping.
    - Модель: `Army`
@@ -139,7 +139,7 @@
 ## Territory / CampInRegion
 
 22. **Annexation Ready**
-   - Тип: trigger.
+   - Тип: `[event trigger]`.
    - Умова: `CampInRegion.control_progress` досягає потрібного порога.
    - Наслідок: CampInRegion стає ready для manual Annexation.
    - Модель: `CampInRegion`
@@ -159,7 +159,7 @@
    - Модель: `? -> Player, CastleFounding`
 
 25. **Castle Founding Complete**
-   - Тип: trigger.
+   - Тип: `[event trigger]`.
    - Умова: founding progress завершений і процес валідний.
    - Наслідок: створюється Castle, Region стає Castle Region, founder переходить до нового Castle.
    - Модель: `CastleFounding -> Player, Castle, Region, Knight`
@@ -181,13 +181,13 @@
    - Модель: `? -> Castle, BuildingUpgrade`
 
 28. **Building Upgrade Complete**
-   - Тип: trigger.
+   - Тип: `[event trigger]`.
    - Умова: BuildingUpgrade досягає завершення.
    - Наслідок: рівень будівлі збільшується; BuildingUpgrade переходить у завершений стан.
    - Модель: `BuildingUpgrade -> Castle`
 
 29. **Knight Replacement Complete**
-   - Тип: trigger.
+   - Тип: `[event trigger]`.
    - Умова: KnightReplacement досягає завершення.
    - Наслідок: створюється новий Knight у відповідному Castle; KnightReplacement переходить у завершений стан.
    - Модель: `KnightReplacement -> Castle, Knight`
@@ -203,7 +203,7 @@
    - Модель: `? -> Region, ResourceSiteUpgrade`
 
 31. **ResourceSite Upgrade Complete**
-   - Тип: trigger.
+   - Тип: `[event trigger]`.
    - Умова: ResourceSiteUpgrade досягає завершення.
    - Наслідок: рівень ResourceSite збільшується; ResourceSiteUpgrade переходить у завершений стан.
    - Модель: `ResourceSiteUpgrade -> Region`
@@ -217,7 +217,7 @@
    - Модель: `? -> Castle, Recruitment`
 
 33. **Current Recruit Finished**
-   - Тип: trigger.
+   - Тип: `[event trigger]`.
    - Умова: progress поточного recruit досяг завершення.
    - Наслідок: recruit завершується і queue переходить до наступного елемента.
    - Модель: `Recruitment -> Castle`
@@ -225,19 +225,19 @@
 ## Economy boundaries
 
 34. **Food Empty Boundary**
-   - Тип: двонаправлений trigger.
-   - Умова: стан `empty_food` змінюється.
+   - Тип: `[state trigger]`.
+   - Умова: boolean-стан `empty_food` змінюється (`false <-> true`).
    - Наслідок: перераховуються залежні rates/processes.
    - Модель: `Castle`
 
 35. **Coins Empty Boundary**
-   - Тип: двонаправлений trigger.
-   - Умова: стан `empty_coins` змінюється.
+   - Тип: `[state trigger]`.
+   - Умова: boolean-стан `empty_coins` змінюється (`false <-> true`).
    - Наслідок: перераховуються залежні rates/processes.
    - Модель: `Player`
 
 36. **Storage Capacity Boundary**
-   - Тип: trigger.
+   - Тип: `[state trigger]`.
    - Умова: ресурс досягає storage capacity.
    - Наслідок: подальший effective growth стає нульовим до зміни умов.
    - Модель: `Castle`
@@ -245,7 +245,7 @@
 ## Neutral Defense recovery
 
 37. **Neutral Defense Recovery Complete**
-   - Тип: trigger.
+   - Тип: `[event trigger]`.
    - Умова: виконані умови повного відновлення Neutral Defense.
    - Наслідок: Neutral Defense відновлюється до повного значення.
    - Модель: `Region`

@@ -107,6 +107,10 @@ IdentityMap:
 
 В актуальній схемі всі обчислювальні характеристики зберігаються при `commit()`. Окремого типу "materialized computed" більше немає: materialization є стандартною властивістю всіх computed characteristics.
 
+Окремо в описах Model позначаються **system-computed** характеристики (маркер `*`). Це не інший persistence type: system-computed, як і решта computed characteristics, зберігаються при `commit()`. Відмінність у способі отримання актуального значення: воно не обчислюється прямо в рамках game logic самої Model, а надається infrastructure за системними правилами. Типові приклади — reverse relationships та топологічні зв'язки карти.
+
+System-computed relationship може безпосередньо надавати Model зв'язок з іншою Model, якщо цей зв'язок сам є природною характеристикою першої Model. Це не скасовує загального обмеження на довільний обхід `A -> B -> C` усередині звичайної computed logic.
+
 Обчислювальна характеристика може використовувати:
 - прямі характеристики своєї Model;
 - dynamic characteristics своєї Model;
@@ -430,7 +434,7 @@ Gameplay action користувача, що виконується через w
 
 ### `check_trigger_{name}()`
 
-Перевірка та прогноз trigger-а. Не змінює game state.
+Перевірка та прогноз trigger-а. Не змінює game state. Для state trigger infrastructure окремо використовує technical previous boolean state, щоб визначити факт переходу; це не змінює return format `check_trigger_*()`. Для event trigger previous boolean state не використовується.
 
 ### `on_trigger_{name}()`
 
@@ -452,23 +456,28 @@ Trigger — не synonym для "якщо умова true, встановити 
 
 ## 23. Види trigger
 
-Поки підтримуються два види.
+Підтримуються два види: `[state trigger]` і `[event trigger]`.
 
-### 23.1. `[однонаправлений]`
+### 23.1. `[state trigger]`
 
-Спрацьовує при виконанні умови без необхідності відстежувати її попередній boolean state.
+State trigger прив'язаний до boolean-умови та відстежує зміну її стану. Trigger engine пам'ятає попередній boolean state і реагує на обидва переходи:
 
-### 23.2. `[двонаправлений]`
-
-Trigger engine пам'ятає попередній boolean state умови та реагує на:
 - `false -> true`;
 - `true -> false`.
 
-Для обох переходів використовується один `on_trigger_{name}()`.
+Одна й та сама умова може переходити між станами багато разів, тому state trigger може спрацьовувати багаторазово. Для обох напрямків використовується один `on_trigger_{name}()`; якщо domain behavior залежить від напрямку переходу, method визначає актуальний state/transition.
 
-Якщо поведінка залежить від напрямку, method визначає актуальний state/transition.
+Technical previous-state state trigger-а зберігається infrastructure і не є domain characteristic Model.
 
-Technical previous-state trigger-а не є domain characteristic Model.
+Типові приклади — `empty_food`, `empty_coins`, досягнення/вихід зі storage capacity та інші boolean boundaries, де важливі обидві зміни стану.
+
+### 23.2. `[event trigger]`
+
+Event trigger представляє окреме настання події або часової межі. Для нього previous boolean state не використовується: кожне нове настання умови є окремою подією і може породити окрему trigger GameEvent.
+
+Event trigger також може спрацьовувати багаторазово, якщо відповідна подія може наставати повторно. Після одного спрацювання наступне настання прогнозується та обробляється незалежно.
+
+Типові приклади — досягнення наступної Region, завершення поточного recruit, завершення BuildingUpgrade або іншого процесу.
 
 ## 24. Семантика `check_trigger_*()`
 
@@ -479,7 +488,7 @@ Technical previous-state trigger-а не є domain characteristic Model.
 - `N > 0` — trigger очікується через `N` одиниць Game Time;
 - `N = 0` — trigger уже повинен бути перевірений/спрацьовувати на поточному `Te`.
 
-`N` — відносний час від поточного `Te`.
+`N` — відносний час від поточного `Te`. Return format однаковий для обох видів trigger. Для `[state trigger]` engine додатково порівнює актуальний boolean state з infrastructure previous-state і створює trigger GameEvent тільки для фактичного переходу. Для `[event trigger]` previous-state не перевіряється: `N = 0` означає окреме актуальне настання події.
 
 Навіть `N = 0` не запускає `on_trigger_*()` у поточній GameEvent.
 
