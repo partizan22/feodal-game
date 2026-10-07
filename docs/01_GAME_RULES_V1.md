@@ -85,9 +85,9 @@ Transit через Occupied Region не створює CombatSituation неза�
 - Neutral Defense надалі відновлюється за звичайними правилами Neutral Region;
 - війська колишнього власника, які вже перебувають у Camp у цій Region, залишаються на місці й надалі вважаються військами в Camp у Neutral Region.
 
-Player може миттєво й безкоштовно добровільно відмовитися від будь-якої своєї звичайної Region, але не від Castle Region. Для цього не потрібна присутність Army або Knight. Єдиний спеціальний blocker — active CombatSituation у самій Region.
+Player може миттєво й безкоштовно добровільно відмовитися від будь-якої своєї звичайної Region, але не від Castle Region. Для цього не потрібна присутність Army або Knight. Єдиний спеціальний blocker — CombatSituation зі status `Active` у самій Region. `Registered` situation існує в queue тільки тоді, коли інша situation цієї Region уже Active, тому окремого стану «queued без Active» у нормальному lifecycle немає.
 
-Після відмови Region одразу стає Neutral, її City Wealth і рівні ResourceSite зберігаються, active ResourceSiteUpgrade продовжуються, а війська, що вже перебувають у ній, залишаються на місці за правилами Neutral Region. Якщо відмова остаточно розриває territorial connection інших Region цього Castle, вони також автоматично стають Neutral за правилами вище. Уже запущений Annexation іншого Player від самої відмови не скасовується.
+Після відмови Region одразу стає Neutral, її City Wealth і рівні ResourceSite зберігаються, active ResourceSiteUpgrade продовжуються, а війська, що вже перебувають у ній, залишаються на місці за правилами Neutral Region. Якщо відмова остаточно розриває territorial connection інших Region цього Castle, вони також автоматично стають Neutral за правилами вище. Уже запущений Annexation іншого Player від самої відмови не скасовується. Власний active CastleFounding також не cancel-иться і не reset-иться лише через `Owned -> Neutral`, якщо founder лишається валідним; далі для progress застосовуються звичайні умови Founding у Neutral Region, включно з `Neutral Defense == 0` і pause через blocking foreign Camp-presence.
 
 Castle Region є винятком із звичайних правил війни у V1: її не можна атакувати і через неї не можна прокладати новий ворожий Transit. Якщо чужа Army вже почала Transit через Region до моменту завершення Founding Castle, вона має право завершити цей уже розпочатий Transit.
 
@@ -157,7 +157,7 @@ Occupied або disconnected Region не передає ці ресурси фо
 
 Player не керує окремими іменованими Site: для одного resource type і поточного level він задає кількість Site, які треба покращити. Один ResourceSiteUpgrade резервує вибрану кількість Site одразу; зарезервовані Site недоступні іншим паралельним order. Кілька order одного level можуть працювати одночасно, якщо лишилися незарезервовані eligible Site.
 
-Всі Site одного order покращуються паралельно й завершуються одночасно. Тривалість переходу level -> level+1 не залежить від `quantity`; cost дорівнює per-site cost × quantity і повністю списується upfront при старті. Під час upgrade Site продовжує виробляти як старий level до completion.
+Всі Site одного order покращуються паралельно й завершуються одночасно. Тривалість переходу level -> level+1 не залежить від `quantity`; cost дорівнює per-site cost × quantity і повністю списується upfront при старті. Wood / Stone / Iron / Food беруться з Castle, до якого Region приєднана на момент Start; Coins / Gold / Silver — з current owner Player. Mixed cost перевіряється і списується атомарно. Подальша зміна owner, Castle association або neutralization не переносить і не повертає вже сплачену cost. Під час upgrade Site продовжує виробляти як старий level до completion.
 
 Layered rule перевіряє фактично досягнуті level: наступний layer не можна почати, доки всі Site цього resource type реально не завершили попередній level. Active upgrade/reservation не рахується як уже завершений level.
 
@@ -250,7 +250,7 @@ Prerequisites задаються конфігурацією як набір мі
 
 Якщо Knight гине, Palace level не зменшується. Для звільненого slot одразу стартує `KnightReplacement` timing. Якщо гине кілька Knight, replacement timers обробляються послідовно однією чергою. Коли timer конкретного replacement завершився, він додає одного готового Knight у спільну FIFO-чергу Knight, що чекають ім'я, і більше не блокує запуск timer наступного загиблого Knight.
 
-Palace upgrade і завершений KnightReplacement додають однаковий елемент у цю спільну чергу очікування імені. До отримання імені такі готові Knight нічим не відрізняються. Player дає їм імена строго по черзі; лише в цей момент відповідний Knight створюється.
+Palace upgrade і завершений KnightReplacement додають однаковий елемент у цю спільну чергу очікування імені. До отримання імені такі готові Knight нічим не відрізняються. Кожний ready unnamed entry уже резервує один доступний Palace slot у сенсі Capacity, хоча Knight entity ще не існує; відкладання імені не створює додаткової вільної Capacity. Player дає їм імена строго по черзі; лише в цей момент відповідний Knight створюється.
 
 Palace має регулярний Coin upkeep за функцією його level.
 
@@ -311,7 +311,11 @@ Knight має:
 
 Knight може існувати без Soldier.
 
-Experience зростає після боїв залежно від масштабу противника та повільно з часом. Конкретні функції зростання й перетворення Experience у коефіцієнт задаються конфігурацією.
+Experience зростає після боїв залежно від масштабу противника та повільно з часом. Battle Experience отримують тільки живі після battle Knight, які реально входили до combat calculation. Knight, що виконали pre-battle Retreat до calculation, XP не отримують; загиблі в цьому battle Knight також не отримують XP. Базовий XP participating survivor визначається функцією від pre-combat strength противника та, за потреби, власної side і не залежить від фактичних втрат конкретного Unit. Commander-in-Chief отримує додатковий Experience bonus за статус Commander.
+
+Passive Experience нараховується всім існуючим живим Knight безперервно незалежно від `Castle / Camp / Movement / Regrouping` та combat lock. Ready unnamed Knight ще не є Knight entity і Experience не накопичує; dead Knight також не накопичує Experience.
+
+Конкретні функції battle/passive Experience, Commander bonus і перетворення Experience у коефіцієнт задаються конфігурацією.
 
 Жорсткої верхньої межі Experience немає; ефект Experience має зростати зі спадною віддачею.
 
@@ -403,9 +407,9 @@ Persistent thresholds можна змінювати під час Camp або Mo
 
 # 12. Upkeep військ
 
-Soldier і Knight мають регулярний Coin upkeep, незалежний від Food. Конкретні ставки та можливі відмінності між Castle/Camp задаються конфігурацією.
+Soldier і Knight мають регулярний Coin upkeep, незалежний від Food. Reserve Soldier у Barracks також мають звичайний Coin upkeep відповідно до Soldier Type і починають його сплачувати одразу після завершення Recruitment. Конкретні ставки та можливі відмінності між Castle/Camp задаються конфігурацією.
 
-Food consumption є окремою системою. Компенсація Food shortage у Coins завжди додається до звичайного Coin upkeep, а не замінює його.
+Food consumption є окремою системою. Reserve Soldier споживають Food саме Castle, де вони зберігаються. Компенсація Food shortage у Coins завжди додається до звичайного Coin upkeep, а не замінює його.
 
 Для Army у Movement весь її Food-equivalent consumption додатково переводиться в Coins за coins_per_food.
 
@@ -413,7 +417,7 @@ Food consumption є окремою системою. Компенсація Food
 
 # 13. Route, Movement, Dt і фіксація наміру
 
-Player задає Army фізичний Route та кінцеву Region. Локальна мета Camp або Transit визначається самим movement order і після входу в поточну Region не переобчислюється через зміну ownership, Occupation або наявності військ.
+Player задає Army фізичний Route та кінцеву Region. Локальна мета Camp або Transit визначається самим movement order і після входу в поточну Region не переобчислюється через зміну ownership, Occupation або наявності військ. Під час combat command-lock заборонені звичайні movement-planning commands, включно зі зміною future route та explicit refresh `target_opponent`; дозволені лише прямо передбачені combat-specific decisions. Після зняття lock Player знову може refresh-нути target opponent до наступного border entry.
 
 Проміжна Region маршруту проходиться як Transit. Якщо поточна Region є кінцевою для цього order, Army рухається до Camp. CombatSituation може pause-ити цей рух, але не змінює початкову локальну мету.
 
@@ -472,7 +476,7 @@ Allow Transit є fallback rule тільки для NonAggressive Transit чер�
 - Allow — CombatSituation завершується без battle, attacker продовжує Transit;
 - Fight — situation доходить до Battle Start.
 
-Ручний вибір immutable. Якщо його немає до Battle Start, використовується поточне Allow Transit: true -> Allow, false -> Fight.
+Ручний вибір immutable. Owner може змінювати `Allow Transit` до Battle Start за звичайними ownership rules. Якщо explicit `Allow/Fight` уже вибрано, fallback для цієї CombatSituation більше не використовується. Якщо ручного рішення немає до Battle Start, використовується актуальне на Battle Start значення Allow Transit: true -> Allow, false -> Fight.
 
 Для Aggressive Transit Allow Transit не застосовується. Якщо defense context є, battle відбувається.
 
@@ -511,9 +515,9 @@ Army, що вже вийшла з Camp, та Army, яка входить піс�
 
 Окремо defender Army, яка ввійшла для Transit **до Start** і на Start ще не вийшла, стає transit defender candidate. Вона продовжує Transit і не отримує lock автоматично. До Battle Start і до фактичного виходу з Region Player може явно залишити її для defense. Тоді її старий Movement/Route припиняється, Army переходить у звичайний Camp, стає potential defender і отримує combat command-lock.
 
-Potential defender до Battle Start може отримати індивідуальне рішення pre-battle Retreat. Воно **не виконує Retreat одразу** і не змінює persistent Army threshold: тільки локально для цієї CombatSituation підміняє effective Defense Loss Threshold цієї Army на `0`.
+Potential defender до Battle Start може отримати індивідуальне рішення pre-battle Retreat. Воно **не виконує Retreat одразу** і не змінює persistent Army threshold: тільки локально для цієї CombatSituation підміняє effective Defense Loss Threshold цієї Army на `0`. До Battle Start це рішення можна змінювати; чинним є останнє значення. На Battle Start воно lock-иться разом з іншими combat parameters.
 
-За відсутності такого рішення Army використовує свій persistent Defense Loss Threshold. Transit candidates без явного join продовжують Transit.
+За відсутності такого рішення effective Defense Loss Threshold визначається на Battle Start за актуальним станом Army. Якщо Army на цей момент усе ще у Regrouping, effective threshold = `0`; якщо Regrouping уже завершився, використовується persistent Defense Loss Threshold. Transit candidates без явного join продовжують Transit.
 
 На Battle Start спочатку перевіряється наявність legal Retreat Region для обох sides. Якщо side не має legal Retreat, її effective threshold примусово стає `100%`; лише після цієї перевірки Army/side, в яких effective threshold лишився `0`, виконують Retreat. Destination визначається side-level за розділом 23.
 
@@ -620,7 +624,7 @@ Combat Strength кожної Army спочатку розраховується 
 
 Якщо legal Retreat у Defender side є, спільний Defender threshold дорівнює мінімальному effective Defense Loss Threshold Army, що лишилися після zero-threshold Retreat. Якщо legal Retreat немає, спільний threshold примусово дорівнює `100%` і pre-battle Retreat не виконується.
 
-Якщо Defender програє, усі Army, що брали участь, вважаються такими, що програли, і використовують **одну спільну Retreat Region**, вибрану для всієї Defender side. Casualties розподіляються тільки між фактичними participants; Army, що виконали pre-battle Retreat, casualties не отримують.
+Якщо Defender програє, усі Army, що брали участь, вважаються такими, що програли, і використовують **одну спільну Retreat Region**, вибрану для всієї Defender side. Casualties розподіляються тільки між фактичними participants; Army, що виконали pre-battle Retreat, casualties не отримують. Для casualty allocation не існує окремої квоти на кожну defender Army: усі Unit усіх participating defender Army утворюють один спільний side-level набір, а Army structure впливає на combat strength через Commander, але не на окремий budget втрат.
 
 ---
 
@@ -629,7 +633,7 @@ Combat Strength кожної Army спочатку розраховується 
 
 Legal Retreat Region визначаються окремо для Attacker side і Defender side, але **не окремо для кожної Army**. Усі Army однієї combat side знаходяться в одній combat Region, мають ту саму combat role та opponent, тому мають один side-level набір legal Retreat Region.
 
-Якщо side не має жодної legal Retreat Region, її loss threshold для цього battle примусово стає максимальним.
+Якщо side не має жодної legal Retreat Region, її loss threshold для цього battle примусово стає максимальним (`100%`). Якщо така side першою досягає цього threshold і програє battle, результат трактується як fight-to-destruction: усі її Soldier і Knight гарантовано гинуть, а звичайна Knight mortality randomness для цього terminal випадку не застосовується.
 
 ## 23.1 Геометричне обмеження
 
@@ -664,11 +668,13 @@ Neutral Defense саме по собі Retreat не блокує.
 
 Серед own Region кожна кандидатна Region оцінюється відносно Castle, до якого приєднана **сама ця Region**: перевага має Region, ближча до свого Castle. Це не home Castle Army і не Castle Commander.
 
-Серед Neutral Region перевага надається ближчій до власної territory; для foreign Region використовується визначений географічний критерій.
+Серед Neutral Region перевага має candidate з меншою мінімальною стандартною hex-grid distance до будь-якої Owned non-Occupied Region цього Player. Disconnected Owned Region враховується, доки вона формально не втрачена; Occupied Region як опорна точка не враховується.
+
+Серед legal foreign Owned Region перевага має candidate з меншою стандартною hex-grid distance до найближчої Neutral Region: Army намагається якомога швидше залишити чужу territory.
 
 Для Attacker найвищий пріоритет має source Region, з якої він увійшов у combat Region, якщо вона legal. Інакше використовуються ті самі групові пріоритети.
 
-Якщо після всіх priority rules кілька Region рівнозначні, одна вибирається випадково.
+Якщо після всіх priority rules кілька Region рівнозначні, одна вибирається seeded random tie-breaker.
 
 Вибір виконується один раз для відповідної side. Усі Army цієї side, що Retreat-ять у межах CombatSituation, використовують той самий destination.
 
@@ -710,7 +716,7 @@ Persistent HP у Soldier і Knight немає.
 
 LossBudget розподіляється між Unit приблизно пропорційно їх Casualty Health, але не строго.
 
-До ваг кожного Unit застосовується невелике випадкове відхилення, після чого ваги нормалізуються так, щоб сумарний LossBudget не змінився.
+До ваг кожного Unit застосовується невелике випадкове відхилення, після чого ваги нормалізуються так, щоб сумарний LossBudget не змінився. Якщо виділений конкретному Unit budget перевищує його максимальну доступну Casualty Health, надлишок не губиться, а перерозподіляється між іншими Unit цієї side; перерозподіл повторюється, доки budget можна застосувати або вся side повністю вичерпала Casualty Health.
 
 Це запобігає штучним результатам, коли однакові Unit завжди втрачають точно однакову кількість Soldier.
 
@@ -816,7 +822,7 @@ City є об'єктом Region і має дві економічні харак�
 
 effective_wealth = wealth × active_wealth_ratio.
 
-Коли active_wealth_ratio == 1, Region є Owned non-Occupied і Player не має empty_coins, wealth поступово зростає.
+Коли active_wealth_ratio == 1, Region є Owned non-Occupied і Player не має empty_coins, wealth поступово зростає. Territorial connection для самого Wealth growth не потрібен: disconnected Owned non-Occupied City продовжує локально нарощувати Wealth, хоча recurring Coin income з disconnected Region не надходить Player до відновлення connection.
 
 Після успішного Raid wealth не зменшується, а active_wealth_ratio скидається до 0. Поки ratio < 1, wealth не росте.
 
