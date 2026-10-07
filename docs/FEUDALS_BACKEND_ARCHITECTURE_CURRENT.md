@@ -488,7 +488,7 @@ Event trigger також може спрацьовувати багатораз�
 - `N > 0` — trigger очікується через `N` одиниць Game Time;
 - `N = 0` — trigger уже повинен бути перевірений/спрацьовувати на поточному `Te`.
 
-`N` — відносний час від поточного `Te`.
+`N` — відносний час від поточного `Te`. Return format однаковий для обох видів trigger. Для `[state trigger]` engine додатково порівнює актуальний boolean state з infrastructure previous-state і створює trigger GameEvent тільки для фактичного переходу. Для `[event trigger]` previous-state не перевіряється: `N = 0` означає окреме актуальне настання події.
 
 Навіть `N = 0` не запускає `on_trigger_*()` у поточній GameEvent.
 
