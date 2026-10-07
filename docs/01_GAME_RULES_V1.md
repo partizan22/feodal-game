@@ -47,6 +47,8 @@ Owned Region формально належить одному гравцю та 
 
 Власник сплачує регулярне утримання Region. Розмір утримання залежить від відстані до Castle через налаштовувану функцію.
 
+У V1 `distance` між звичайною Region і її Castle — це пряма стандартна відстань на hex-grid між hex цієї Region і hex Castle Region, а не довжина територіального шляху. Для Castle Region `distance = 0`, для сусідньої Region `distance = 1`.
+
 
 ## 2.3 Occupied
 
@@ -79,8 +81,13 @@ Transit через Occupied Region не створює CombatSituation неза�
 
 - рівні ResourceSite зберігаються;
 - Wealth City, якщо City є, зберігається, але перестає зростати, поки Region Neutral;
+- active ResourceSiteUpgrade не скасовуються і продовжуються;
 - Neutral Defense надалі відновлюється за звичайними правилами Neutral Region;
 - війська колишнього власника, які вже перебувають у Camp у цій Region, залишаються на місці й надалі вважаються військами в Camp у Neutral Region.
+
+Player може миттєво й безкоштовно добровільно відмовитися від будь-якої своєї звичайної Region, але не від Castle Region. Для цього не потрібна присутність Army або Knight. Єдиний спеціальний blocker — active CombatSituation у самій Region.
+
+Після відмови Region одразу стає Neutral, її City Wealth і рівні ResourceSite зберігаються, active ResourceSiteUpgrade продовжуються, а війська, що вже перебувають у ній, залишаються на місці за правилами Neutral Region. Якщо відмова остаточно розриває territorial connection інших Region цього Castle, вони також автоматично стають Neutral за правилами вище. Уже запущений Annexation іншого Player від самої відмови не скасовується.
 
 Castle Region є винятком із звичайних правил війни у V1: її не можна атакувати і через неї не можна прокладати новий ворожий Transit. Якщо чужа Army вже почала Transit через Region до моменту завершення Founding Castle, вона має право завершити цей уже розпочатий Transit.
 
@@ -148,6 +155,14 @@ Occupied або disconnected Region не передає ці ресурси фо
 
 Розвиток ResourceSite має власну вартість і час, що задаються конфігурацією.
 
+Player не керує окремими іменованими Site: для одного resource type і поточного level він задає кількість Site, які треба покращити. Один ResourceSiteUpgrade резервує вибрану кількість Site одразу; зарезервовані Site недоступні іншим паралельним order. Кілька order одного level можуть працювати одночасно, якщо лишилися незарезервовані eligible Site.
+
+Всі Site одного order покращуються паралельно й завершуються одночасно. Тривалість переходу level -> level+1 не залежить від `quantity`; cost дорівнює per-site cost × quantity і повністю списується upfront при старті. Під час upgrade Site продовжує виробляти як старий level до completion.
+
+Layered rule перевіряє фактично досягнуті level: наступний layer не можна почати, доки всі Site цього resource type реально не завершили попередній level. Active upgrade/reservation не рахується як уже завершений level.
+
+Новий ResourceSiteUpgrade можна почати тільки у власній, non-Occupied і territorially connected Region. Чужа Army у pure Transit цьому не заважає. Після старту upgrade ніколи не pause-иться й не скасовується через Occupation, disconnection, перехід Region у Neutral, зміну owner або Castle association; він завершується в цій Region і підвищує рівні Site для того, хто володітиме Region на той момент. Manual cancellation у V1 немає, refund немає.
+
 ---
 
 
@@ -213,7 +228,11 @@ V1 не вводить окремих штрафів голодування, а�
 
 У V1 немає ліміту слотів Building.
 
-Вартість і час Construction/Upgrade є конфігураційними.
+Вартість і час Construction/Upgrade є конфігураційними. Повна вартість списується upfront при старті; manual cancellation і refund у V1 немає. Після старту BuildingUpgrade не pause-иться через зміну інших умов.
+
+Prerequisites задаються конфігурацією як набір мінімальних level інших Building; усі умови мають виконуватися одночасно. У V1 prerequisites перевіряються тільки при construction `0 -> 1`; подальші level тієї самої Building їх повторно не перевіряють. Building не демонтуються і їх level не зменшуються.
+
+`empty_food` або `empty_coins` самі по собі не є окремим blocker BuildingUpgrade: старт можливий, якщо фактичних ресурсів достатньо для повної upfront cost.
 
 ## 7.1 Warehouse
 
@@ -227,9 +246,11 @@ V1 не вводить окремих штрафів голодування, а�
 
 Палац (Palace) визначає кількість доступних місць для Knight у конкретному Castle.
 
-Кількість Knight slots структурно дорівнює Palace level. Кожне збільшення Palace level відкриває одне нове місце для Knight. Новий Knight створюється автоматично для вільного місця.
+Кількість Knight slots структурно дорівнює Palace level. Кожне збільшення Palace level одразу відкриває одне нове місце. Для нового slot немає окремого replacement delay, але Knight фактично не існує, доки Player не надасть йому ім'я.
 
-Якщо Knight гине, Palace level не зменшується. Вільне місце автоматично заповнюється новим Knight після налаштовуваного часу. В одному Palace заміна загиблих Knight відбувається послідовно через одну чергу.
+Якщо Knight гине, Palace level не зменшується. Для звільненого slot одразу стартує `KnightReplacement` timing. Якщо гине кілька Knight, replacement timers обробляються послідовно однією чергою. Коли timer конкретного replacement завершився, він додає одного готового Knight у спільну FIFO-чергу Knight, що чекають ім'я, і більше не блокує запуск timer наступного загиблого Knight.
+
+Palace upgrade і завершений KnightReplacement додають однаковий елемент у цю спільну чергу очікування імені. До отримання імені такі готові Knight нічим не відрізняються. Player дає їм імена строго по черзі; лише в цей момент відповідний Knight створюється.
 
 Palace має регулярний Coin upkeep за функцією його level.
 
@@ -251,11 +272,11 @@ Capacity перевіряється саме в момент виконання 
 
 Казарма (Barracks) потрібна для Recruitment і для дешевого розміщення Soldier у Castle.
 
-Barracks має Capacity. У ній знаходяться як неназначені Soldier, так і Soldier сформованих Unit, що переведені зі стану Camp у Castle.
+Barracks має Capacity, що вимірюється в Soldier: один Soldier будь-якого Type займає одну одиницю Capacity. У ній знаходяться як reserve Soldier, так і Soldier сформованих Unit, чиї Knight мають `location_state = Castle`. Сам Knight Capacity не займає.
 
-Unit не може перейти з Camp у Castle, якщо Barracks не має достатньо вільної Capacity для всіх його Soldier. Частковий вхід не допускається.
+Unit не може перейти з Camp у Castle, якщо Barracks не має достатньо вільної Capacity для всіх його Soldier. Частковий вхід не допускається. Knight з 0 Soldier може перейти в Castle навіть при повній Barracks.
 
-Якщо Barracks заповнена, Recruitment pause до появи вільного місця.
+Soldier Unit у Camp не займають Barracks Capacity. Якщо Barracks заповнена, Recruitment pause до появи вільного місця.
 
 ## 7.7 Coin-producing Buildings
 
@@ -317,15 +338,17 @@ Soldier одного Type не є індивідуальними сутност�
 
 Recruitment виконується в Barracks конкретного Castle.
 
-Гравець обирає Soldier Type і кількість. Вартість списується при постановці замовлення.
+Гравець обирає Soldier Type і кількість. Повна вартість усього order (`per-soldier cost × quantity`) списується upfront при постановці замовлення; refund немає.
 
-Кожний Castle має одну Recruitment Queue. У ній може бути кілька замовлень, які виконуються послідовно. Soldier з'являються поступово відповідно до Recruitment time.
+Кожний Castle має одну FIFO Recruitment Queue. Новий order завжди додається в кінець, існуючі order не можна reorder-ити або змінювати priority; сусідні order одного Type не зобов'язані об'єднуватися.
 
-Якщо для наступного Soldier немає вільної Barracks Capacity, Queue ставиться на pause. Уже сплачена вартість не повертається.
+Soldier рекрутуються по одному. Order `quantity = N` означає N послідовних повних recruitment cycles; кожний завершений cycle створює рівно одного Soldier і зменшує `remaining_quantity` на 1. Отже без pause повний час order дорівнює N × per-Soldier recruitment time.
 
-Recruitment також ставиться на pause, якщо Castle перебуває у стані нестачі Food або Player перебуває у стані нестачі Coins за правилами розділу 6.4. У цих станах нове замовлення Recruitment створити не можна. Після зникнення блокуючої умови Queue автоматично продовжується, якщо Barracks має Capacity.
+Якщо Barracks не має хоча б одного вільного місця, progress поточного Soldier pause-иться негайно й відновлюється з того самого значення після появи місця. Якщо progress уже досяг completion, але місця немає, він залишається ready і Soldier створюється одразу після появи Capacity. Звільнене місце може бути знову зайняте іншою дією до completion, тоді Recruitment знову pause-иться.
 
-Скасування незавершеного Recruitment у V1 немає.
+Новий order не можна додати, якщо Barracks повна, Castle має `empty_food` або Player має `empty_coins`. Водночас не потрібно мати Capacity для всієї quantity: за наявності хоча б одного вільного місця можна додати order будь-якого додатного розміру, якщо Player має всю upfront cost. Штучного max queue length або max quantity у V1 немає.
+
+Active Recruitment також pause-иться при `empty_food` або `empty_coins` і автоматично продовжується після зникнення blocker. Manual cancellation незавершеного Recruitment у V1 немає.
 
 ---
 
@@ -340,7 +363,7 @@ Unit має home Castle, який збігається з home Castle його K
 
 У V1 немає жорсткого ліміту Soldier у Unit або Unit в Army.
 
-Merge і split дозволені тільки Army у звичайному Camp одного Player і одного CampInRegion, якщо вони не command-locked CombatSituation. Regrouping merge/split забороняє. Зміна Commander сама по собі під час Regrouping дозволена, якщо немає command lock.
+Merge і split дозволені тільки Army у звичайному Camp одного Player і одного CampInRegion, якщо вони не command-locked CombatSituation. Regrouping merge/split забороняє. Commander можна змінювати у Camp або під час звичайного Movement, якщо Army не command-locked; під час Regrouping зміна Commander заборонена.
 
 Зміна складу Soldier виконується тільки через Castle reserve <-> Knight у home Castle і також не допускається для command-locked Army.
 
@@ -350,7 +373,7 @@ Merge і split дозволені тільки Army у звичайному Camp
 - Target Combat Threshold;
 - Incidental Combat Threshold.
 
-Threshold можна змінювати під час Camp, Regrouping або Movement, доки Army не command-locked CombatSituation. Після Registration attacker уже locked; potential defender отримує lock на CombatSituation Start. Значення конкретного battle остаточно фіксуються на Battle Start.
+Persistent thresholds можна змінювати під час Camp або Movement, доки Army не command-locked CombatSituation. Під час Regrouping persistent thresholds не змінюються: effective Defense Loss Threshold Army примусово дорівнює `0`, тому при атаці вона Retreat-ить, якщо є legal Retreat; якщо legal Retreat немає, загальне правило примусово робить effective threshold `100%`. Після завершення Regrouping знову діє збережений persistent threshold, який тоді можна змінити. Після Registration attacker уже locked; potential defender отримує lock на CombatSituation Start. Значення конкретного battle остаточно фіксуються на Battle Start.
 
 При merge thresholds нової Army задаються явно. Після split нові Army отримують поточні thresholds вихідної Army, доки Player не змінить їх.
 
@@ -659,7 +682,7 @@ Pre-battle Retreat використовує ті самі movement/Regrouping ru
 
 Якщо кілька defender Army Retreat-ять, усі використовують одну Defender retreat Region. Якщо destination — empty foreign Owned non-Occupied Region, після Camp arrival створюється одна Occupation цього Player.
 
-Regrouping є звичайною Camp-presence для Food, Occupation, Annexation, Founding, defense та Camp lifecycle. Army у Regrouping не може ініціювати Movement або Attack і не може Merge/Split. Зміна Commander, threshold та composition дозволяються за звичайними location/combat-lock rules; composition усе одно потребує home Castle.
+Regrouping є звичайною Camp-presence для Food, Occupation, Annexation, Founding, defense та Camp lifecycle. Army у Regrouping не може ініціювати Movement або Attack, не може Merge/Split, змінювати Commander або persistent combat thresholds. Її effective Defense Loss Threshold під час Regrouping дорівнює `0`; якщо legal Retreat немає, він примусово стає `100%`. Після завершення Regrouping знову використовується збережений persistent threshold. Composition під час Regrouping дозволена лише за звичайних home Castle/location/combat-lock rules.
 
 Якщо виграє Defender, participating defender Army лишаються у Camp.
 
