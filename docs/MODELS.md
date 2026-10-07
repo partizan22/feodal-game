@@ -119,19 +119,22 @@ Food consumption одного Soldier не залежить від Soldier Type.
 - `warehouse_capacity`, `granary_capacity`, `storage_full`.
 - `empty_food` — `food == 0 && food_balance <= 0`.
 - `barracks_capacity`.
-- `barracks_used` — кількість/occupancy Unit, чиї Knight мають `location_state = Castle` у цьому home Castle.
+- `barracks_used` — `soldier_reserve` + сумарна кількість Soldier усіх active Knight цього home Castle з `location_state = Castle`; 1 Soldier будь-якого Type = 1 Capacity, Knight сам Capacity не займає.
 - `barracks_free_capacity = barracks_capacity - barracks_used`.
 - `governor_capacity`, `external_region_count`.
 - `palace_capacity`, `active_knight_replacement_id`.
+- `ready_knights_awaiting_name` — FIFO count/queue готових до створення Knight без імені; поповнюється завершенням Palace upgrade та завершенням KnightReplacement.
 
 ### Domain methods
 
 - `can_pay_local_cost(cost)`, `pay_local_cost(cost)`.
-- `can_house_unit(knight)` — перевіряє, що Knight може мати `location_state = Castle`.
+- `can_house_unit(knight)` — перевіряє, що Barracks має Capacity для **всіх Soldier** Unit; вхід атомарний, partial entry немає; Knight з 0 Soldier не потребує Capacity.
 - `move_soldiers_between_reserve_and_knight(knight, composition_delta)` — переносить Soldier тільки `Castle reserve <-> Knight`.
 - `add_recruited_soldier(type)`.
-- `can_start_building_upgrade(building_type)`, `apply_building_upgrade(building_type, target_level)`.
-- `create_knight_for_palace_slot()`, `create_knight_replacement()`, `complete_knight_replacement(replacement)`.
+- `can_start_building_upgrade(building_type)` — перевіряє відсутність active upgrade цієї Building, повну upfront cost і, тільки для `0 -> 1`, усі config-driven minimum-level prerequisites.
+- `apply_building_upgrade(building_type, target_level)` — застосовує level; Palace level increase додає один ready Knight у FIFO `ready_knights_awaiting_name` без replacement delay.
+- `enqueue_knight_replacement()`, `complete_knight_replacement(replacement)` — death/vacated slot ставить replacement у послідовну timer queue; completion додає одного ready Knight у спільну FIFO чергу очікування імені та дозволяє старт timer наступного replacement.
+- `name_next_ready_knight(name)` — бере тільки head спільної FIFO черги, створює Knight з указаним Player name і займає доступний Palace slot.
 - `can_annex_region(region, camp)` — перевіряє Governor Capacity, допустимий зв'язок Region з цим Castle і наявність у `camp` хоча б одного Knight, чия Army має Camp-presence (`Camp` або `Regrouping`) і чий home Castle дорівнює цьому Castle. Method напряму обходить `CampInRegion -> armies[] -> knights[]`.
 - `recalculate_region_connections()` — централізовано перераховує `Region.is_connection_valid` після occupation/loss/restore/annexation. Temporary disconnect через Occupation лише робить downstream Region invalid-connected; у Neutral вони переходять тільки після остаточної втрати ownership bridge Region.
 
@@ -176,6 +179,7 @@ Food consumption одного Soldier не залежить від Soldier Type.
 - `player_id` — ID `player`; проміжна scalar characteristic для computed characteristics інших Model без другого relationship hop.
 - `valid_connected_neighbor_player_ids[]` — `player_id` сусідніх Owned Region з валідним connection; використовує `neighbors[].player_id`, а не `neighbors[] -> player`.
 - `is_occupied`, `is_castle_region`, `has_active_founding`.
+- `distance_to_castle` — пряма стандартна hex-grid distance між цією Region і її Castle Region (`0` для Castle Region); не є path length і використовується DistanceEfficiency/territorial distance rules.
 - `has_any_troops` — чи є в Region хоча б одна фізично присутня Army незалежно від її Camp/Transit/Regrouping context.
 - `food_production`.
 - `camp_food_consumption` — сумарне Food consumption усіх Army у Camp/Regrouping цієї Region.
@@ -194,6 +198,7 @@ Food consumption одного Soldier не залежить від Soldier Type.
 ### User methods
 
 - `user_change_allow_transit(value)` — змінює fallback Transit rule власної Owned non-Occupied Region; для Occupied Region `allow_transit` не використовується.
+- `user_abandon_region()` — миттєво й без cost переводить власну ordinary Region у Neutral. Castle Region і Region з `active_combat_situation != null` заборонені. Не потребує Army/Knight presence; дозволена для disconnected або Occupied Region. Після neutralization запускає connectivity recalculation; downstream Region, що остаточно втратили connection до Castle, також стають Neutral. City Wealth, ResourceSite levels і active ResourceSiteUpgrade зберігаються; Army залишаються фізично на місці; уже active Annexation іншого Player не скасовується.
 
 ### Domain methods
 
@@ -344,8 +349,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `user_merge_armies(armies, commander, thresholds)` — дозволено тільки Army одного Player у `state == Camp` в одному CampInRegion, якщо жодна з них не `is_command_locked`. Army у Regrouping merge не може.
 - `user_split_army(groups)` — дозволено тільки для `state == Camp` і за відсутності command lock; Regrouping split забороняє.
-- `user_change_commander(knight)` — дозволено, якщо Army не `is_command_locked` жодною CombatSituation; Regrouping саме по собі не забороняє зміну Commander.
-- `user_change_combat_thresholds(values)` — змінює persistent thresholds тільки коли Army не `is_command_locked`. Тому attacker після Registration та potential defender після CombatSituation Start уже не можуть змінити свої thresholds; Transit defender candidate може змінювати власний `defense_loss_threshold`, доки не приєднався до defense і не отримав lock. Усі thresholds, потрібні для майбутньої CombatSituation, мають бути визначені під час формування/відправлення Army або іншою попередньою UI-дією; точний UI flow буде визначено окремо.
+- `user_change_commander(knight)` — дозволено у `Camp` або `Movement`, якщо Army не `is_command_locked`; у `Regrouping` заборонено.
+- `user_change_combat_thresholds(values)` — змінює persistent thresholds тільки у `Camp` або `Movement` і коли Army не `is_command_locked`. У `Regrouping` persistent values не змінюються; effective `defense_loss_threshold = 0`, а за відсутності legal Retreat battle logic примусово використовує `1.0`. Attacker після Registration та potential defender після CombatSituation Start locked; Transit defender candidate може змінювати persistent `defense_loss_threshold`, доки не приєднався до defense і не отримав lock.
 - `user_attack_player(target_camp)` — player-vs-player attack із Camp у Neutral Region. Дозволено тільки `state == Camp` (не Regrouping), якщо target Player має в цій самій Neutral Region хоча б одну Army з `state == Camp`; самі лише Regrouping або `is_entered_for_camp == true` ініціацію не дозволяють. Attacking Army не може бути attacker іншої незавершеної CombatSituation або potential defender active CombatSituation. Викликає `Region.register_combat(..., defender_player = target_camp.player)`, тому окрема CombatSituation одразу фіксує цю Army як єдиного attacker і конкретного defender Player.
 - `user_raid_city(city)` — City Raid тільки для `state == Camp`. Заборонено, якщо Player цієї Army у цій Region є attacker будь-якої незавершеної CombatSituation або potential defender Active CombatSituation. Raid не входить у player-vs-player CombatSituation queue і відбувається миттєво.
 - `user_attack_neutral_defense()` — миттєва атака Neutral Defense цієї Region конкретною Army у `state == Camp`; Regrouping не може її ініціювати. Заборонено, якщо Player цієї Army у цій Region є attacker будь-якої незавершеної CombatSituation або potential defender Active CombatSituation. Якщо в Region є City, до abstract Defender strength додається full City Defense. Ця дія не створює CombatSituation і не входить у FIFO-чергу Region.
@@ -359,8 +364,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `finish_movement()`.
 - `set_combat_waiting(combat)` — застосовує command-lock queued attacker без зміни фізичного state. Для Camp Army `camp` і Camp-presence зберігаються; для Movement Army Movement переходить у paused-for-combat state без втрати route/context.
 - `clear_combat_waiting()` — при CombatSituation Start/termination знімає waiting-lock; подальший Movement/Camp context визначається поточною CombatSituation.
-- `start_regrouping()` — переводить Army у Regrouping і скидає progress. Camp зберігається; Army продовжує бути звичайною Camp-presence для Food, Annexation, Founding, Occupation, defense та Camp lifecycle.
-- `finish_regrouping()` — повертає Army у Camp після `Dt`.
+- `start_regrouping()` — переводить Army у Regrouping і скидає progress. Camp зберігається; Army продовжує бути звичайною Camp-presence для Food, Annexation, Founding, Occupation, defense та Camp lifecycle. Persistent thresholds зберігаються без змін; для defense effective threshold під час Regrouping = `0` (або `1.0`, якщо legal Retreat відсутній).
+- `finish_regrouping()` — повертає Army у Camp після `Dt`; знову діють збережені persistent thresholds.
 - `start_retreat_to(region)` — звичайний player-vs-player Retreat: Army одразу вважається такою, що увійшла в retreat Region **без реєстрації нової CombatSituation**, після чого `retreat-local` триває `Dt` до Camp-Regrouping. При досягненні Camp у чужій Owned non-Occupied Region викликається `Region.set_occupied_by(player)`; кілька Army однієї сторони, що Retreat-ять разом, приходять у ту саму Region/Camp і встановлюють одну Occupation.
 - `start_loss_regrouping_in_current_camp()` — спеціальний результат поразки від Neutral Defense або City Defense: без Retreat у сусідню Region і без окремого post-defeat `Dt`; Army лишається/переходить у той самий Camp і одразу починає Regrouping.
 - `remove_dead_knights()`.
@@ -725,33 +730,33 @@ Neutral Defense attack і City Raid не є `CombatSituation`. Це миттєв
 
 ## 11. `Recruitment`
 
-Один Castle має одну послідовну Recruitment Queue.
+Один Castle має одну послідовну FIFO Recruitment Queue. Кожний Soldier проходить окремий повний recruitment cycle.
 
 ### Прямі характеристики
 
 - `castle`.
-- `queue` — orders `{soldier_type, remaining_quantity}`.
+- `queue` — orders `{soldier_type, remaining_quantity}` у незмінному FIFO order.
 - `current_order_index`.
 - `status`.
 
 ### Динамічні характеристики
 
-- `progress`.
+- `progress` — progress **поточного одного Soldier**, а не всього order; при pause зберігається.
 
 ### Обчислювальні характеристики
 
 - `current_order`.
 - `can_progress` — є current order, `castle.empty_food == false`, `castle.player_empty_coins == false`, `castle.barracks_free_capacity > 0`.
-- `progress_rate`, `required_progress`, `current_recruit_finished`.
+- `progress_rate`, `required_progress`, `current_recruit_finished`. Якщо progress already complete, але Capacity зникла, completion залишається ready до появи місця.
 
 ### User methods
 
-- `user_add_recruitment_order(soldier_type, quantity)`.
+- `user_add_recruitment_order(soldier_type, quantity)` — тільки append; після validation атомарно списує повну upfront cost всього quantity і додає order у хвіст. Cancellation/reorder/priority change немає.
 
 ### Domain methods
 
-- `validate_new_order(type, quantity)`.
-- `finish_current_recruit()`.
+- `validate_new_order(type, quantity)` — valid Type, `quantity > 0`, `!castle.empty_food`, `!castle.player_empty_coins`, `castle.barracks_free_capacity > 0` та достатньо фактичних local/global resources для **повної** order cost. Capacity для всього quantity не потрібна; artificial max quantity/queue length немає.
+- `finish_current_recruit()` — за наявності одного вільного Barracks slot створює рівно 1 Soldier через `Castle.add_recruited_soldier()`, декрементує `remaining_quantity`, скидає per-Soldier progress; при `remaining_quantity == 0` переходить до наступного FIFO order. Якщо slot немає, нічого не створює й лишає completed progress ready.
 
 ### Triggers
 
@@ -767,7 +772,7 @@ Neutral Defense attack і City Raid не є `CombatSituation`. Це миттєв
 
 ## 12. `BuildingUpgrade`
 
-Один instance = один process upgrade однієї Building.
+Один instance = один process upgrade однієї Building. Різні Building одного Castle можуть upgrade-итися паралельно; для одного concrete `building_type` active instance може бути максимум один.
 
 ### Прямі характеристики
 
@@ -779,15 +784,17 @@ Neutral Defense attack і City Raid не є `CombatSituation`. Це миттєв
 
 ### Обчислювальні характеристики
 
-- `progress_rate`, `required_progress`, `is_complete`.
+- `progress_rate` — після успішного start не pause-иться через `empty_food`, `empty_coins` або подальшу зміну prerequisite state.
+- `required_progress`, `is_complete`.
 
 ### User methods
 
-- `user_start_building_upgrade(castle, building_type)`.
+- `user_start_building_upgrade(castle, building_type)` — визначає `target_level = current + 1`, перевіряє відсутність active upgrade цієї Building, повну upfront cost та config prerequisites для `0 -> 1`, атомарно списує cost і запускає process. Manual cancellation/refund немає.
 
 ### Domain methods
 
-- `complete()` — застосовує target level.
+- `validate_start()` — prerequisites є config-driven набором умов `other_building_level >= min_level`; у V1 всі вони застосовуються лише для first construction `0 -> 1` і мають виконуватися одночасно. `empty_food`/`empty_coins` окремо не блокують start, якщо фактичних ресурсів для upfront cost достатньо.
+- `complete()` — застосовує target level через `Castle.apply_building_upgrade()`; Palace completion також додає одного ready unnamed Knight у спільну FIFO чергу.
 
 ### Triggers / Trigger methods
 
@@ -798,11 +805,11 @@ Neutral Defense attack і City Raid не є `CombatSituation`. Це миттєв
 
 ## 13. `ResourceSiteUpgrade`
 
-Один instance = один process upgrade вибраної кількості ResourceSite одного resource type/level.
+Один instance = один parallel process upgrade вибраної кількості ResourceSite одного `resource_type` з одного фактичного `from_level` у `target_level = from_level + 1`. Іменованих Site не потрібно; order резервує count із відповідного level bucket.
 
 ### Прямі характеристики
 
-- `region`, `resource_type`, `target_level`, `quantity`, `status`.
+- `region`, `resource_type`, `from_level`, `target_level`, `quantity`, `status`.
 
 ### Динамічні характеристики
 
@@ -810,15 +817,18 @@ Neutral Defense attack і City Raid не є `CombatSituation`. Це миттєв
 
 ### Обчислювальні характеристики
 
-- `progress_rate`, `required_progress`, `is_complete`.
+- `progress_rate` — після start постійний за config transition і не pause-иться через Occupation/disconnection/Neutral/owner change.
+- `required_progress` — залежить від level transition, але **не** від `quantity`.
+- `is_complete`.
 
 ### User methods
 
-- `user_start_resource_site_upgrade(region, resource_type, quantity)`.
+- `user_start_resource_site_upgrade(region, resource_type, quantity)` — дозволено тільки current owner для Owned non-Occupied valid-connected Region; pure foreign Transit не блокує. Резервує `quantity` eligible Site та атомарно списує upfront `per_site_cost × quantity`. Manual cancellation/refund немає.
 
 ### Domain methods
 
-- `complete()` — застосовує level changes.
+- `validate_start()` — перевіряє `quantity > 0`, ownership/non-Occupied/connection, layered rule за **фактично completed** site levels, достатню кількість незарезервованих Site current minimum level і повну upfront cost. Active reservations не вважаються completed level і не можуть бути зарезервовані повторно.
+- `complete()` — незалежно від поточного owner/state Region переводить зарезервований count із `from_level` у `target_level`; до цього моменту ці Site виробляють як `from_level`.
 
 ### Triggers / Trigger methods
 
@@ -829,11 +839,11 @@ Neutral Defense attack і City Raid не є `CombatSituation`. Це миттєв
 
 ## 14. `KnightReplacement`
 
-Один instance = один process створення replacement Knight для звільненого Palace slot.
+Один instance = один replacement **timer** для Palace slot, звільненого death/іншим виходом active Knight із home Castle. Сам Knight при completion timer ще не створюється.
 
 ### Прямі характеристики
 
-- `castle`, `status`.
+- `castle`, `status` — queued / active / timer_complete.
 
 ### Динамічні характеристики
 
@@ -841,13 +851,13 @@ Neutral Defense attack і City Raid не є `CombatSituation`. Це миттєв
 
 ### Обчислювальні характеристики
 
-- `is_queue_head` — визначається через `castle.active_knight_replacement_id`.
-- `progress_rate` — ненульовий тільки для queue head.
+- `is_queue_head` — визначається через `castle.active_knight_replacement_id` серед replacement, timer яких ще не завершився.
+- `progress_rate` — ненульовий тільки для active queue head.
 - `required_progress`, `is_complete`.
 
 ### Domain methods
 
-- `complete()` — створює replacement Knight.
+- `complete()` — завершує timer, додає один ready unnamed Knight у `castle.ready_knights_awaiting_name`, звільняє replacement timer queue для наступного queued instance. Очікування Player name не блокує наступний replacement timer; усі ready unnamed Knight разом із ready Knight від Palace upgrade використовують одну спільну FIFO name queue.
 
 ### Triggers / Trigger methods
 
