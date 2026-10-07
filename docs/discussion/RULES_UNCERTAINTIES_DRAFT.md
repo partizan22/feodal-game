@@ -50,7 +50,10 @@ Battle XP отримують тільки **живі після battle Knight, �
 
 Knight, що пішли pre-battle Retreat до calculation, XP не отримують. Загиблі Knight XP не потребують.
 
-Базовий XP для кожного participating survivor визначати функцією від pre-combat strength противника та, за потреби, власної side; не залежати від того, скільки Soldier конкретно втратив цей Unit. Commander не отримує окремого бонусу лише за статус Commander.
+Базовий XP для кожного participating survivor визначати функцією від pre-combat strength противника та, за потреби, власної side; не залежати від того, скільки Soldier конкретно втратив цей Unit. 
+
+### Зміна
+Commander отримує більше досвіду за статус Commander.
 
 ---
 
@@ -106,11 +109,14 @@ Effective threshold визначається **на Battle Start за актуа
 
 ### Пропоноване рішення
 
-Для кожної Neutral candidate Region рахувати мінімальну стандартну hex-grid distance до будь-якої **Owned non-Occupied valid-connected Region** цього Player.
+Для кожної Neutral candidate Region рахувати мінімальну стандартну hex-grid distance до будь-якої **Owned non-Occupied Region** цього Player.
 
 Перемагає candidate з меншою distance. При рівності використовується seeded random tie-breaker.
 
-Occupied або disconnected власні Region не вважати опорними точками для цього priority.
+Occupied  власні Region не вважати опорними точками для цього priority.
+
+### Зміна:
+disconnected можна, якщо вона ще не втрачена остоточно 
 
 ---
 
@@ -120,13 +126,9 @@ Occupied або disconnected власні Region не вважати опорн�
 
 У правилах залишено лише "визначений географічний критерій".
 
-### Пропоноване рішення
+### Зміна
 
-Використовувати ту саму metric, що й для Neutral Region: мінімальну hex-grid distance candidate Region до будь-якої Owned non-Occupied valid-connected Region Player.
-
-При рівності — seeded random tie-breaker.
-
-Це дає один простий географічний принцип і не вводить оцінювання чужого owner, City, ResourceSite тощо.
+Ні. Для чужих територій пріоритет - мінімальна відстань до найближчної нейтральної (армія намагається якомога швидще покинути чужу територію)
 
 ---
 
@@ -136,7 +138,7 @@ Occupied або disconnected власні Region не вважати опорн�
 
 Barracks містить reserve Soldier, але поточні правила Food/upkeep описані переважно через Army/Unit. Не визначено явно, чи Soldier у reserve продовжують споживати Food і Coins.
 
-### Пропоноване рішення
+### Зміна
 
 Reserve Soldier повністю зберігають звичайний Soldier upkeep:
 - споживають Food Castle;
@@ -153,7 +155,7 @@ Reserve Soldier повністю зберігають звичайний Soldier
 
 Позитивний Coin income disconnected Region уже визначено як 0. Але City Wealth growth зараз залежить від Owned + non-Occupied + `!empty_coins`, без явної вимоги territorial connection.
 
-### Пропоноване рішення
+### Зміна
 
 Disconnected City **продовжує локально нарощувати Wealth**, якщо Region Owned, non-Occupied, `active_wealth_ratio == 1` і Player не має `empty_coins`.
 
@@ -175,6 +177,9 @@ Occupation, як і зараз, зупиняє Wealth growth.
 
 Якщо в Region є лише queued `Registered` situations, owner може abandon Region. Після зміни state вони не видаляються наперед, а кожна на своєму Start перевіряє актуальність interaction і за потреби завершується без battle за вже чинним загальним правилом queue.
 
+### Уточнення
+
+Якщо в Region є лише queued situations, то є і активна, інакше чого чикає queued?
 ---
 
 ## 12. Voluntary abandonment під час власного CastleFounding
