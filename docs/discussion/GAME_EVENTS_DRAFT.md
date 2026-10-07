@@ -102,7 +102,7 @@
 
 16. **Attack Player in Neutral Region**
    - Тип: дія користувача.
-   - Умова: attacking Army перебуває у Camp Neutral Region, не Regrouping і не command-locked; target Player має active Camp у цій самій Region.
+   - Умова: attacking Army перебуває у `state == Camp` Neutral Region, не command-locked; target Player має в цій самій Region хоча б одну Army у `state == Camp`. Самі лише Regrouping або entered-for-Camp Army target Player недостатні для ініціації.
    - Наслідок: реєструється CombatSituation з цією Army як єдиним attacker і target Player як зафіксованим defender; Movement `target_opponent` тут не використовується.
    - Модель: `? -> Army, Region, CombatSituation`
 
