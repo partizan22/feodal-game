@@ -52,8 +52,6 @@ Long-running construction, recruitment, founding and replacement processes.
 
 ---
 
----
-
 ## 11. `Recruitment`
 
 Один Castle має одну послідовну FIFO Recruitment Queue. Кожний Soldier проходить окремий повний recruitment cycle.
@@ -96,8 +94,6 @@ Long-running construction, recruitment, founding and replacement processes.
 
 ---
 
----
-
 ## 12. `BuildingUpgrade`
 
 Один instance = один process upgrade однієї Building. Різні Building одного Castle можуть upgrade-итися паралельно; для одного concrete `building_type` active instance може бути максимум один.
@@ -128,8 +124,6 @@ Long-running construction, recruitment, founding and replacement processes.
 
 - `complete` `[event trigger]`.
 - `check_trigger_complete()`, `on_trigger_complete()`.
-
----
 
 ---
 
@@ -164,8 +158,6 @@ Long-running construction, recruitment, founding and replacement processes.
 
 - `complete` `[event trigger]`.
 - `check_trigger_complete()`, `on_trigger_complete()`.
-
----
 
 ---
 
