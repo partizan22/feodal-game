@@ -228,7 +228,7 @@ Regrouping є звичайною Camp-presence для Food, Occupation, Annexati
 - Якщо всі Unit Army були у Castle, Army не розділяється й залишається там у початковому складі, без Regrouping.
 - Усі власні війська всередині Castle блокуються при виникненні Occupation, навіть якщо вони не брали участі у відповідному battle.
 
-Якщо Attacker перемагає, але має **Transit**, Castle Region не стає Occupied, Castle не блокується, а **всі defeated Defender Army** залишаються у цій самій Region і переходять до Regrouping. Їхні Unit зберігають стан `Castle` / `Camp`; відступу до сусідньої Region немає. Це спеціальний виняток із загальних Retreat rules.
+Якщо Attacker перемагає в **транзитній атаці на не столичну Castle Region**, він продовжує Transit; Region не стає Occupied, Castle не блокується. Усі Army захисника залишаються в цій самій Region **без Retreat і без Regrouping**, у звичайному стані `Camp`. Це однаково стосується Army, що брали участь у battle, і Army, які не брали участі через pre-battle Retreat або effective Defense Loss Threshold = `0`: вони просто не беруть участі в бойовому розрахунку й залишаються в Region. Для Unit, що до бою мали стан `Castle`, після такої поразки також встановлюється звичайний `Camp`. Втрати від battle застосовуються тільки до фактичних учасників бою. Це спеціальний виняток із загальних правил Retreat і Regrouping.
 
 ### Війська під блокадою Castle
 
