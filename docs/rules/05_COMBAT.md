@@ -8,9 +8,10 @@
 
 CombatSituation реєструється, коли:
 
-- чужа Army входить у Owned non-Occupied Region — Camp або Transit, **включно з Camp-bound входом унаслідок Retreat**;
-- Army входить у Occupied Region з локальною метою Camp і не є current occupier;
-- Army formal owner входить у власну ще non-Occupied Region, де вже є чужа Army, яка фізично ввійшла для Camp (`EnteringCamp`, у тому числі після Retreat), але ще не досягла Camp: створюється окрема CombatSituation у спільній FIFO, навіть якщо власних Army у Camp немає;
+- чужа Army входить у Owned non-Occupied Region з метою Transit — за звичайними правилами Transit;
+- Army входить у чужу Owned/Occupied Region з метою Camp (включно з Retreat): CombatSituation реєструється, **лише якщо в Region уже є Army іншого Player у `Camp`/Regrouping або Army іншого Player, яка раніше ввійшла для Camp (`EnteringCamp`)**. За відсутності таких Army нова CombatSituation не реєструється, Army переходить до Camp за звичайний `Dt`;
+- Army formal owner входить у власну Region з метою Camp, якщо там уже є чужа Army у `Camp`/Regrouping або чужа Army, яка раніше ввійшла для Camp (`EnteringCamp`), навіть якщо Region ще не Occupied;
+- Якщо у Region уже є unresolved CombatSituation між різними Player, кожна наступна Camp-bound Army, яка при вході бачить чужу `Camp` або раніше введену `EnteringCamp` Army, реєструє власну CombatSituation в FIFO, навіть якщо належить Player першого attacker/defender. Defender не фіксується до Start; якщо на Start між цією Army та актуальним противником немає interaction, situation завершується без battle;
 - це включає Camp-bound Army формального owner, яка атакує occupier власної Castle Region; Army всередині заблокованого Castle не беруть участі;
 - Region стає Occupied, коли Camp-bound Army formal owner уже ввійшла в неї, але запізно для попередньої defense;
 - Army у Camp Neutral Region (але не в Regrouping) явно атакує конкретного іншого Player, який має в цій самій Region принаймні одну Army у територіальному стані `Camp`, **включно з Regrouping**. Лише entered-for-Camp без Army у `Camp` недостатньо для ініціації explicit attack.
@@ -21,9 +22,9 @@ CombatSituation реєструється, коли:
 
 Для territorial situation defender Player визначається тільки на Start за актуальним interaction. Для explicit attack у Neutral Region конкретний defender Player фіксується вже на Registration і situation ніколи не retarget-иться на іншого Player.
 
-Якщо на власному Start interaction уже не існує (наприклад, Region стала Neutral або для explicit attack у Neutral Region зникла presence зафіксованого defender), situation завершується без battle. **Відсутність Army defender сама по собі не скасовує territorial Camp-bound interaction у чужій Owned/Occupied Region:** така situation обов'язково доходить до Battle Start через повний `Dt`. Queued situation не видаляється наперед лише тому, що її майбутні умови змінилися.
+Якщо на власному Start interaction уже не існує (наприклад, Region стала Neutral або для explicit attack у Neutral Region зникла presence зафіксованого defender), situation завершується без battle. **Якщо territorial Camp-bound CombatSituation була зареєстрована через наявність чужої Army у `Camp` або `EnteringCamp`, але на Start interaction зникла, вона завершується без battle.** Queued situation не видаляється наперед лише тому, що її майбутні умови змінилися.
 
-Від Start до Battle Start завжди проходить повний Dt, якщо situation не завершилась достроково без battle. **На Battle Start territorial Camp-bound атаки без жодної potential Defender Army Attacker автоматично перемагає порожню defender side без combat calculation і Battle Experience та одразу переходить у `Camp`; зміна Occupation/Owned застосовується до Start наступної situation у FIFO.** Це правило діє навіть тоді, коли інша Camp-bound Army уже очікує в черзі цієї Region.
+Від Start до Battle Start завжди проходить повний Dt, якщо situation не завершилась достроково без battle. На Battle Start Camp-bound Attacker, який переміг, одразу переходить у `Camp`; зміна Occupation/Owned застосовується до Start наступної situation у FIFO. Якщо попередня Camp-bound situation завершилася без battle через зникнення interaction, її attacker продовжує перехід до Camp за звичайними правилами локального руху.
 
 Попередження про наближення Army та UI-деталі не змінюють цих lifecycle rules.
 
@@ -183,7 +184,7 @@ Legal Retreat Region визначаються окремо для Attacker side 
 
 Neutral Defense саме по собі Retreat не блокує.
 
-Порожня foreign Owned non-Occupied Region може бути legal Retreat destination. **Retreat entry у чужу Owned Region реєструє звичайну territorial Camp-bound CombatSituation**, так само як будь-який інший вхід для Camp; винятку з Registration немає. За відсутності defender Army вона триває повний `Dt` до Battle Start; переможець одразу переходить у Camp і створює Occupation. Якщо situation очікує у FIFO, її Start і Battle Start визначаються загальними правилами черги.
+Порожня foreign Owned non-Occupied Region може бути legal Retreat destination. Retreat entry перевіряє присутність чужих Army у `Camp`/Regrouping або раніше введених `EnteringCamp`: за їх відсутності CombatSituation не реєструється і Retreat Army досягає Camp через `Dt`, створюючи Occupation; за наявності реєструється CombatSituation за загальними правилами FIFO.
 
 ## 23.3 Пріоритет вибору
 
@@ -207,13 +208,13 @@ Neutral Defense саме по собі Retreat не блокує.
 
 # 24. Наслідки Retreat, перемоги та Regrouping
 
-При звичайному player-vs-player Retreat Army одразу вважається такою, що залишила combat Region і ввійшла в обрану сусідню Region. **Якщо це чужа Owned Region, на entry реєструється territorial Camp-bound CombatSituation за §16;** для інших destination діють їхні звичайні правила Registration. Retreat у Neutral Region із Camp третього Player дозволений, якщо інші правила Retreat не забороняють destination; така Camp-presence третього Player сама по собі не блокує Retreat.
+При звичайному player-vs-player Retreat Army одразу вважається такою, що залишила combat Region і ввійшла в обрану сусідню Region. **Якщо це чужа Owned Region, на entry застосовується перевірка реєстрації territorial Camp-bound CombatSituation за §16;** для інших destination діють їхні звичайні правила Registration. Retreat у Neutral Region із Camp третього Player дозволений, якщо інші правила Retreat не забороняють destination; така Camp-presence третього Player сама по собі не блокує Retreat.
 
 Далі Army рухається локально до Camp за правилами §13 і §16. Якщо на entry виникла CombatSituation, перехід до Camp підпорядкований її FIFO та результату: лише Army, яка фактично досягла Camp, починає Regrouping на Dt. Якщо після бою Army знову Retreat-ить, застосовується новий Retreat entry, а не Regrouping у попередній Region.
 
 Pre-battle Retreat вважається поразкою відповідного Defender без combat casualties. Він використовує ті самі movement/Regrouping rules, крім особливих правил оборони Castle Region нижче. **Якщо Camp-bound Attacker окупує Castle Region і Defender Army має змішані режими Knight, її pre-battle Retreat спершу виключає всю Army з combat calculation, але не переносить усі її Unit із Region. На наслідках Occupation Unit «у замку» відділяються кожен в окрему заблоковану Army, а Unit «поза замком» залишаються разом у початковій Army та відступають; бойових втрат не має жодна частина.**
 
-Якщо кілька defender Army Retreat-ять, усі використовують одну Defender retreat Region. Якщо destination — empty foreign Owned non-Occupied Region, **кожна Army реєструє власну territorial Camp-bound CombatSituation у спільній FIFO**. Occupation виникає за звичайними правилами після перемоги першої Army, яка фактично перейшла в Camp; наступні ситуації перевіряють актуальний стан Region на Start.
+Якщо кілька defender Army Retreat-ять, усі використовують одну Defender retreat Region. Якщо destination — empty foreign Owned non-Occupied Region, Army того самого Player можуть увійти послідовно без CombatSituation, доки немає чужої `Camp`/`EnteringCamp` Army. Occupation виникає при першому фактичному переході в Camp. Якщо між входами з'являється чужа Army, кожен наступний Camp-bound entry перевіряється за §16 і за потреби реєструє окрему situation у FIFO.
 
 Regrouping є додатковим обмеженням всієї Army у територіальному стані `Camp`, а не окремим станом. У Castle Region воно виникає лише при Retreat із сусідньої Region; зміна режиму Knight «у замку» / «поза замком» під час Regrouping дозволена. Regrouping є звичайною Camp-presence для Food, Occupation, Annexation, Founding, defense та Camp lifecycle. Army у Regrouping не може ініціювати Movement або Attack, не може Merge/Split, змінювати Commander або persistent combat thresholds. Її effective Defense Loss Threshold під час Regrouping дорівнює `0`. Якщо legal Retreat немає, загальне правило примусово встановлює `100%`, **крім Camp-bound атаки Castle Region** (повністю розміщена «у замку» Army з threshold `0` виходить із бою без втрат) та **Transit-атаки Castle Region** (нульовий threshold діє без потреби відступати до сусідньої Region). Після завершення Regrouping знову використовується збережений persistent threshold. Composition під час Regrouping дозволена лише за звичайних home Castle/location/combat-lock rules.
 
