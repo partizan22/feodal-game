@@ -106,6 +106,8 @@ Persistent thresholds можна змінювати під час Camp або Mo
 
 Стан Castle/Camp задається окремо для кожного Unit навіть усередині однієї Army. Unit в Castle і Unit у Camp тієї самої Castle Region вважаються такими, що знаходяться в одному місці, і можуть бути об'єднані в Army.
 
+Під час Occupation Castle Region власні Unit всередині Castle набувають стану `BlockedInCastle`. Вони не можуть рухатись, атакувати, переходити до Camp або брати участь у CombatSituation, але можуть змінювати склад Soldier, склад Army та Commander за звичайними правилами home Castle і Barracks. Якщо Occupation завершується, блокування знімається. За зміни occupier — не знімається. Звичайний Retreat інших Army не допускає входу всередину заблокованого Castle.
+
 Якщо така Army отримує Movement order, усі її Unit починають Movement синхронно й одразу; Unit, які перебували в Castle, миттєво виходять із нього та звільняють відповідну Barracks Capacity. Окремого Dt, попередньої команди «вийти з Castle» або додаткової перевірки Capacity для виходу немає.
 
 Надалі, коли різниця неважлива, термін Camp охоплює обидва варіанти перебування біля home Castle.
