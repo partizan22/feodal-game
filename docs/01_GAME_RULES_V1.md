@@ -7,7 +7,7 @@
 
 ---
 
-Цей документ — самодостатній опис основних правил V1. У `docs/rules/` збережено докладну специфікацію: умови, алгоритми, порядок подій, винятки та edge cases. Тематичні документи уточнюють основні правила, не змінюючи їх. **Реорганізація не включає наступні погоджені зміни механік.**
+Цей документ — самодостатній опис основних правил V1. У `docs/rules/` збережено докладну специфікацію: умови, алгоритми, порядок подій, винятки та edge cases. Тематичні документи уточнюють основні правила, не змінюючи їх. Ці основні правила враховують погоджені зміни щодо Capital, Castle Occupation та заблокованого Castle.
 
 ## Детальні документи
 
@@ -24,7 +24,7 @@
 
 # 1. Загальна структура світу
 
-Світ — постійна шестикутна карта областей (Region). Гравець володіє одним або кількома замками (Castle), до яких прив'язані території, господарство й війська. Процеси відбуваються в Game Time, а події, навіть з однаковим часом, обробляються послідовно.
+Світ — постійна шестикутна карта областей (Region). Гравець володіє одним або кількома замками (Castle), до яких прив'язані території, господарство й війська. Його початковий Castle є Capital, статус якої у V1 не переноситься. Процеси відбуваються в Game Time, а події, навіть з однаковим часом, обробляються послідовно.
 
 [Детальна специфікація §1](rules/00_OVERVIEW.md).
 
@@ -32,7 +32,7 @@
 
 # 2. Стани області та територіальний контроль
 
-Region може бути Neutral, Owned або Occupied. Нейтральна область допускає одночасне перебування Camp різних гравців без автоматичного бою. Власна область дає економічний потік до свого Castle й потребує утримання. Окупована область залишається у власності попереднього owner, але контролюється іншим гравцем через Camp; економічні потоки припиняються. Окупація зникає після виходу останньої Army окупанта з Camp.
+Region може бути Neutral, Owned або Occupied. Нейтральна область допускає одночасне перебування Camp різних гравців без автоматичного бою. Власна область дає економічний потік до свого Castle й потребує утримання. Окупована область залишається у власності попереднього owner, але контролюється іншим гравцем через Camp; економічні потоки припиняються. Окупація зникає після виходу останньої Army окупанта з Camp. Formal owner не може пройти через свою Occupied Region Transit, тільки атакувати occupier із метою Camp. Occupation не столичної Castle Region дозволена, але Annexation її заборонена; вона блокує Castle.
 
 [Детальна специфікація §2](rules/01_WORLD_AND_REGIONS.md).
 
@@ -40,7 +40,7 @@ Region може бути Neutral, Owned або Occupied. Нейтральна о
 
 # 3. Територіальна зв'язність
 
-Зовнішні Region кожного Castle повинні утворювати безперервний ланцюг власних Region до Castle. Окупація проміжної Region може відрізати економічні потоки, але не змінює власності інших областей. Остаточна втрата територіального мосту робить відрізані Region нейтральними. Власник може відмовитися від звичайної Region, але не від Castle Region.
+Зовнішні Region кожного Castle повинні утворювати безперервний ланцюг власних Region до Castle. Окупація проміжної Region може відрізати економічні потоки, але не змінює власності інших областей. Остаточна втрата територіального мосту робить відрізані Region нейтральними. Власник може відмовитися від звичайної Region, але не від Castle Region. Capital Region не можна атакувати чи пройти чужим Transit; інші Castle Region підпорядковані звичайним правилам Owned/Occupied з винятками блокування Castle і особливого Retreat.
 
 [Детальна специфікація §3](rules/01_WORLD_AND_REGIONS.md).
 
@@ -48,7 +48,7 @@ Region може бути Neutral, Owned або Occupied. Нейтральна о
 
 # 4. Ресурси
 
-Wood, Stone, Iron та Food зберігаються локально в Castle; Wood/Stone/Iron — у Warehouse, Food — у Granary. Coins, Gold та Silver — глобальні баланси Player. Надлишок понад місткість сховища не накопичується.
+Wood, Stone, Iron та Food зберігаються локально в Castle; Wood/Stone/Iron — у Warehouse, Food — у Granary. Coins, Gold та Silver — глобальні баланси Player, але Gold/Silver production проходить через Castle: Occupied/disconnected Region та заблокований Castle не дають відповідних надходжень. Надлишок понад місткість сховища не накопичується.
 
 [Детальна специфікація §4](rules/02_CASTLES_AND_ECONOMY.md).
 
@@ -56,7 +56,7 @@ Wood, Stone, Iron та Food зберігаються локально в Castle;
 
 # 5. ResourceSite і видобуток
 
-ResourceSite у Region виробляють ресурси залежно від рівня розвитку. Поліпшення відбуваються пошарово й оплачуються за правилами Upgrade. Надходження до Castle залежать від територіального контролю, зв'язності та DistanceEfficiency.
+ResourceSite у Region виробляють ресурси залежно від рівня розвитку. Поліпшення відбуваються пошарово й оплачуються за правилами Upgrade. Надходження до Castle залежать від територіального контролю, зв'язності, блокування Castle та DistanceEfficiency.
 
 [Детальна специфікація §5](rules/02_CASTLES_AND_ECONOMY.md).
 
@@ -72,7 +72,7 @@ Population, Soldier та Knight споживають Food. Camp у звичай�
 
 # 7. Будівлі Castle
 
-Castle має Building з рівнями, тривалістю та вартістю покращень. Palace визначає місця Knight і механізм їх заміни; Governor's House — кількість зовнішніх Region; Barracks — місткість Soldier і Recruitment. Warehouse/Granary зберігають ресурси, Forge відкриває Barracks, економічні Building виробляють Coins, Bank збільшує відповідний дохід.
+Castle має Building з рівнями, тривалістю та вартістю покращень. Якщо Castle Region окупована, Castle заблокований: повністю припиняються надходження ресурсів із Region і Coins від прив'язаних City, але Coin income власних Building і регулярні витрати зберігаються. Будівництво, Recruitment і створення Knight залишаються дозволеними за звичайних вимог. Palace визначає місця Knight і механізм їх заміни; Governor's House — кількість зовнішніх Region; Barracks — місткість Soldier і Recruitment. Warehouse/Granary зберігають ресурси, Forge відкриває Barracks, економічні Building виробляють Coins, Bank збільшує відповідний дохід.
 
 [Детальна специфікація §7](rules/02_CASTLES_AND_ECONOMY.md).
 
@@ -104,7 +104,7 @@ Unit містить рівно одного Knight та нуль або біль
 
 # 11. Castle та Camp у Castle Region
 
-Unit у Castle Region перебуває або всередині Castle, або у Camp. Для більшості дій стани рівнозначні, але відрізняються upkeep і зайнятістю Barracks. Перехід Castle/Camp миттєвий; Movement усієї Army починається одночасно для всіх її Unit.
+Unit у Castle Region перебуває або всередині Castle, або у Camp. Для більшості дій стани рівнозначні, але відрізняються upkeep і зайнятістю Barracks. Перехід Castle/Camp миттєвий; Movement усієї Army починається одночасно для всіх її Unit. Заблоковані в Castle Unit не можуть Movement, Attack, перейти до Camp чи брати участь у CombatSituation, але можуть змінювати склад Unit, Army й Commander.
 
 [Детальна специфікація §11](rules/03_ARMIES_AND_KNIGHTS.md).
 
@@ -128,7 +128,7 @@ Knight, Soldier і резервні Soldier мають постійний Coin u
 
 # 14. Transit і Aggressive Transit
 
-Transit означає прохід без зупинки у Camp. У Neutral Region він не створює територіального CombatSituation. Для Owned non-Occupied Region Transit може бути Aggressive або NonAggressive залежно від зафіксованого target opponent; Occupied Region має окремі правила.
+Transit означає прохід без зупинки у Camp. Formal owner не може Transit через власну Occupied Region; чужий Transit через Capital Region заборонений. У Neutral Region він не створює територіального CombatSituation. Для Owned non-Occupied Region Transit може бути Aggressive або NonAggressive залежно від зафіксованого target opponent; Occupied Region має окремі правила.
 
 [Детальна специфікація §14](rules/04_MOVEMENT.md).
 
@@ -208,7 +208,7 @@ Retreat здійснюється в допустиму сусідню Region з 
 
 # 24. Наслідки Retreat, перемоги та Regrouping
 
-Після Retreat Army переміщується в сусідню Region, досягає Camp та проходить Regrouping. Переможець, залежно від наміру Camp або Transit, займає Camp, створює Occupation чи продовжує Route. Regrouping забороняє частину команд, але вважається Camp-presence для інших механік.
+Після Retreat Army переміщується в сусідню Region, досягає Camp та проходить Regrouping. Виняток для не столичної Castle Region: після поразки від Camp-bound Attacker Castle-Unit залишаються всередині й блокуються, Camp-Unit відступають. Після перемоги Transit Attacker усі Defender Army Regrouping у тій самій Region, не змінюючи Castle/Camp state. Pre-battle Retreat теж вважається програшем. При звільненні Castle заблоковані Army не беруть участі в бою, а заміна occupier не завершує облогу. Переможець, залежно від наміру Camp або Transit, займає Camp, створює Occupation чи продовжує Route. Regrouping забороняє частину команд, але вважається Camp-presence для інших механік.
 
 [Детальна специфікація §24](rules/05_COMBAT.md).
 
@@ -232,7 +232,7 @@ Neutral Defense — абстрактна оборона Neutral Region, а не 
 
 # 27. Annexation Neutral Region
 
-Annexation Neutral Region потребує Neutral Defense = 0, Camp-presence, територіального зв'язку та відсутності блокуючих чужих військ. Після накопичення control progress гравець виконує окрему дію Annexation з перевіркою Governor's House Capacity і Knight потрібного Castle.
+Annexation Neutral Region потребує Neutral Defense = 0, Camp-presence, територіального зв'язку та відсутності блокуючих чужих військ. Після накопичення control progress гравець виконує окрему дію Annexation з перевіркою Governor's House Capacity і Knight потрібного незаблокованого Castle.
 
 [Детальна специфікація §27](rules/06_TERRITORY_CONTROL.md).
 
@@ -240,7 +240,7 @@ Annexation Neutral Region потребує Neutral Defense = 0, Camp-presence, �
 
 # 28. Annexation Occupied Region
 
-Current occupier може Annex Occupied Region за близькою процедурою, але без вимоги щодо Neutral Defense. Після успіху Region переходить до обраного Castle occupier, а зв'язність попереднього власника перераховується.
+Current occupier може Annex звичайну Occupied Region за близькою процедурою, але не Castle Region; до заблокованого Castle нові Region також не можна Annex. Після успіху Region переходить до обраного Castle occupier, а зв'язність попереднього власника перераховується.
 
 [Детальна специфікація §28](rules/06_TERRITORY_CONTROL.md).
 
@@ -264,7 +264,7 @@ City Raid — окрема миттєва дія Army у Camp проти City De
 
 # 31. Заснування нового Castle
 
-У V1 Castle можна заснувати тільки в Neutral Region із Neutral Defense = 0. Founder — Knight без Soldier у Camp; Founding має оплачуваний Start, час виконання, умови pause і cancel. Після завершення створюється Castle, зберігаються існуючі об'єкти Region, а founder переходить у його Palace slot. Уже розпочатий чужий Transit може завершитися.
+У V1 Castle можна заснувати тільки в Neutral Region із Neutral Defense = 0. До завершення Founding діють Neutral rules, після — Owned rules; уже розпочатий Transit завершується без CombatSituation. Новий Castle не є Capital. Founder — Knight без Soldier у Camp; Founding має оплачуваний Start, час виконання, умови pause і cancel. Після завершення створюється Castle, зберігаються існуючі об'єкти Region, а founder переходить у його Palace slot. Уже розпочатий чужий Transit може завершитися.
 
 [Детальна специфікація §31](rules/07_CASTLE_FOUNDING.md).
 
@@ -296,7 +296,7 @@ City Raid — окрема миттєва дія Army у Camp проти City De
 
 # 35. Межі V1
 
-V1 не включає повноцінні alliances, політичну ієрархію, захоплення Castle, торгівлю між Player, Fog of War, складну логістику, persistent HP та інші системи, відкладені на пізніші версії.
+V1 не включає повноцінні alliances, політичну ієрархію, зміну власника Castle (хоча Occupation Castle Region можлива), торгівлю між Player, Fog of War, складну логістику, persistent HP та інші системи, відкладені на пізніші версії.
 
 [Детальна специфікація §35](rules/00_OVERVIEW.md).
 
