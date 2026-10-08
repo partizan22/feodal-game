@@ -24,7 +24,7 @@ CombatSituation реєструється, коли:
 
 Якщо на власному Start interaction уже не існує (наприклад, Region стала Neutral або для explicit attack у Neutral Region зникла presence зафіксованого defender), situation завершується без battle. **Якщо territorial Camp-bound CombatSituation була зареєстрована через наявність чужої Army у `Camp` або `EnteringCamp`, але на Start interaction зникла, вона завершується без battle.** Queued situation не видаляється наперед лише тому, що її майбутні умови змінилися.
 
-Від Start до Battle Start завжди проходить повний Dt, якщо situation не завершилась достроково без battle. На Battle Start Camp-bound Attacker, який переміг, одразу переходить у `Camp`; зміна Occupation/Owned застосовується до Start наступної situation у FIFO. Якщо попередня Camp-bound situation завершилася без battle через зникнення interaction, її attacker продовжує перехід до Camp за звичайними правилами локального руху.
+Від Start до Battle Start завжди проходить повний Dt, якщо situation не завершилась достроково без battle. На Battle Start Camp-bound Attacker, який переміг, одразу переходить у `Camp`; зміна Occupation/Owned застосовується до Start наступної situation у FIFO. Якщо попередня Camp-bound situation завершилася без battle через зникнення interaction, її attacker продовжує перехід до Camp за звичайними правилами локального руху. Army, яка була `EnteringCamp` на Start і стала defender, завершує перехід до `Camp` не пізніше Battle Start.
 
 Попередження про наближення Army та UI-деталі не змінюють цих lifecycle rules.
 
@@ -34,7 +34,7 @@ CombatSituation реєструється, коли:
 
 Unit і Army зі станом `BlockedInCastle` не беруть участі в жодній CombatSituation, включно з боєм за звільнення Castle або заміну occupier. Їх не можна атакувати окремо у V1.
 
-На CombatSituation Start фіксуються potential defenders defender Player: усі Army у Camp/Regrouping та всі Army, що вже entered-for-Camp не пізніше Start. Для battle participation entered-for-Camp не є окремою категорією: оскільки entry -> Camp і Start -> Battle Start обидва тривають рівно `Dt`, така Army гарантовано буде у Camp або Regrouping на Battle Start і бере участь на тих самих умовах. Це так само стосується Army у `retreat-local`, яка ввійшла в Region до Start.
+На CombatSituation Start фіксуються potential defenders defender Player: усі Army у Camp/Regrouping та всі Army, що вже entered-for-Camp не пізніше Start. **Army, які раніше ввійшли для Camp, є обов'язковими potential defenders, але це не остаточний склад оборони: Army того самого defender Player, які перебувають у Transit, можуть приєднатися за загальними правилами §17 до Battle Start.** Для battle participation entered-for-Camp не є окремою категорією: оскільки entry -> Camp і Start -> Battle Start обидва тривають рівно `Dt`, така Army гарантовано буде у Camp або Regrouping на Battle Start і бере участь на тих самих умовах. Це так само стосується Army у `retreat-local`, яка ввійшла в Region до Start.
 
 Army, що вже вийшла з Camp, та Army, яка входить після Start, не можуть брати участі в цій CombatSituation.
 
