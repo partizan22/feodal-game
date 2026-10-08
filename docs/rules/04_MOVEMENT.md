@@ -4,7 +4,7 @@
 
 # 13. Route, Movement, Dt і фіксація наміру
 
-Територіальні стани Army: `Camp`, `Transit`, `LeavingCamp`, `EnteringCamp`, `BlockedInCastle`. Regrouping і combat command-lock не є додатковими станами: це обмеження Army у `Camp`. Режим Knight «у замку» / «поза замком» не змінює територіальний стан Army.
+Територіальні стани Army: `Camp`, `Transit`, `LeavingCamp`, `EnteringCamp`, `BlockedInCastle`. Regrouping і combat command-lock не є територіальними станами: Regrouping обмежує Army тільки у `Camp`, тоді як combat command-lock може обмежувати Army у `Camp` або під час Movement (зокрема Transit та EnteringCamp), залежно від ролі в CombatSituation. Режим Knight «у замку» / «поза замком» не змінює територіальний стан Army.
 
 Player задає Army фізичний Route та кінцеву Region. Локальна мета Camp або Transit визначається самим movement order і після входу в поточну Region не переобчислюється через зміну ownership, Occupation або наявності військ. Під час combat command-lock заборонені звичайні movement-planning commands, включно зі зміною future route та explicit refresh `target_opponent`; дозволені лише прямо передбачені combat-specific decisions. Після зняття lock Player знову може refresh-нути target opponent до наступного border entry.
 
