@@ -17,7 +17,7 @@
 
 Ігровий світ — постійна шестикутна карта, поділена на області (Region). Кожна Region має шість сусідніх Region.
 
-Гравець може мати один або кілька замків (Castle). Castle є окремим економічним і військовим центром. До нього прив'язуються його Region, локальні запаси масових ресурсів, будівлі, населення, лицарі та сформовані в ньому загони.
+Гравець може мати один або кілька замків (Castle). Початковий Castle є Capital Castle; перенести столицю у V1 не можна. На Capital Region заборонені атаки та чужий Transit. Castle є окремим економічним і військовим центром. До нього прив'язуються його Region, локальні запаси масових ресурсів, будівлі, населення, лицарі та сформовані в ньому загони.
 
 Частина ресурсів зберігається локально в Castle, а частина має єдиний глобальний баланс гравця.
 
@@ -93,4 +93,4 @@
 
 # 35. Межі V1
 
-У цей документ свідомо не включені системи, яких немає у першій версії: alliances, формальна політична ієрархія, захоплення Castle, terrain movement modifiers, Stable, розширена роль Forge, спеціальні recruitment-speed Building, player-to-player trade та resource transfer, prestige systems, повна intelligence/scouting system, складна supply logistics, persistent HP та інші механіки, перелічені у файлі майбутніх систем.
+У цей документ свідомо не включені системи, яких немає у першій версії: alliances, формальна політична ієрархія, зміна власника Castle (але Occupation Castle Region можлива), terrain movement modifiers, Stable, розширена роль Forge, спеціальні recruitment-speed Building, player-to-player trade та resource transfer, prestige systems, повна intelligence/scouting system, складна supply logistics, persistent HP та інші механіки, перелічені у файлі майбутніх систем.
