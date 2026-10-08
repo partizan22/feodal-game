@@ -402,7 +402,7 @@ Persistent thresholds можна змінювати під час Camp або Mo
 
 Стан Castle/Camp задається окремо для кожного Unit навіть усередині однієї Army. Unit в Castle і Unit у Camp тієї самої Castle Region вважаються такими, що знаходяться в одному місці, і можуть бути об'єднані в Army.
 
-Якщо така Army отримує Movement order, вона починає Movement одразу; окремої попередньої команди «вийти з Castle» не потрібно.
+Якщо така Army отримує Movement order, усі її Unit починають Movement синхронно й одразу; Unit, які перебували в Castle, миттєво виходять із нього та звільняють відповідну Barracks Capacity. Окремого Dt, попередньої команди «вийти з Castle» або додаткової перевірки Capacity для виходу немає.
 
 Надалі, коли різниця неважлива, термін Camp охоплює обидва варіанти перебування біля home Castle.
 
@@ -416,6 +416,10 @@ Soldier і Knight мають регулярний Coin upkeep, незалежн�
 Food consumption є окремою системою. Reserve Soldier споживають Food саме Castle, де вони зберігаються. Компенсація Food shortage у Coins завжди додається до звичайного Coin upkeep, а не замінює його.
 
 Для Army у Movement весь її Food-equivalent consumption додатково переводиться в Coins за coins_per_food.
+
+Castle-level Food production/flows та Food consumption Population, reserve Soldier і Army у Castle Region підсумовуються в одному Food balance Castle. Якщо Food бракує, загальний непокритий дефіцит компенсується Coins один раз, без пріоритету окремих груп споживачів і без додаткових penalties.
+
+Coin upkeep нараховується безперервно в Game Time за поточним станом/location Soldier або Knight: до переходу діє попередня ставка, після переходу — нова. Минулі нарахування не перераховуються.
 
 ---
 
@@ -535,7 +539,7 @@ Army defender Player, що входить після Start, не reinforcement. 
 
 Attacker у player-vs-player CombatSituation завжди одна Army. Defender може складатися з кількох Army одного Player.
 
-Attacker має Target Combat Threshold і Incidental Combat Threshold.
+Attacker має Target Combat Threshold і Incidental Combat Threshold. Для Attacker у V1 допустимі значення обох threshold строго більші за `0`; pre-battle Retreat через zero threshold для Attacker не передбачений.
 
 Для CombatSituation, зареєстрованої через Movement:
 
@@ -554,7 +558,9 @@ Attacker має Target Combat Threshold і Incidental Combat Threshold.
 4. якщо Defender Army залишились, спільний Defender threshold стає мінімальним effective threshold серед них;
 5. після цього lock-яться strengths і виконується combat calculation.
 
-Отже, звичайний persistent threshold `0` також означає відхід до combat, якщо Retreat можливий. Якщо `0` має Attacker і legal Retreat є, Attacker Retreat-ить і battle не розраховується.
+Отже, persistent Defense Loss Threshold `0` у Defender означає відхід до combat, якщо Retreat можливий. Attacker threshold `0` у V1 заборонений.
+
+Якщо всі potential Defender Army виконують pre-battle Retreat, CombatSituation все одно доходить до Battle Start. Формально Attacker перемагає, усі Defender відступають без втрат; числовий combat calculation не проводиться і Battle Experience не нараховується. Attacker продовжує початковий Camp/Transit context, а Camp-bound Attacker після прибуття в Camp створює Occupation за звичайними правилами.
 
 ---
 
@@ -572,7 +578,7 @@ Battle Start настає через Dt і situation використовує т
 
 Для Retreat напрямкового обмеження за вектором входу немає: обидві сторони розглядають усі шість сусідніх Region за іншими правилами Retreat.
 
-Camp/Transit війська третіх Player у цей battle не включаються.
+Camp/Transit війська третіх Player у цей battle не включаються. Інші Army атакуючого Player також не приєднуються автоматично: Attacker є тільки Army, яка ініціювала explicit Attack; для іншої Army потрібна окрема CombatSituation у спільній FIFO-черзі.
 
 ---
 
@@ -611,7 +617,7 @@ Combat розраховується аналітично на основі сп�
 
 Combat завершується, коли одна зі сторін першою досягає свого loss threshold. Вона програє/відступає, інша сторона вважається переможцем.
 
-Якщо обидві сторони досягають відповідного threshold в один і той самий момент, такий результат не приймається: Luck Factor генерується повторно і combat перераховується.
+Якщо обидві сторони досягають відповідного threshold в один і той самий момент, такий результат не приймається: Luck Factor генерується повторно і combat перераховується. При кожній наступній генерації допустимий діапазон відхилення Luck Factor від `1` симетрично розширюється; величина розширення задається конфігурацією. Перерахунок повторюється до результату без нічиєї.
 
 Фактичні casualties визначаються лише після завершення combat.
 
@@ -684,7 +690,7 @@ Neutral Defense саме по собі Retreat не блокує.
 
 # 24. Наслідки Retreat, перемоги та Regrouping
 
-При звичайному player-vs-player Retreat Army одразу вважається такою, що залишила combat Region і ввійшла в обрану сусідню Region. Нової CombatSituation на цьому entry не створюється.
+При звичайному player-vs-player Retreat Army одразу вважається такою, що залишила combat Region і ввійшла в обрану сусідню Region. Нової CombatSituation на цьому entry не створюється. Retreat у Neutral Region із Camp третього Player дозволений, якщо інші правила Retreat не забороняють destination; така Camp-presence третього Player сама по собі не блокує Retreat.
 
 Далі Army протягом Dt рухається локально до Camp. Після Camp arrival вона входить у Regrouping ще на Dt.
 
@@ -726,7 +732,7 @@ LossBudget розподіляється між Unit приблизно проп�
 
 ## 25.2 Розподіл усередині Unit
 
-Усередині Unit budget між Soldier Type також розподіляється приблизно пропорційно з невеликим випадковим відхиленням і наступною нормалізацією.
+Усередині Unit budget між Soldier Type також розподіляється приблизно пропорційно з невеликим випадковим відхиленням і наступною нормалізацією. Якщо Soldier Type вичерпано, його надлишковий budget перерозподіляється між іншими Soldier Type того самого Unit. Після вичерпання всіх Soldier залишок може застосовуватися до Knight; після вичерпання доступної Casualty Health Unit надлишок переходить до інших Unit цієї side.
 
 Правило округлення до цілих Soldier повинно зберігати очікуваний загальний обсяг casualties і використовувати ігрове джерело випадковості.
 
@@ -742,7 +748,7 @@ Commander-in-Chief використовує менший mortality coefficient, 
 
 Умовна шкода Knight не переноситься між combat.
 
-Якщо Commander-in-Chief гине, це визначається після завершення розподілу всіх casualties. Army **не розпадається**: серед живих Knight цієї Army автоматично новим Commander-in-Chief стає Knight із найбільшим Experience. Це не змінює результат уже розрахованого combat; Army зберігає thresholds і свій подальший Retreat/Camp/Movement/Regrouping context. Якщо живих Knight в Army не лишилося, сама Army припиняє існування. При рівному Experience використовується детермінований tie-breaker.
+Якщо Commander-in-Chief гине, це визначається після завершення розподілу всіх casualties. Army **не розпадається**: серед живих Knight цієї Army автоматично новим Commander-in-Chief стає Knight із найбільшим Experience. Це не змінює результат уже розрахованого combat; Army зберігає thresholds і свій подальший Retreat/Camp/Movement/Regrouping context. Якщо живих Knight в Army не лишилося, сама Army припиняє існування. Оскільки кожний Unit має рівно одного Knight, який не може загинути за наявності живих Soldier у своєму Unit, Army без живих Knight не може мати живих Soldier. При рівному Experience використовується детермінований tie-breaker.
 
 Всі випадкові рішення combat повинні бути відтворюваними при однаковому повному стані та однаковому random seed.
 
@@ -881,7 +887,7 @@ Founder повинен залишатися живим, у потрібному 
 
 Якщо під час завершення Founding у Region уже знаходиться foreign Transit Army, Castle все одно створюється, а ця Army має право завершити вже розпочатий Transit. Нові hostile entries у Castle Region після цього заборонені V1.
 
-Після completion Neutral Region стає Castle Region нового Castle. Існуючі City, `wealth`, `active_wealth_ratio`, ResourceSite та їх levels зберігаються; active ResourceSiteUpgrade продовжуються без reset. Neutral Defense після переходу Region у Castle Region більше не має gameplay-функції. Створюються Warehouse 1, Granary 1 і Palace 1. Founder змінює home Castle на новий і займає початковий Palace slot; додатковий Knight через цей стартовий slot не генерується. У старому home Castle founder-а звільнений Palace slot запускає звичайний KnightReplacement mechanism так само, як slot після загибелі Knight.
+Після completion Neutral Region стає Castle Region нового Castle. Існуючі City, `wealth`, `active_wealth_ratio`, ResourceSite та їх levels зберігаються; active ResourceSiteUpgrade продовжуються без reset. Neutral Defense після переходу Region у Castle Region більше не має gameplay-функції. Створюються Warehouse 1, Granary 1 і Palace 1. Founder змінює home Castle на новий і займає початковий Palace slot; додатковий Knight через цей стартовий slot не генерується. У старому home Castle founder-а звільнений Palace slot запускає звичайний KnightReplacement mechanism так само, як slot після загибелі Knight. Кожний Palace slot може перебувати лише в одному стані: зайнятий living Knight, зарезервований ready unnamed Knight або зарезервований active/pending KnightReplacement. Transfer Founder звільняє рівно один slot, який резервується для його replacement; наявні ready unnamed entries не створюють додаткових slots.
 
 ---
 
