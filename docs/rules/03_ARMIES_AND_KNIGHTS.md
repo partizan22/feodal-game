@@ -1,6 +1,6 @@
 # Феодали — Армії та лицарі: детальна специфікація V1
 
-[Основні правила](../01_GAME_RULES_V1.md). Усі правила нижче збережені без змін із початкового документа.
+[Основні правила](../01_GAME_RULES_V1.md). Документ містить актуальні уточнення правил V1.
 
 # 8. Knight
 
@@ -97,9 +97,9 @@ Persistent thresholds можна змінювати під час Camp або Mo
 
 Кожен Knight разом зі своїми Soldier у Castle Region має один із двох режимів розміщення: **«у замку»** або **«поза замком»**. Це не територіальні стани Army: до блокування Army перебуває в територіальному стані `Camp` незалежно від режимів її Knight. Режим визначається індивідуально для кожного Knight навіть усередині однієї Army; змішані режими не заважають об'єднанню Unit в одну Army.
 
-Knight може перейти «у замку» в **будь-якому Castle власного Player**, незалежно від його home Castle; у Castle іншого Player — не може. Для входу всіх Soldier його Unit потрібна вільна Capacity Barracks поточного Castle. Knight без Soldier може ввійти навіть за повної Barracks. Перемикання «у замку» / «поза замком» миттєве, не є Movement і **дозволене під час Regrouping**. Під час command-lock діють загальні обмеження відповідної CombatSituation.
+Knight може перейти «у замку» в **будь-якому Castle власного Player**, незалежно від його home Castle; у Castle іншого Player — не може. Для входу всіх Soldier його Unit потрібна вільна Capacity Barracks поточного Castle. Knight без Soldier може ввійти навіть за повної Barracks. Перемикання «у замку» / «поза замком» миттєве, не є Movement і **дозволене під час Regrouping та активної CombatSituation, навіть за command-lock**. Для Battle використовується індивідуальний режим кожного Knight на Battle Start; вимоги Barracks Capacity залишаються чинними.
 
-При Occupation Castle Region Knight у режимі «у замку» залишаються в Castle; Army, що складається лише з таких Knight, цілком переходить до територіального стану `BlockedInCastle`, **без розділення, збереженням складу та Commander**. Якщо Army містить також Knight «поза замком», вона розділяється за різними наслідками Occupation: заблоковані Knight відділяються за правилами §24, інші Retreat-ять. `BlockedInCastle` Army не бере участі в зовнішніх взаємодіях, не може Movement/Attack або змінити режим на «поза замком», але допускає внутрішні зміни Soldier (лише у home Castle), Army та Commander за спеціальними правилами блокування. Заміна occupier блокування не знімає; завершення Occupation знімає.
+При Occupation Castle Region Knight у режимі «у замку» залишаються в Castle; Army, що складається лише з таких Knight, цілком переходить до територіального стану `BlockedInCastle`, **без розділення, збереженням складу та Commander**. Якщо Army містить також Knight «поза замком», лише Unit Knight «у замку» відділяються, кожен в окрему заблоковану Army; Unit «поза замком» **залишаються разом у початковій Army** та Retreat-ять. Якщо Commander відступаючої Army лишився в Castle, Commander призначається автоматично серед Knight з найбільшим Experience; при рівності — випадково з відтворюваним random seed. Те саме розділення при Occupation застосовується і до змішаної Army, яка достроково вийшла з battle calculation через threshold `0` / pre-battle Retreat; обидві частини не мають combat casualties. `BlockedInCastle` Army не бере участі в зовнішніх взаємодіях, не може Movement/Attack або змінити режим на «поза замком», але допускає внутрішні зміни Soldier (лише у home Castle), Army та Commander за спеціальними правилами блокування. Заміна occupier блокування не знімає; завершення Occupation (у тому числі відвоювання owner) переводить заблоковані Army з `BlockedInCastle` у `Camp` **без Regrouping**, зі збереженням складу, Commander і режимів «у замку».
 
 При Movement order для звичайної Army у `Camp` усі Unit починають Movement синхронно; Knight «у замку» миттєво виходять із Castle, звільняючи Barracks Capacity, без додаткового Dt чи окремої команди.
 
