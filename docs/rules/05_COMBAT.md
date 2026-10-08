@@ -20,9 +20,9 @@ CombatSituation реєструється, коли:
 
 Для territorial situation defender Player визначається тільки на Start за актуальним interaction. Для explicit attack у Neutral Region конкретний defender Player фіксується вже на Registration і situation ніколи не retarget-иться на іншого Player.
 
-Якщо на власному Start interaction уже не існує, situation завершується без battle. Queued situation не видаляється наперед лише тому, що її майбутні умови змінилися.
+Якщо на власному Start interaction уже не існує (наприклад, Region стала Neutral або для explicit attack у Neutral Region зникла presence зафіксованого defender), situation завершується без battle. **Відсутність Army defender сама по собі не скасовує territorial Camp-bound interaction у чужій Owned/Occupied Region:** така situation обов'язково доходить до Battle Start через повний `Dt`. Queued situation не видаляється наперед лише тому, що її майбутні умови змінилися.
 
-Від Start до Battle Start завжди проходить повний Dt, якщо situation не завершилась достроково без battle.
+Від Start до Battle Start завжди проходить повний Dt, якщо situation не завершилась достроково без battle. **На Battle Start territorial Camp-bound атаки без жодної potential Defender Army Attacker автоматично перемагає порожню defender side без combat calculation і Battle Experience та одразу переходить у `Camp`; зміна Occupation/Owned застосовується до Start наступної situation у FIFO.** Це правило діє навіть тоді, коли інша Camp-bound Army уже очікує в черзі цієї Region.
 
 Попередження про наближення Army та UI-деталі не змінюють цих lifecycle rules.
 
@@ -75,7 +75,7 @@ Attacker має Target Combat Threshold і Incidental Combat Threshold. Для A
 
 Отже, persistent Defense Loss Threshold `0` у Defender означає відхід до combat, якщо Retreat можливий. Attacker threshold `0` у V1 заборонений.
 
-Якщо всі potential Defender Army достроково вийшли з battle calculation через threshold `0` / pre-battle Retreat (у тому числі за спеціальним правилом Castle Region), CombatSituation все одно доходить до Battle Start. Формально Attacker перемагає; Defender не отримують combat casualties, а їхня подальша поведінка визначається типом атаки та §24. Числовий combat calculation не проводиться і Battle Experience не нараховується. Attacker з локальною метою `Camp` **одразу на Battle Start переходить у `Camp`**, без додаткового руху чи затримки після перемоги; у foreign Owned Region в цей самий момент створюється Occupation за звичайними правилами. Attacker з локальною метою `Transit` продовжує початковий Transit context.
+Якщо potential Defender Army від початку відсутні **або** всі potential Defender Army достроково вийшли з battle calculation через threshold `0` / pre-battle Retreat (у тому числі за спеціальним правилом Castle Region), CombatSituation все одно доходить до Battle Start. Формально Attacker перемагає; Defender не отримують combat casualties, а їхня подальша поведінка визначається типом атаки та §24. Числовий combat calculation не проводиться і Battle Experience не нараховується. Attacker з локальною метою `Camp` **одразу на Battle Start переходить у `Camp`**, без додаткового руху чи затримки після перемоги; у foreign Owned Region в цей самий момент створюється Occupation за звичайними правилами. Attacker з локальною метою `Transit` продовжує початковий Transit context.
 
 ---
 
