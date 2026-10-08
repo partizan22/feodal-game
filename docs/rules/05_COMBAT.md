@@ -12,7 +12,7 @@ CombatSituation реєструється, коли:
 - Army входить у Occupied Region з локальною метою Camp і не є current occupier;
 - це включає Camp-bound Army формального owner, яка атакує occupier власної Castle Region; Army всередині заблокованого Castle не беруть участі;
 - Region стає Occupied, коли Camp-bound Army formal owner уже ввійшла в неї, але запізно для попередньої defense;
-- Army у Camp Neutral Region явно атакує конкретного іншого Player, який має в цій самій Region принаймні одну Army саме у звичайному Camp (`state == Camp`). Regrouping або entered-for-Camp без такої Army недостатньо для ініціації explicit attack.
+- Army у Camp Neutral Region явно атакує конкретного іншого Player, який має в цій самій Region принаймні одну Army у територіальному стані `Camp`, **включно з Regrouping**. Лише entered-for-Camp без Army у `Camp` недостатньо для ініціації explicit attack.
 
 У кожній Region існує одна спільна FIFO-черга **всіх** player-vs-player CombatSituation незалежно від пар Player. Одночасно Active може бути максимум одна.
 
@@ -44,7 +44,7 @@ Manual pre-battle decision може примусово поставити `0` з
 
 На Battle Start спочатку перевіряється наявність legal Retreat Region для обох sides. Якщо legal Retreat немає, застосовується примусовий threshold `100%`, **крім двох спеціальних випадків**: для Camp-bound атаки Castle Region діє достроковий вихід повністю розміщених у замку Army з effective threshold `0` за §24; для Transit-атаки Castle Region діють звичайні thresholds і нульові pre-battle decisions без вимоги відступити до сусідньої Region за §24. Для інших випадків лише Army/side з effective threshold `0` і допустимим Retreat виходять до battle calculation. Destination визначається side-level за §23.
 
-Potential defenders після Start command-locked для Movement, merge/split, зміни Commander і composition до завершення situation. Combat-specific Retreat/join decisions залишаються доступними там, де це передбачено.
+Potential defenders після Start command-locked для Movement, merge/split, зміни Commander і composition до завершення situation. **Перемикання режиму окремого Knight «у замку» / «поза замком» під час активної CombatSituation дозволене**, якщо виконуються звичайні вимоги Castle та Barracks Capacity; для battle береться режим на Battle Start. Combat-specific Retreat/join decisions залишаються доступними там, де це передбачено.
 
 Army defender Player, що входить після Start, не reinforcement. Якщо після завершення поточного battle Region уже Occupied, Camp-bound Army formal owner може створити нову CombatSituation проти occupier; Transit продовжується без CombatSituation.
 
@@ -81,7 +81,7 @@ Attacker має Target Combat Threshold і Incidental Combat Threshold. Для A
 
 # 19. Player-vs-player combat у Neutral Region
 
-Explicit attack у Neutral Region можливий Army у Camp проти конкретного іншого Player тільки якщо цей Player має в цій самій Neutral Region принаймні одну Army саме у звичайному Camp (`state == Camp`). Army лише у Regrouping або entered-for-Camp недостатньо для ініціації атаки. Після Registration актуальність уже зафіксованої interaction на Start перевіряється ширше: defender Player повинен мати Camp/Regrouping presence або Army, що вже entered-for-Camp.
+Explicit attack у Neutral Region можливий Army у Camp проти конкретного іншого Player тільки якщо цей Player має в цій самій Neutral Region принаймні одну Army у територіальному стані `Camp`, **включно з Army у Regrouping**. Лише entered-for-Camp без Army у `Camp` недостатньо для ініціації атаки. Після Registration актуальність уже зафіксованої interaction на Start перевіряється ширше: defender Player повинен мати Camp/Regrouping presence або Army, що вже entered-for-Camp.
 
 На Registration defender Player фіксується. На Start situation або лишається атакою саме проти нього, або завершується без battle; retarget на третього Player не відбувається.
 
@@ -228,7 +228,7 @@ Regrouping є додатковим обмеженням всієї Army у те�
 
 - Unit, Knight якого перебуває в режимі «у замку», залишається всередині Castle разом із Soldier, що вижили; Army з таких Unit переходить у територіальний стан `BlockedInCastle`. Немає Retreat та Regrouping; це стосується й Unit, який обрав pre-battle Retreat (він не має combat casualties).
 - Unit, Knight якого перебуває в режимі «поза замком», здійснює звичайний Retreat у сусідню Region, потім Regrouping.
-- Якщо Army містила Knight «у замку» та «поза замком», Unit Knight «у замку» відділяються: **кожний від'єднаний Unit залишається окремою Army**, вони не зливаються. Залишок початкової Army відступає; якщо Commander-in-Chief залишився у Castle, Commander відступаючої Army стає Knight з найбільшим Experience серед її Unit; за рівності кандидат обирається випадково.
+- Якщо Army містила Knight «у замку» та «поза замком», **тільки Unit Knight «у замку» відділяються, кожний в окрему Army** у `BlockedInCastle`; вони не зливаються. **Усі Unit «поза замком» залишаються разом у початковій Army**, яка відступає без додаткового поділу. Якщо Commander-in-Chief залишився у Castle, Commander відступаючої Army автоматично стає Knight з найбільшим Experience серед її Unit; за рівності Experience кандидат обирається випадково.
 - Якщо всі Knight Army були в режимі «у замку», Army не розділяється, переходить до `BlockedInCastle` й залишається в замку зі збереженням початкового складу й Commander, без Regrouping.
 - Усі власні війська всередині Castle блокуються при виникненні Occupation, навіть якщо вони не брали участі у відповідному battle.
 
@@ -236,7 +236,7 @@ Regrouping є додатковим обмеженням всієї Army у те�
 
 ### Війська під блокадою Castle
 
-`BlockedInCastle` є п’ятим територіальним станом Army, а не Regrouping. Такі Army та їх Unit не можуть Movement, Attack, перейти в режим «поза замком» або брати участь у будь-якій CombatSituation. Soldier залишаються в Barracks, займаючи звичайну Capacity. Дозволено змінювати склад Unit (у home Castle), merge/split Army та Commander, дотримуючись звичайних умов Barracks і складу. Нові Knight, створені в заблокованому Castle, також одразу блокуються.
+`BlockedInCastle` є п’ятим територіальним станом Army, а не Regrouping. Такі Army та їх Unit не можуть Movement, Attack, перейти в режим «поза замком» або брати участь у будь-якій CombatSituation. Soldier залишаються в Barracks, займаючи звичайну Capacity. Дозволено змінювати склад Unit **лише Knight, для яких заблокований Castle є home Castle**; Knight з іншим home Castle не можуть змінювати склад Unit у цьому Castle. Merge/split Army та зміна Commander дозволені за звичайних умов Barracks і складу. Нові Knight, створені в заблокованому Castle, також одразу блокуються.
 
 Якщо owner Camp-bound Army атакує occupier і перемагає, Occupation знімається, але заблоковані Castle Army не допомагають їй у battle. Якщо третій Player перемагає occupier і стає новим occupier, облога **не** знімається; Castle Army не вступають у додатковий бій. Якщо всі occupier Army залишили Camp, блокування й облога одразу завершуються; розблоковані Unit у Castle можуть брати участь у наступній обороні.
 
@@ -307,7 +307,7 @@ City Defense використовує fixed raid loss threshold із configurati
 
 При успіху reward визначається pre-raid effective_wealth, Coins одразу зараховуються Player, після чого active_wealth_ratio = 0. wealth і City Defense не змінюються. Raid при низькому ratio дозволений і знову скидає ratio до 0.
 
-При поразці Army не Retreat-ить у сусідню Region: вона лишається в тому самому Camp. Поза Castle Region одразу починається Regrouping на Dt; у Castle Region Regrouping не виникає.
+При поразці Army не Retreat-ить у сусідню Region: вона лишається в тому самому Camp. Після поразки одразу починається Regrouping на Dt. City Raid можливий лише в Region з City, а заснування Castle в такій Region заборонено, тому City Raid у Castle Region неможливий.
 
 Player не може ініціювати City Raid у Region, якщо він є attacker будь-якої unresolved CombatSituation у цій Region або potential defender Active CombatSituation.
 
