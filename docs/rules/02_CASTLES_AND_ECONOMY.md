@@ -35,7 +35,7 @@ Gold є рідкісним стратегічним ресурсом розви�
 
 Silver у V1 видобувається та накопичується, але ще не витрачається.
 
-Coins, Gold та Silver не мають складської місткості.
+Coins, Gold та Silver не мають складської місткості. Проте production Gold і Silver проходить економічну перевірку через Castle, до якого Region приєднана, до зарахування на глобальний баланс Player. Глобальне зберігання не обходить відсутність територіального зв'язку, Occupation або блокування Castle.
 
 ---
 
@@ -54,11 +54,11 @@ ResourceSite не обов'язково існують як окремі іме�
 
 LocalProduction = Σ ResourceSiteOutput(level_i)
 
-Для Wood, Stone та Iron у Owned non-Occupied Region з чинною територіальною зв'язністю позитивне виробництво надходить до Castle з коефіцієнтом відстані:
+Для Wood, Stone та Iron у Owned non-Occupied Region з чинною територіальною зв'язністю та **незаблокованим Castle** позитивне виробництво надходить до Castle з коефіцієнтом відстані:
 
 CastleFlow = LocalProduction × DistanceEfficiency(distance)
 
-Для Gold і Silver distance coefficient не застосовується. Їх production зараховується до глобального балансу Player тільки якщо Region є Owned, не Occupied і має чинну територіальну зв'язність.
+Для Gold і Silver distance coefficient не застосовується. Їх production зараховується до глобального балансу Player через відповідний Castle тільки якщо Region є Owned, не Occupied, має чинну територіальну зв'язність і **Castle не заблокований**. Джерела з Occupied або disconnected Region не дають доходу.
 
 Occupied або disconnected Region не передає ці ресурси формальному owner.
 
@@ -91,7 +91,7 @@ Army у Camp або Regrouping споживають локальне Food produc
 
 Непокритий дефіцит кожного Player компенсується Coins за coins_per_food.
 
-Для звичайної Owned non-Occupied Region з чинною територіальною зв'язністю тільки **позитивний** залишок Food після Camp consumption передається до Castle з DistanceEfficiency(distance). Castle не постачає Food назад у звичайні Region. Негативний локальний balance ніколи не перетворюється на demand до Castle.
+Для звичайної Owned non-Occupied Region з чинною територіальною зв'язністю та **незаблокованим Castle** тільки **позитивний** залишок Food після Camp consumption передається до Castle з DistanceEfficiency(distance). Castle не постачає Food назад у звичайні Region. Негативний локальний balance ніколи не перетворюється на demand до Castle.
 
 У Neutral, foreign, Occupied або disconnected Region діє та сама локальна Camp-consumption логіка, але позитивний залишок не надходить до Castle формального owner.
 
@@ -99,9 +99,9 @@ Army у Camp або Regrouping споживають локальне Food produc
 
 Castle Region є спеціальним випадком.
 
-Food consumption Army у Camp/Regrouping Castle Region не віднімається від локального production самої Region. Уся позитивна Food production Castle Region надходить у Castle з coefficient 1.
+Food consumption Army у Camp/Regrouping Castle Region не віднімається від локального production самої Region. Уся позитивна Food production Castle Region надходить у Castle з coefficient 1 **лише якщо Castle не заблокований**. Під час Occupation навіть Food production самої Castle Region не надходить у Castle.
 
-Food consumption усіх Army у Camp/Regrouping Castle Region віднімається вже на рівні Food balance Castle разом із non-military consumption.
+Food consumption власних Army у Camp/Regrouping Castle Region віднімається на рівні Food balance Castle разом із non-military consumption, доки Region не окупована. Якщо Castle заблокований, його Building/Population та Unit всередині Castle продовжують споживати Food із Castle stocks; Army occupier у Camp не споживають Food зі складів Castle, а забезпечують власне споживання за локальними Camp rules.
 
 Якщо запас Food Castle дорівнює 0 і його Food balance від'ємний, непокрита частина компенсується Coins за тим самим coins_per_food.
 
@@ -142,6 +142,10 @@ V1 не вводить окремих штрафів голодування, а�
 Prerequisites задаються конфігурацією як набір мінімальних level інших Building; усі умови мають виконуватися одночасно. У V1 prerequisites перевіряються тільки при construction `0 -> 1`; подальші level тієї самої Building їх повторно не перевіряють. Building не демонтуються і їх level не зменшуються.
 
 `empty_food` або `empty_coins` самі по собі не є окремим blocker BuildingUpgrade: старт можливий, якщо фактичних ресурсів достатньо для повної upfront cost.
+
+## 7.1 Warehouse
+
+**Економіка заблокованого Castle.** За Occupation Castle Region надходження Wood, Stone, Iron, Food, Gold і Silver із **усіх** прив'язаних Region (включно з Castle Region) припиняються. Gold/Silver не зараховуються навіть на глобальні Player balances. Монети від усіх City, прив'язаних до заблокованого Castle, не надходять. Однак Coin-producing Building самого Castle продовжують працювати (включно з Bank effect). Coin upkeep та інші витрати не змінюються. Building/Upgrade дозволені за наявності upfront resources; Recruitment дозволений за звичайних вимог Food/Coins і Barracks Capacity; створення Knight через Palace дозволене, але вони залишаються BlockedInCastle. Нові Region не можна Annex до заблокованого Castle, навіть якщо територіальний зв'язок наявний. Обмеження завершуються одночасно зі зняттям Occupation.
 
 ## 7.1 Warehouse
 
