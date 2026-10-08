@@ -77,7 +77,7 @@ Attacker має Target Combat Threshold і Incidental Combat Threshold. Для A
 
 Отже, persistent Defense Loss Threshold `0` у Defender означає відхід до combat, якщо Retreat можливий. Attacker threshold `0` у V1 заборонений.
 
-Якщо potential Defender Army від початку відсутні **або** всі potential Defender Army достроково вийшли з battle calculation через threshold `0` / pre-battle Retreat (у тому числі за спеціальним правилом Castle Region), CombatSituation все одно доходить до Battle Start. Формально Attacker перемагає; Defender не отримують combat casualties, а їхня подальша поведінка визначається типом атаки та §24. Числовий combat calculation не проводиться і Battle Experience не нараховується. Attacker з локальною метою `Camp` **одразу на Battle Start переходить у `Camp`**, без додаткового руху чи затримки після перемоги; у foreign Owned Region в цей самий момент створюється Occupation за звичайними правилами. Attacker з локальною метою `Transit` продовжує початковий Transit context.
+Якщо на CombatSituation Start немає доступного Defender, situation завершується без battle за §16. **Якщо ж Defender був визначений на Start, але до battle calculation усі його potential Defender Army достроково вийшли через threshold `0` / pre-battle Retreat** (у тому числі за спеціальним правилом Castle Region), situation доходить до Battle Start. Формально Attacker перемагає; Defender не отримують combat casualties, а їхня подальша поведінка визначається типом атаки та §24. Числовий combat calculation не проводиться і Battle Experience не нараховується. Attacker з локальною метою `Camp` **одразу на Battle Start переходить у `Camp`**, без додаткового руху чи затримки після перемоги; у foreign Owned Region в цей самий момент створюється Occupation за звичайними правилами. Attacker з локальною метою `Transit` продовжує початковий Transit context.
 
 ---
 
@@ -87,7 +87,7 @@ Explicit attack у Neutral Region може ініціювати Army у `Camp`, 
 
 На Registration defender Player фіксується. На Start situation або лишається атакою саме проти нього, або завершується без battle; retarget на третього Player не відбувається.
 
-Усі Army зафіксованого defender Player, які на Start є у Camp/Regrouping або вже entered-for-Camp, обов'язково входять до potential defenders; для entered-for-Camp це не опціональне приєднання. До defender side застосовуються ті самі правила Transit join, pre-battle Retreat та command-lock, що й у territorial CombatSituation.
+Усі доступні Army зафіксованого defender Player, які на Start є у Camp/Regrouping або вже entered-for-Camp, обов'язково входять до potential defenders; для entered-for-Camp це не опціональне приєднання. Army, яка є attacker в іншій unresolved CombatSituation (Active або queued), не може бути potential defender і тут. До defender side застосовуються ті самі правила Transit join, pre-battle Retreat та command-lock, що й у territorial CombatSituation.
 
 Battle Start настає через Dt і situation використовує ту саму загальну FIFO-чергу Region.
 
