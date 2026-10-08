@@ -85,7 +85,7 @@ Food shortage не замінює звичайний Coin upkeep військ: �
 
 ## 6.1 Army у Camp звичайної Region
 
-Army у Camp або Regrouping споживають локальне Food production Region.
+Army у територіальному стані `Camp`, зокрема під обмеженням Regrouping, споживають локальне Food production Region.
 
 Якщо Food достатньо, локальне production покриває весь Camp consumption. Якщо Food недостатньо, доступна кількість ділиться між Player пропорційно сумарному Food consumption їхніх Camp-військ у цій Region. Жоден Player або Army не має пріоритету.
 
@@ -165,7 +165,7 @@ Prerequisites задаються конфігурацією як набір мі
 
 Palace upgrade і завершений KnightReplacement додають однаковий елемент у цю спільну чергу очікування імені. До отримання імені такі готові Knight нічим не відрізняються. Кожний ready unnamed entry уже резервує один доступний Palace slot у сенсі Capacity, хоча Knight entity ще не існує; відкладання імені не створює додаткової вільної Capacity. Player дає їм імена строго по черзі; лише в цей момент відповідний Knight створюється.
 
-Новий Knight після отримання імені створюється у своєму home Castle з 0 Soldier і `location = Castle`. Одночасно створюється окрема Army з одного його Unit, де цей Knight є Commander-in-Chief. У V1 кожний active Knight завжди належить рівно одній Army; окремого стану active Knight без Army немає.
+Новий Knight після отримання імені створюється у своєму home Castle з 0 Soldier і територіальний стан Army `Camp` і режим розміщення Knight «у замку». Одночасно створюється окрема Army з одного його Unit, де цей Knight є Commander-in-Chief. У V1 кожний active Knight завжди належить рівно одній Army; окремого стану active Knight без Army немає.
 
 Palace має регулярний Coin upkeep за функцією його level.
 
@@ -187,11 +187,11 @@ Capacity перевіряється саме в момент виконання 
 
 Казарма (Barracks) потрібна для Recruitment і для дешевого розміщення Soldier у Castle.
 
-Barracks має Capacity, що вимірюється в Soldier: один Soldier будь-якого Type займає одну одиницю Capacity. У ній знаходяться як reserve Soldier, так і Soldier сформованих Unit, чиї Knight мають `location_state = Castle`. Сам Knight Capacity не займає.
+Barracks має Capacity, що вимірюється в Soldier: один Soldier будь-якого Type займає одну одиницю Capacity. У ній знаходяться як reserve Soldier, так і Soldier сформованих Unit, чиї Knight перебувають у режимі «у замку» в цьому Castle. Сам Knight Capacity не займає.
 
-Unit не може перейти з Camp у Castle, якщо Barracks не має достатньо вільної Capacity для всіх його Soldier. Частковий вхід не допускається. Knight з 0 Soldier може перейти в Castle навіть при повній Barracks.
+Knight разом зі своїм Unit може перейти з режиму «поза замком» у режим «у замку» в будь-якому власному Castle Player (не обов'язково home Castle), якщо Barracks цього Castle має достатньо вільної Capacity для всіх його Soldier. У чужому Castle такий перехід заборонений. Частковий вхід Unit не допускається. Knight з 0 Soldier може перейти «у замку» навіть при повній Barracks. Перемикання режиму дозволене й під час Regrouping.
 
-Soldier Unit у Camp не займають Barracks Capacity. Якщо Barracks заповнена, Recruitment pause до появи вільного місця.
+Soldier Unit у режимі «поза замком» не займають Barracks Capacity. Якщо Barracks заповнена, Recruitment pause до появи вільного місця.
 
 ## 7.7 Coin-producing Buildings
 
