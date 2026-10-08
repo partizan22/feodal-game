@@ -1,6 +1,6 @@
 # Феодали — Замки та економіка: детальна специфікація V1
 
-[Основні правила](../01_GAME_RULES_V1.md). Усі правила нижче збережені без змін із початкового документа.
+[Основні правила](../01_GAME_RULES_V1.md). Документ містить актуальні уточнення правил V1.
 
 # 4. Ресурси
 
@@ -101,7 +101,7 @@ Castle Region є спеціальним випадком.
 
 Food consumption Army у Camp/Regrouping Castle Region не віднімається від локального production самої Region. Уся позитивна Food production Castle Region надходить у Castle з coefficient 1 **лише якщо Castle не заблокований**. Під час Occupation навіть Food production самої Castle Region не надходить у Castle.
 
-Food consumption власних Army у Camp/Regrouping Castle Region віднімається на рівні Food balance Castle разом із non-military consumption, доки Region не окупована. Якщо Castle заблокований, його Building/Population та Unit всередині Castle продовжують споживати Food із Castle stocks; Army occupier у Camp не споживають Food зі складів Castle, а забезпечують власне споживання за локальними Camp rules. **Army формального owner у Camp окупованої Castle Region поза Castle** (можлива під час черги CombatSituation, коли кілька Army owner увійшли атакувати occupier) також споживає Food **за звичайними локальними правилами для кількох Army у Region без Castle (§6.1)**. Вона не використовує Food stocks Castle і бере участь у пропорційному розподілі місцевого Food production між Player разом з Army occupier.
+Food consumption власних Army у Camp/Regrouping Castle Region віднімається на рівні Food balance Castle разом із non-military consumption, доки Region не окупована. Якщо Castle заблокований, його Building/Population та Unit всередині Castle продовжують споживати Food із Castle stocks; Army occupier у Camp не споживають Food зі складів Castle, а забезпечують власне споживання за локальними Camp rules. **Army формального owner у Camp окупованої Castle Region поза Castle** (можлива під час черги CombatSituation, коли кілька Army owner увійшли атакувати occupier) також споживає Food **за звичайними локальними правилами для кількох Army у Region без Castle (§6.1)**. Вона не використовує Food stocks Castle і бере участь у пропорційному розподілі місцевого Food production між Player разом з Army occupier. **Правило вибору джерела Food залежить від фактичного територіального стану Army, а не від статусу CombatSituation**: поки Army у Movement / `EnteringCamp` або її Movement paused через FIFO, весь Food-equivalent сплачується Coins за §6.3; лише після фактичного переходу в `Camp` застосовується локальне споживання за §6.1, навіть якщо battle ще у черзі.
 
 Якщо запас Food Castle дорівнює 0 і його Food balance від'ємний, непокрита частина компенсується Coins за тим самим coins_per_food.
 
@@ -143,7 +143,7 @@ Prerequisites задаються конфігурацією як набір мі
 
 `empty_food` або `empty_coins` самі по собі не є окремим blocker BuildingUpgrade: старт можливий, якщо фактичних ресурсів достатньо для повної upfront cost.
 
-## 7.1 Warehouse
+## 7.0 Економіка заблокованого Castle
 
 **Економіка заблокованого Castle.** За Occupation Castle Region надходження Wood, Stone, Iron, Food, Gold і Silver із **усіх** прив'язаних Region (включно з Castle Region) припиняються. Gold/Silver не зараховуються навіть на глобальні Player balances. Монети від усіх City, прив'язаних до заблокованого Castle, не надходять. Однак Coin-producing Building самого Castle продовжують працювати (включно з Bank effect). Coin upkeep та інші витрати не змінюються. Building/Upgrade дозволені за наявності upfront resources; Recruitment дозволений за звичайних вимог Food/Coins і Barracks Capacity; створення Knight через Palace дозволене, але вони залишаються BlockedInCastle. Нові Region не можна Annex до заблокованого Castle, навіть якщо територіальний зв'язок наявний. Обмеження завершуються одночасно зі зняттям Occupation.
 
@@ -165,7 +165,7 @@ Prerequisites задаються конфігурацією як набір мі
 
 Palace upgrade і завершений KnightReplacement додають однаковий елемент у цю спільну чергу очікування імені. До отримання імені такі готові Knight нічим не відрізняються. Кожний ready unnamed entry уже резервує один доступний Palace slot у сенсі Capacity, хоча Knight entity ще не існує; відкладання імені не створює додаткової вільної Capacity. Player дає їм імена строго по черзі; лише в цей момент відповідний Knight створюється.
 
-Новий Knight після отримання імені створюється у своєму home Castle з 0 Soldier і територіальний стан Army `Camp` і режим розміщення Knight «у замку». Одночасно створюється окрема Army з одного його Unit, де цей Knight є Commander-in-Chief. У V1 кожний active Knight завжди належить рівно одній Army; окремого стану active Knight без Army немає.
+Новий Knight після отримання імені створюється у своєму home Castle без Soldier, у режимі розміщення «у замку». Для нього одночасно створюється окрема Army з одного Unit, де цей Knight є Commander-in-Chief; її територіальний стан — `Camp`, або `BlockedInCastle`, якщо Castle окупований. У V1 кожний active Knight завжди належить рівно одній Army; окремого стану active Knight без Army немає.
 
 Palace має регулярний Coin upkeep за функцією його level.
 
