@@ -144,7 +144,7 @@ Transit означає прохід без зупинки у Camp. Formal owner 
 
 # 16. CombatSituation: Registration, Start і FIFO
 
-Кожна CombatSituation має одну Attacker Army та Defender side й проходить стадії Registration, Start, Battle Start. Усі player-vs-player CombatSituation однієї Region впорядковані у FIFO-чергу. Кілька атакуючих Army формують окремі situations. Camp-bound territorial CombatSituation у чужій Owned/Occupied Region **не завершується достроково лише через відсутність defender Army**: через повний `Dt` на Battle Start Attacker автоматично перемагає порожню defender side й одразу переходить у `Camp` без додаткового `Dt`; зміни Occupation / Owned застосовуються до Start наступної CombatSituation у FIFO.
+Кожна CombatSituation має одну Attacker Army та Defender side й проходить стадії Registration, Start, Battle Start. Усі player-vs-player CombatSituation однієї Region впорядковані у FIFO-чергу. Кілька атакуючих Army формують окремі situations. Retreat у чужу Owned Region не звільняє від CombatSituation: Camp-bound entry реєструє її за звичайними правилами. Вхід formal owner у власну ще non-Occupied Region з чужою `EnteringCamp` Army також реєструє CombatSituation, яка очікує у FIFO; defender визначається на Start. Camp-bound territorial CombatSituation у чужій Owned/Occupied Region **не завершується достроково лише через відсутність defender Army**: через повний `Dt` на Battle Start Attacker автоматично перемагає порожню defender side й одразу переходить у `Camp` без додаткового `Dt`; зміни Occupation / Owned застосовуються до Start наступної CombatSituation у FIFO.
 
 [Детальна специфікація §16](rules/05_COMBAT.md).
 
