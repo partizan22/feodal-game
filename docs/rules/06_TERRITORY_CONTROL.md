@@ -18,7 +18,7 @@ Foreign pure Transit не pause-ить Annexation progress, навіть якщ�
 
 Досягнення required control time не виконує Annexation автоматично. Region лише стає ready.
 
-При manual Annexation Player обирає конкретний Castle. Потрібні:
+При manual Annexation Player обирає конкретний **незаблокований** Castle; Annexation до заблокованого Castle заборонений. Потрібні:
 
 - valid territorial connection до цього Castle;
 - вільна Governor's House Capacity;
@@ -33,6 +33,8 @@ Annexation не має окремої одноразової resource cost у V1
 ---
 
 # 28. Annexation Occupied Region
+
+**Castle Region не може бути Annexed** навіть за Occupation. Це стосується Capital та інших Castle Region. Так само до заблокованого Castle не можна Annex нові Region.
 
 Current occupier може Annex Occupied Region за тією самою control-progress логікою, але Neutral Defense для цього не потрібна.
 
