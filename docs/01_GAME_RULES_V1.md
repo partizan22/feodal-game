@@ -252,6 +252,8 @@ Prerequisites задаються конфігурацією як набір мі
 
 Palace upgrade і завершений KnightReplacement додають однаковий елемент у цю спільну чергу очікування імені. До отримання імені такі готові Knight нічим не відрізняються. Кожний ready unnamed entry уже резервує один доступний Palace slot у сенсі Capacity, хоча Knight entity ще не існує; відкладання імені не створює додаткової вільної Capacity. Player дає їм імена строго по черзі; лише в цей момент відповідний Knight створюється.
 
+Новий Knight після отримання імені створюється у своєму home Castle з 0 Soldier і `location = Castle`. Одночасно створюється окрема Army з одного його Unit, де цей Knight є Commander-in-Chief. У V1 кожний active Knight завжди належить рівно одній Army; окремого стану active Knight без Army немає.
+
 Palace має регулярний Coin upkeep за функцією його level.
 
 ## 7.4 Governor's House
@@ -314,6 +316,8 @@ Knight може існувати без Soldier.
 Experience зростає після боїв залежно від масштабу противника та повільно з часом. Battle Experience отримують тільки живі після battle Knight, які реально входили до combat calculation. Knight, що виконали pre-battle Retreat до calculation, XP не отримують; загиблі в цьому battle Knight також не отримують XP. Базовий XP participating survivor визначається функцією від pre-combat strength противника та, за потреби, власної side і не залежить від фактичних втрат конкретного Unit. Commander-in-Chief отримує додатковий Experience bonus за статус Commander.
 
 Passive Experience нараховується всім існуючим живим Knight безперервно незалежно від `Castle / Camp / Movement / Regrouping` та combat lock. Ready unnamed Knight ще не є Knight entity і Experience не накопичує; dead Knight також не накопичує Experience.
+
+Battle Experience нараховується після будь-якого фактично виконаного combat calculation: player-vs-player battle, Attack Neutral Defense і City Raid. Для Neutral Defense/City Defense opponent scale визначається їх pre-combat defender strength; eligibility surviving Knight і Commander bonus лишаються такими самими.
 
 Конкретні функції battle/passive Experience, Commander bonus і перетворення Experience у коефіцієнт задаються конфігурацією.
 
@@ -517,7 +521,7 @@ Army, що вже вийшла з Camp, та Army, яка входить піс�
 
 Potential defender до Battle Start може отримати індивідуальне рішення pre-battle Retreat. Воно **не виконує Retreat одразу** і не змінює persistent Army threshold: тільки локально для цієї CombatSituation підміняє effective Defense Loss Threshold цієї Army на `0`. До Battle Start це рішення можна змінювати; чинним є останнє значення. На Battle Start воно lock-иться разом з іншими combat parameters.
 
-За відсутності такого рішення effective Defense Loss Threshold визначається на Battle Start за актуальним станом Army. Якщо Army на цей момент усе ще у Regrouping, effective threshold = `0`; якщо Regrouping уже завершився, використовується persistent Defense Loss Threshold. Transit candidates без явного join продовжують Transit.
+Manual pre-battle decision може примусово поставити `0` звичайній Army або до Battle Start скасувати власний попередній manual `0`, але не може перебити forced Regrouping rule. Effective Defense Loss Threshold остаточно визначається на Battle Start за актуальним станом Army: якщо Army на цей момент усе ще у Regrouping, effective threshold = `0` незалежно від manual decision; якщо Regrouping уже завершився, застосовується актуальне manual decision, а за його відсутності — persistent Defense Loss Threshold. Transit candidates без явного join продовжують Transit.
 
 На Battle Start спочатку перевіряється наявність legal Retreat Region для обох sides. Якщо side не має legal Retreat, її effective threshold примусово стає `100%`; лише після цієї перевірки Army/side, в яких effective threshold лишився `0`, виконують Retreat. Destination визначається side-level за розділом 23.
 
@@ -670,7 +674,7 @@ Neutral Defense саме по собі Retreat не блокує.
 
 Серед Neutral Region перевага має candidate з меншою мінімальною стандартною hex-grid distance до будь-якої Owned non-Occupied Region цього Player. Disconnected Owned Region враховується, доки вона формально не втрачена; Occupied Region як опорна точка не враховується.
 
-Серед legal foreign Owned Region перевага має candidate з меншою стандартною hex-grid distance до найближчої Neutral Region: Army намагається якомога швидше залишити чужу territory.
+Серед legal foreign Owned Region перевага має candidate з меншою стандартною hex-grid distance до найближчої Neutral Region: Army намагається якомога швидше залишити чужу territory. Якщо на карті немає жодної Neutral Region, fallback-критерієм є менша мінімальна hex-grid distance до будь-якої власної non-Occupied Region цього Player.
 
 Для Attacker найвищий пріоритет має source Region, з якої він увійшов у combat Region, якщо вона legal. Інакше використовуються ті самі групові пріоритети.
 
@@ -836,7 +840,7 @@ City має окрему City Defense = f(wealth). Вона залежить в�
 
 # 30. City Raid
 
-City Raid — миттєва локальна Attack-дія конкретної Army у Camp тієї самої Region. Army у Movement або Regrouping не може її ініціювати.
+City Raid — миттєва локальна Attack-дія конкретної Army у Camp тієї самої Region. Army у Movement або Regrouping не може її ініціювати. Player не може Raid-ити City у Region, formal owner якої — цей самий Player.
 
 Defender Raid — **тільки City Defense**. Neutral Defense не бере участі.
 
@@ -856,12 +860,9 @@ Player не може ініціювати City Raid у Region, якщо він �
 
 # 31. Заснування нового Castle
 
-Новий Castle можна заснувати:
+У V1 новий Castle можна заснувати **тільки у Neutral Region**. Заснування Castle у власній Owned/Annexed Region заборонене.
 
-- у Neutral Region;
-- у власній Annexed non-Castle Region.
-
-Для Neutral Region не потрібні contiguity, Governor Capacity або попередній Annexation progress, але Neutral Defense має бути 0.
+Для Founding не потрібні contiguity, Governor Capacity або попередній Annexation progress, але Neutral Defense має бути 0.
 
 Founder — Knight без Soldier, фізично присутній у Camp цієї Region. Regrouping рахується Camp-presence: він не забороняє старт Founding і не pause-ить progress сам по собі.
 
@@ -880,7 +881,7 @@ Founder повинен залишатися живим, у потрібному 
 
 Якщо під час завершення Founding у Region уже знаходиться foreign Transit Army, Castle все одно створюється, а ця Army має право завершити вже розпочатий Transit. Нові hostile entries у Castle Region після цього заборонені V1.
 
-Після completion Region стає Castle Region нового Castle. Якщо вона раніше належала іншому Castle цього Player, зв'язок із старим Castle припиняється. Створюються Warehouse 1, Granary 1 і Palace 1. Founder змінює home Castle на новий і займає початковий Palace slot; додатковий Knight через цей стартовий slot не генерується. У старому home Castle founder-а звільнений Palace slot запускає звичайний KnightReplacement mechanism так само, як slot після загибелі Knight.
+Після completion Neutral Region стає Castle Region нового Castle. Існуючі City, `wealth`, `active_wealth_ratio`, ResourceSite та їх levels зберігаються; active ResourceSiteUpgrade продовжуються без reset. Neutral Defense після переходу Region у Castle Region більше не має gameplay-функції. Створюються Warehouse 1, Granary 1 і Palace 1. Founder змінює home Castle на новий і займає початковий Palace slot; додатковий Knight через цей стартовий slot не генерується. У старому home Castle founder-а звільнений Palace slot запускає звичайний KnightReplacement mechanism так само, як slot після загибелі Knight.
 
 ---
 
