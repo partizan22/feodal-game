@@ -31,6 +31,8 @@ Player задає Army фізичний Route та кінцеву Region. Лок
 - Owned non-Occupied Player B -> B;
 - Owned Occupied Player C -> поточний occupier C.
 
+Target opponent не дає формальному owner права на Transit через його Occupied Region.
+
 target_opponent є характеристикою **Movement**, а не Army. Подальша зміна ownership/Occupation final Region автоматично його не змінює.
 
 Player може явно виконати refresh target opponent. Нове значення обчислюється в момент refresh, зберігається як pending і набуває чинності тільки при вході Army в наступну Region. Уже зареєстрована CombatSituation від цього не змінюється.
@@ -48,7 +50,7 @@ Player може явно виконати refresh target opponent. Нове зн
 - якщо formal owner поточної Region == target_opponent -> Aggressive Transit;
 - інакше -> NonAggressive Transit.
 
-Occupied Region є винятком: Transit через неї CombatSituation не створює взагалі, Allow Transit не застосовується, Aggressive/NonAggressive classification не визначається.
+Occupied Region є винятком: третій Player (не formal owner та не occupier) може Transit без CombatSituation, Allow Transit і Aggressive/NonAggressive classification. Formal owner не має права Transit через власну Occupied Region — для входу він мусить атакувати occupier з метою Camp. Чужий Transit через Capital Region заборонений. У не столичних Castle Region діють звичайні правила Owned/Occupied. Виняток: Transit, уже розпочатий фізичним входом у Neutral Region до completion Castle Founding, завершується без CombatSituation.
 
 ---
 
