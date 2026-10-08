@@ -64,7 +64,7 @@ ResourceSite у Region виробляють ресурси залежно від
 
 # 6. Food та населення
 
-Population, Soldier та Knight споживають Food. Camp у звичайній Region використовує місцеве виробництво; у Castle Region Food враховується в балансі Castle. У Movement замість Food сплачуються Coins; дефіцит Food також компенсується додатковими Coins. Фактичні запаси Food і Coins не можуть ставати від'ємними, а дефіцит може призупиняти Recruitment.
+Population, Soldier та Knight споживають Food. Camp у звичайній Region використовує місцеве виробництво; у неокупованій Castle Region Food власних Army враховується в балансі Castle. Під час Occupation Army occupier та Army власника у Camp поза Castle споживають місцеве Food за звичайними правилами, не зі складів Castle; Army у Movement компенсують Food у Coins аж до фактичного входу в Camp. У Movement замість Food сплачуються Coins; дефіцит Food також компенсується додатковими Coins. Фактичні запаси Food і Coins не можуть ставати від'ємними, а дефіцит може призупиняти Recruitment.
 
 [Детальна специфікація §6](rules/02_CASTLES_AND_ECONOMY.md).
 
@@ -104,7 +104,7 @@ Unit містить рівно одного Knight та нуль або біль
 
 Очікувана модель Army: рівно п’ять територіальних станів — `Camp`, `Transit`, `LeavingCamp`, `EnteringCamp`, `BlockedInCastle`. `Regrouping` і command-lock активної CombatSituation — додаткові обмеження, а не територіальні стани. `Regrouping` застосовується до всієї Army у `Camp`; у Castle Region виникає лише після відступу із сусідньої Region і не забороняє перемикати режим розміщення лицарів.
 
-Кожен Knight із Soldier у Castle Region має режим розміщення **«у замку»** або **«поза замком»**; це не територіальний стан Army. Перехід між режимами миттєвий, у тому числі під час Regrouping, і доступний у будь-якому Castle власного Player незалежно від home Castle Knight, за достатньої Barracks Capacity; у чужому Castle неможливий. Movement усієї Army починається одночасно для всіх Unit. При Occupation Knight у режимі «у замку» переходять до `BlockedInCastle`; якщо вся Army залишається у замку, вона не розділяється. Якщо режими змішані й наслідки різні, Army розділяється. Заблоковані Army не взаємодіють із зовнішніми військами; внутрішнє керування зберігається за визначеними правилами.
+Кожен Knight у Castle Region, у тому числі без Soldier, має режим розміщення **«у замку»** або **«поза замком»**; це не територіальний стан Army. Перехід між режимами миттєвий, у тому числі під час Regrouping та активної CombatSituation (попри command-lock), і доступний у будь-якому Castle власного Player незалежно від home Castle Knight, за достатньої Barracks Capacity; у чужому Castle неможливий. Movement усієї Army починається одночасно для всіх Unit. При Occupation Knight у режимі «у замку» переходять до `BlockedInCastle`; якщо вся Army залишається у замку, вона не розділяється. Якщо Army змішана, при Occupation кожен Unit «у замку» відділяється в окрему заблоковану Army, а всі Unit «поза замком» **залишаються разом у початковій Army** й відступають. Це стосується також Army, що вийшла з battle calculation через pre-battle Retreat / threshold `0`: її Unit не отримують бойових втрат. Якщо Commander залишився в замку, у відступаючій Army його замінює Knight з найбільшим Experience (при рівності — випадковий вибір з ігровим seed). Після завершення Occupation заблоковані Army повертаються у `Camp` без Regrouping, зі збереженням складу, Commander і режиму розміщення. Заблоковані Army не взаємодіють із зовнішніми військами; внутрішнє керування зберігається за визначеними правилами.
 
 [Детальна специфікація §11](rules/03_ARMIES_AND_KNIGHTS.md).
 
@@ -168,7 +168,7 @@ Attacker має Target та Incidental Combat Threshold, обидва більш
 
 # 19. Player-vs-player combat у Neutral Region
 
-У Neutral Region Army, яка перебуває в Camp, може окремою дією атакувати Camp конкретного іншого Player, **включно з Army під обмеженням Regrouping**. Така атака створює CombatSituation; інші власні Army автоматично до Attacker не приєднуються.
+У Neutral Region Army у Camp **без Regrouping** може окремою дією атакувати Camp конкретного іншого Player, **включно з Army-захисником у Regrouping**. Army в Regrouping сама не може ініціювати Attack. Така атака створює CombatSituation; інші власні Army автоматично до Attacker не приєднуються.
 
 [Детальна специфікація §19](rules/05_COMBAT.md).
 
