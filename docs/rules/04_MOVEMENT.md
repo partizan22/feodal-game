@@ -8,7 +8,7 @@
 
 Player задає Army фізичний Route та кінцеву Region. Локальна мета Camp або Transit визначається самим movement order і після входу в поточну Region не переобчислюється через зміну ownership, Occupation або наявності військ. Під час combat command-lock заборонені звичайні movement-planning commands, включно зі зміною future route та explicit refresh `target_opponent`; дозволені лише прямо передбачені combat-specific decisions. Після зняття lock Player знову може refresh-нути target opponent до наступного border entry.
 
-Проміжна Region маршруту проходиться як Transit. Якщо поточна Region є кінцевою для цього order, Army рухається до Camp. CombatSituation може pause-ити цей рух, але не змінює початкову локальну мету.
+Проміжна Region маршруту проходиться як Transit. Якщо поточна Region є кінцевою для цього order, Army рухається до Camp. CombatSituation може pause-ити цей рух, але не змінює початкову локальну мету. **Якщо Camp-bound Attacker перемагає у battle, він одразу переходить у `Camp` на завершенні battle; додатковий локальний рух або `Dt` не потрібний.** Результати контролю Region застосовуються до запуску наступної CombatSituation у FIFO.
 
 У V1 використовується одна базова константа часу Dt:
 
