@@ -208,7 +208,7 @@ Retreat здійснюється в допустиму сусідню Region з 
 
 # 24. Наслідки Retreat, перемоги та Regrouping
 
-Після Retreat Army переміщується в сусідню Region, досягає Camp та проходить Regrouping. Виняток для не столичної Castle Region: після поразки від Camp-bound Attacker Castle-Unit залишаються всередині й блокуються, Camp-Unit відступають. Після перемоги Transit Attacker усі Defender Army Regrouping у тій самій Region, не змінюючи Castle/Camp state. Pre-battle Retreat теж вважається програшем. При звільненні Castle заблоковані Army не беруть участі в бою, а заміна occupier не завершує облогу. Переможець, залежно від наміру Camp або Transit, займає Camp, створює Occupation чи продовжує Route. Regrouping забороняє частину команд, але вважається Camp-presence для інших механік.
+Після Retreat Army переміщується в сусідню Region, досягає Camp та проходить Regrouping. Виняток для не столичної Castle Region: після поразки від Camp-bound Attacker Castle-Unit залишаються всередині й блокуються, Camp-Unit відступають. Після перемоги Transit Attacker у не столичній Castle Region усі Defender Army залишаються в цій Region у звичайному стані Camp, без Retreat і Regrouping. Це стосується як учасників бою, так і тих, хто не брав участі через pre-battle Retreat або нульовий поріг втрат. Pre-battle Retreat теж вважається програшем. При звільненні Castle заблоковані Army не беруть участі в бою, а заміна occupier не завершує облогу. Переможець, залежно від наміру Camp або Transit, займає Camp, створює Occupation чи продовжує Route. Regrouping забороняє частину команд, але вважається Camp-presence для інших механік.
 
 [Детальна специфікація §24](rules/05_COMBAT.md).
 
