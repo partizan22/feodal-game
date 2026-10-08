@@ -42,7 +42,7 @@ Potential defender до Battle Start може отримати індивіду�
 
 Manual pre-battle decision може примусово поставити `0` звичайній Army або до Battle Start скасувати власний попередній manual `0`, але не може перебити forced Regrouping rule. Effective Defense Loss Threshold остаточно визначається на Battle Start за актуальним станом Army: якщо Army на цей момент усе ще у Regrouping, effective threshold = `0` незалежно від manual decision; якщо Regrouping уже завершився, застосовується актуальне manual decision, а за його відсутності — persistent Defense Loss Threshold. Transit candidates без явного join продовжують Transit.
 
-На Battle Start спочатку перевіряється наявність legal Retreat Region для обох sides. Якщо side не має legal Retreat, її effective threshold примусово стає `100%`; лише після цієї перевірки Army/side, в яких effective threshold лишився `0`, виконують Retreat. Destination визначається side-level за розділом 23.
+На Battle Start спочатку перевіряється наявність legal Retreat Region для обох sides. Якщо legal Retreat немає, застосовується примусовий threshold `100%`, **крім двох спеціальних випадків**: для Camp-bound атаки Castle Region діє достроковий вихід повністю розміщених у замку Army з effective threshold `0` за §24; для Transit-атаки Castle Region діють звичайні thresholds і нульові pre-battle decisions без вимоги відступити до сусідньої Region за §24. Для інших випадків лише Army/side з effective threshold `0` і допустимим Retreat виходять до battle calculation. Destination визначається side-level за §23.
 
 Potential defenders після Start command-locked для Movement, merge/split, зміни Commander і composition до завершення situation. Combat-specific Retreat/join decisions залишаються доступними там, де це передбачено.
 
@@ -68,14 +68,14 @@ Attacker має Target Combat Threshold і Incidental Combat Threshold. Для A
 На Battle Start порядок фіксований:
 
 1. для Attacker side і Defender side визначається наявність legal Retreat;
-2. якщо side не має legal Retreat, її effective combat threshold примусово стає `100%`; для Defender жодна локальна `0`-підміна тоді не виконує Retreat;
-3. тільки після цього всі Army/side з effective threshold `0` і legal Retreat виходять до combat calculation без casualties;
-4. якщо Defender Army залишились, спільний Defender threshold стає мінімальним effective threshold серед них;
-5. після цього lock-яться strengths і виконується combat calculation.
+2. якщо side не має legal Retreat, її effective combat threshold примусово стає `100%`, **крім спеціальних правил Castle Region**: при Camp-bound атаці до примусового порогу із бою без втрат виходять лише Army, всі Knight яких уже мають режим «у замку» і effective threshold `0`; при Transit-атаці не застосовується примусовий поріг лише через відсутність напрямку Retreat, а всі нульові thresholds виключають Army з battle calculation без зміни її розміщення;
+3. в інших випадках Army/side з effective threshold `0` та legal Retreat виконують звичайний Retreat без casualties до combat calculation;
+4. якщо Defender Army залишились, спільний Defender threshold є мінімальним effective threshold серед них за наявності legal Retreat або при Transit-атаці Castle Region; при Camp-bound атаці Castle Region без legal Retreat він дорівнює `100%` для всіх Army, що залишились;
+5. після цього lock-яться strengths і виконується combat calculation. Якщо після дострокового виходу Army захисників не лишилось, Attacker перемагає без числового combat calculation.
 
 Отже, persistent Defense Loss Threshold `0` у Defender означає відхід до combat, якщо Retreat можливий. Attacker threshold `0` у V1 заборонений.
 
-Якщо всі potential Defender Army виконують pre-battle Retreat, CombatSituation все одно доходить до Battle Start. Формально Attacker перемагає, усі Defender відступають без втрат; числовий combat calculation не проводиться і Battle Experience не нараховується. Attacker продовжує початковий Camp/Transit context, а Camp-bound Attacker після прибуття в Camp створює Occupation за звичайними правилами.
+Якщо всі potential Defender Army достроково вийшли з battle calculation через threshold `0` / pre-battle Retreat (у тому числі за спеціальним правилом Castle Region), CombatSituation все одно доходить до Battle Start. Формально Attacker перемагає; Defender не отримують combat casualties, а їхня подальша поведінка визначається типом атаки та §24. Числовий combat calculation не проводиться і Battle Experience не нараховується. Attacker продовжує початковий Camp/Transit context, а Camp-bound Attacker після прибуття в Camp створює Occupation за звичайними правилами.
 
 ---
 
@@ -147,7 +147,7 @@ Combat Strength кожної Army спочатку розраховується 
 
 До combat calculation не входять Army, які після перевірки Retreat availability мають effective threshold `0` і виконали Retreat, а також Army, які інакше не є participant за правилами CombatSituation.
 
-Якщо legal Retreat у Defender side є, спільний Defender threshold дорівнює мінімальному effective Defense Loss Threshold Army, що лишилися після zero-threshold Retreat. Якщо legal Retreat немає, спільний threshold примусово дорівнює `100%` і pre-battle Retreat не виконується.
+Якщо legal Retreat у Defender side є, спільний Defender threshold дорівнює мінімальному effective Defense Loss Threshold Army, що лишилися після zero-threshold Retreat. Для Transit-атаки Castle Region діють ті самі звичайні thresholds і виключення нульових Army незалежно від наявності сусіднього Retreat destination. Якщо legal Retreat немає при Camp-bound атаці Castle Region, Army, повністю розміщені «у замку», з effective threshold `0` виходять із бойового розрахунку без casualties; для решти Defender Army спільний threshold дорівнює `100%`. Якщо legal Retreat немає за інших обставин, загальне правило примусово встановлює `100%` і не дозволяє pre-battle Retreat.
 
 Якщо Defender програє, усі Army, що брали участь, вважаються такими, що програли, і використовують **одну спільну Retreat Region**, вибрану для всієї Defender side. Casualties розподіляються тільки між фактичними participants; Army, що виконали pre-battle Retreat, casualties не отримують. Для casualty allocation не існує окремої квоти на кожну defender Army: усі Unit усіх participating defender Army утворюють один спільний side-level набір, а Army structure впливає на combat strength через Commander, але не на окремий budget втрат.
 
@@ -158,7 +158,7 @@ Combat Strength кожної Army спочатку розраховується 
 
 Legal Retreat Region визначаються окремо для Attacker side і Defender side, але **не окремо для кожної Army**. Усі Army однієї combat side знаходяться в одній combat Region, мають ту саму combat role та opponent, тому мають один side-level набір legal Retreat Region.
 
-Якщо side не має жодної legal Retreat Region, її loss threshold для цього battle примусово стає максимальним (`100%`). Якщо така side першою досягає цього threshold і програє battle, результат трактується як fight-to-destruction: усі її Soldier і Knight гарантовано гинуть, а звичайна Knight mortality randomness для цього terminal випадку не застосовується.
+Якщо side не має жодної legal Retreat Region, її loss threshold для цього battle примусово стає максимальним (`100%`), з винятками Castle Region, наведеними у §24. При Camp-bound атаці Castle Region достроково виходять лише повністю розміщені «у замку» Defender Army з effective threshold `0`; для решти поріг `100%`. При Transit-атаці Castle Region відсутність сусіднього Retreat destination не примушує поріг до `100%`. Якщо сторона програє battle, маючи застосований примусовий поріг `100%` через неможливість Retreat, результат — fight-to-destruction: усі Soldier і Knight **Army, що брали участь у бою**, гарантовано гинуть без звичайної Knight mortality randomness. Army, які достроково вийшли з бою без casualties, цим знищенням не зачіпаються.
 
 ## 23.1 Геометричне обмеження
 
@@ -220,7 +220,11 @@ Regrouping є додатковим обмеженням всієї Army у те�
 
 ### Поразка захисника не столичної Castle Region
 
-Якщо Camp-bound Attacker перемагає і займає Camp Castle Region, створюючи Occupation, результат визначається **для кожного Unit за станом його Knight на момент Battle Start**:
+**Camp-bound атака, legal Retreat відсутній.** На Battle Start, **до combat calculation**, кожна Defender Army перевіряється як ціле. Якщо **всі її Knight вже мають режим «у замку»** і effective Defense Loss Threshold цієї Army дорівнює `0` (у тому числі через pre-battle Retreat або Regrouping), Army достроково виходить із бою без casualties, зберігаючи склад і Commander. Змішана Army, де хоча б один Knight перебуває «поза замком», не відповідає цій умові навіть за threshold `0`. Усі інші Defender Army беруть участь із примусовим threshold `100%`; їхній pre-battle Retreat скасовується. Якщо вони програють battle, відбувається повне знищення всіх їхніх Soldier і Knight — fight-to-destruction. Якщо Attacker перемагає й створює Occupation, Army, які достроково вийшли з бою, залишаються у замку та переходять до `BlockedInCastle`; автоматичного split немає. Якщо Defender перемагає, режими розміщення всіх Knight не змінюються.
+
+**Camp-bound атака, legal Retreat наявний.** Діють звичайні нульові thresholds і pre-battle Retreat; наслідки для Knight «у замку» / «поза замком» при Occupation описано нижче.
+
+Якщо Camp-bound Attacker перемагає і займає Camp Castle Region, створюючи Occupation, а для Defender є legal Retreat, результат визначається **для кожного Unit за режимом розміщення Knight на Battle Start**:
 
 - Unit, Knight якого перебуває в режимі «у замку», залишається всередині Castle разом із Soldier, що вижили; Army з таких Unit переходить у територіальний стан `BlockedInCastle`. Немає Retreat та Regrouping; це стосується й Unit, який обрав pre-battle Retreat (він не має combat casualties).
 - Unit, Knight якого перебуває в режимі «поза замком», здійснює звичайний Retreat у сусідню Region, потім Regrouping.
@@ -228,7 +232,7 @@ Regrouping є додатковим обмеженням всієї Army у те�
 - Якщо всі Knight Army були в режимі «у замку», Army не розділяється, переходить до `BlockedInCastle` й залишається в замку зі збереженням початкового складу й Commander, без Regrouping.
 - Усі власні війська всередині Castle блокуються при виникненні Occupation, навіть якщо вони не брали участі у відповідному battle.
 
-Якщо Attacker перемагає в **транзитній атаці на не столичну Castle Region**, він продовжує Transit; Region не стає Occupied, Castle не блокується. Усі Army захисника залишаються в цій самій Region **без Retreat і без Regrouping**, у територіальному стані `Camp`. Це однаково стосується Army, що брали участь у battle, і Army, які не брали участі через pre-battle Retreat або effective Defense Loss Threshold = `0`: вони просто не беруть участі в бойовому розрахунку й залишаються в Region. Knight, які до бою перебували в режимі «у замку», залишаються «у замку»; Knight «поза замком» залишаються «поза замком». Жодна з цих Army не переходить у Regrouping. Втрати від battle застосовуються тільки до фактичних учасників бою. Це спеціальний виняток із загальних правил Retreat і Regrouping.
+**Transit-атака Castle Region** не використовує спеціальний алгоритм для Camp-bound атаки без legal Retreat. Незалежно від наявності сусіднього Retreat destination діють звичайні effective thresholds, включно з `0` і pre-battle Retreat: такі Army не беруть участі в combat calculation, але не покидають Region. Якщо Attacker перемагає в **транзитній атаці на не столичну Castle Region**, він продовжує Transit; Region не стає Occupied, Castle не блокується. Усі Army захисника залишаються в цій самій Region **без Retreat і без Regrouping**, у територіальному стані `Camp`. Це однаково стосується Army, що брали участь у battle, і Army, які не брали участі через pre-battle Retreat або effective Defense Loss Threshold = `0`: вони просто не беруть участі в бойовому розрахунку й залишаються в Region. Knight, які до бою перебували в режимі «у замку», залишаються «у замку»; Knight «поза замком» залишаються «поза замком». Жодна з цих Army не переходить у Regrouping. Втрати від battle застосовуються тільки до фактичних учасників бою. Це спеціальний виняток із загальних правил Retreat і Regrouping.
 
 ### Війська під блокадою Castle
 
