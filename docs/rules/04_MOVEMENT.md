@@ -16,7 +16,7 @@ Player задає Army фізичний Route та кінцеву Region. Лок
 - entry у Region -> Camp: Dt;
 - базовий звичайний Transit однієї Region: Dt;
 - CombatSituation Start -> Battle Start: Dt;
-- звичайний Retreat entry -> Camp: Dt;
+- звичайний Retreat entry -> Camp: Dt, якщо цей перехід не очікує CombatSituation у FIFO; для Camp-bound Retreat у чужу Owned Region застосовуються звичайні Start -> Battle Start = Dt та правила паузи в черзі;
 - Regrouping: Dt.
 
 У майбутньому speed modifier може змінювати тільки звичайний Transit без CombatSituation; інші перелічені інтервали лишаються рівно Dt.
@@ -45,7 +45,7 @@ Player може явно виконати refresh target opponent. Нове зн
 
 Звичайний Transit через Neutral Region не створює територіальної CombatSituation.
 
-При вході чужої Army в Owned non-Occupied Region CombatSituation реєструється і для Camp, і для Transit.
+При вході чужої Army в Owned non-Occupied Region CombatSituation реєструється і для Camp, і для Transit, **також коли вхід для Camp є наслідком Retreat**. Якщо formal owner входить у власну ще non-Occupied Region, де чужа Army вже `EnteringCamp` (включно з retreat-local), реєструється окрема territorial CombatSituation, яка очікує своєї черги FIFO; defender визначається на її Start.
 
 Для Transit такої CombatSituation на Start використовується snapshot target_opponent, зафіксований при Registration:
 
