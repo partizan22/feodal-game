@@ -10,6 +10,7 @@ CombatSituation реєструється, коли:
 
 - чужа Army входить у Owned non-Occupied Region — Camp або Transit;
 - Army входить у Occupied Region з локальною метою Camp і не є current occupier;
+- це включає Camp-bound Army формального owner, яка атакує occupier власної Castle Region; Army всередині заблокованого Castle не беруть участі;
 - Region стає Occupied, коли Camp-bound Army formal owner уже ввійшла в неї, але запізно для попередньої defense;
 - Army у Camp Neutral Region явно атакує конкретного іншого Player, який має в цій самій Region принаймні одну Army саме у звичайному Camp (`state == Camp`). Regrouping або entered-for-Camp без такої Army недостатньо для ініціації explicit attack.
 
@@ -28,6 +29,8 @@ CombatSituation реєструється, коли:
 ---
 
 # 17. Defender participation і pre-battle decisions
+
+Unit і Army зі станом `BlockedInCastle` не беруть участі в жодній CombatSituation, включно з боєм за звільнення Castle або заміну occupier. Їх не можна атакувати окремо у V1.
 
 На CombatSituation Start фіксуються potential defenders defender Player: усі Army у Camp/Regrouping та всі Army, що вже entered-for-Camp не пізніше Start. Для battle participation entered-for-Camp не є окремою категорією: оскільки entry -> Camp і Start -> Battle Start обидва тривають рівно `Dt`, така Army гарантовано буде у Camp або Regrouping на Battle Start і бере участь на тих самих умовах. Це так само стосується Army у `retreat-local`, яка ввійшла в Region до Start.
 
@@ -173,6 +176,7 @@ Legal Retreat Region визначаються окремо для Attacker side 
 
 - у чужу Castle Region;
 - у свою Region, яку зараз Occupied інший Player;
+- у Castle, який заблокований через Occupation: звичайний Retreat не дає входу всередину Castle;
 - у чужу Owned Region, якщо туди вже ввійшла для Camp хоча б одна Army будь-якого Player або там уже є Army у Camp/Regrouping; pure Transit при цьому не блокує Retreat;
 - у Neutral Region, де є local presence opponent, якому ця side щойно програла.
 
@@ -206,13 +210,31 @@ Neutral Defense саме по собі Retreat не блокує.
 
 Далі Army протягом Dt рухається локально до Camp. Після Camp arrival вона входить у Regrouping ще на Dt.
 
-Pre-battle Retreat використовує ті самі movement/Regrouping rules, але не завдає combat casualties.
+Pre-battle Retreat вважається поразкою відповідного Defender без combat casualties. Він використовує ті самі movement/Regrouping rules, крім особливих правил оборони Castle Region нижче.
 
 Якщо кілька defender Army Retreat-ять, усі використовують одну Defender retreat Region. Якщо destination — empty foreign Owned non-Occupied Region, після Camp arrival створюється одна Occupation цього Player.
 
 Regrouping є звичайною Camp-presence для Food, Occupation, Annexation, Founding, defense та Camp lifecycle. Army у Regrouping не може ініціювати Movement або Attack, не може Merge/Split, змінювати Commander або persistent combat thresholds. Її effective Defense Loss Threshold під час Regrouping дорівнює `0`; якщо legal Retreat немає, він примусово стає `100%`. Після завершення Regrouping знову використовується збережений persistent threshold. Composition під час Regrouping дозволена лише за звичайних home Castle/location/combat-lock rules.
 
 Якщо виграє Defender, participating defender Army лишаються у Camp.
+
+### Поразка захисника не столичної Castle Region
+
+Якщо Camp-bound Attacker перемагає і займає Camp Castle Region, створюючи Occupation, результат визначається **для кожного Unit за станом його Knight на момент Battle Start**:
+
+- Unit зі станом `Castle` залишається всередині Castle разом із Soldier, що вижили, і стає `BlockedInCastle`. Немає Retreat та Regrouping; це стосується й Unit, який обрав pre-battle Retreat (він не має combat casualties).
+- Unit зі станом `Camp` здійснює звичайний Retreat у сусідню Region, потім Regrouping.
+- Якщо Army містила Castle- і Camp-Unit, Castle-Unit відділяються: **кожний від'єднаний Unit залишається окремою Army**, вони не зливаються. Залишок початкової Army відступає; якщо Commander-in-Chief залишився у Castle, Commander відступаючої Army стає Knight з найбільшим Experience серед її Unit; за рівності кандидат обирається випадково.
+- Якщо всі Unit Army були у Castle, Army не розділяється й залишається там у початковому складі, без Regrouping.
+- Усі власні війська всередині Castle блокуються при виникненні Occupation, навіть якщо вони не брали участі у відповідному battle.
+
+Якщо Attacker перемагає, але має **Transit**, Castle Region не стає Occupied, Castle не блокується, а **всі defeated Defender Army** залишаються у цій самій Region і переходять до Regrouping. Їхні Unit зберігають стан `Castle` / `Camp`; відступу до сусідньої Region немає. Це спеціальний виняток із загальних Retreat rules.
+
+### Війська під блокадою Castle
+
+`BlockedInCastle` не є `Regrouping`. Такі Unit/Army не можуть Movement, Attack, перейти в Camp або брати участь у будь-якій CombatSituation. Soldier залишаються в Barracks, займаючи звичайну Capacity. Дозволено змінювати склад Unit (у home Castle), merge/split Army та Commander, дотримуючись звичайних умов Barracks і складу. Нові Knight, створені в заблокованому Castle, також одразу блокуються.
+
+Якщо owner Camp-bound Army атакує occupier і перемагає, Occupation знімається, але заблоковані Castle Army не допомагають їй у battle. Якщо третій Player перемагає occupier і стає новим occupier, облога **не** знімається; Castle Army не вступають у додатковий бій. Якщо всі occupier Army залишили Camp, блокування й облога одразу завершуються; розблоковані Unit у Castle можуть брати участь у наступній обороні.
 
 Якщо виграє Camp-bound Attacker, після battle він завершує перехід у Camp; у foreign Owned Region це створює Occupation. Якщо Attacker мав Transit і виграв, він продовжує свій зафіксований Route без повторного проходження поточної Region.
 
