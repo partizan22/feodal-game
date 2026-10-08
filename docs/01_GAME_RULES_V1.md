@@ -168,7 +168,7 @@ Attacker має Target та Incidental Combat Threshold, обидва більш
 
 # 19. Player-vs-player combat у Neutral Region
 
-У Neutral Region Army, яка перебуває в Camp, може окремою дією атакувати Camp конкретного іншого Player. Така атака створює CombatSituation; інші власні Army автоматично до Attacker не приєднуються.
+У Neutral Region Army, яка перебуває в Camp, може окремою дією атакувати Camp конкретного іншого Player, **включно з Army під обмеженням Regrouping**. Така атака створює CombatSituation; інші власні Army автоматично до Attacker не приєднуються.
 
 [Детальна специфікація §19](rules/05_COMBAT.md).
 
@@ -256,7 +256,7 @@ City має довгостроковий wealth і частку active_wealth_ra
 
 # 30. City Raid
 
-City Raid — окрема миттєва дія Army у Camp проти City Defense; Neutral Defense не бере участі. Власну City атакувати не можна. Успіх дає Coins і скидає active_wealth_ratio; поразка залишає Army у тій самій Region; поза Castle Region починається Regrouping, у Castle Region — ні.
+City Raid — окрема миттєва дія Army у Camp проти City Defense; Neutral Defense не бере участі. Власну City атакувати не можна. Успіх дає Coins і скидає active_wealth_ratio; поразка залишає Army у тій самій Region; після поразки починається Regrouping; City Raid у Castle Region неможливий, оскільки заснування Castle в Region із City заборонене.
 
 [Детальна специфікація §30](rules/05_COMBAT.md).
 
@@ -264,7 +264,7 @@ City Raid — окрема миттєва дія Army у Camp проти City De
 
 # 31. Заснування нового Castle
 
-У V1 Castle можна заснувати тільки в Neutral Region із Neutral Defense = 0. До завершення Founding діють Neutral rules, після — Owned rules; уже розпочатий Transit завершується без CombatSituation. Новий Castle не є Capital. Founder — Knight без Soldier у Camp; Founding має оплачуваний Start, час виконання, умови pause і cancel. Після завершення створюється Castle, зберігаються існуючі об'єкти Region, а founder переходить у його Palace slot. Уже розпочатий чужий Transit може завершитися.
+У V1 Castle можна заснувати тільки в Neutral Region із Neutral Defense = 0 **та без City**. До завершення Founding діють Neutral rules, після — Owned rules; уже розпочатий Transit завершується без CombatSituation. Новий Castle не є Capital. Founder — Knight без Soldier у Camp; Founding має оплачуваний Start, час виконання, умови pause і cancel. Після завершення створюється Castle, зберігаються існуючі об'єкти Region, а founder переходить у його Palace slot. Уже розпочатий чужий Transit може завершитися.
 
 [Детальна специфікація §31](rules/07_CASTLE_FOUNDING.md).
 
