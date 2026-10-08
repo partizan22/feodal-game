@@ -70,16 +70,8 @@ Foreign Transit через таку Owned Region може вже мати Active
 
 Не визначено, що робити з уже Registered/Active CombatSituation цього grandfathered Transit.
 
-### Пропоноване рішення
+### Поки залишається невизначеним
 
-CombatSituation, зареєстрована **до** completion Founding, не скасовується лише через появу Castle.
-
-Вона завершується за своїм звичайним lifecycle:
-- `Allow` -> Transit продовжується;
-- `Fight`/Aggressive -> battle може відбутися навіть уже в новій Castle Region;
-- після цього surviving Transit Army має право завершити лише вже розпочатий Transit через Castle Region.
-
-Castle immunity блокує тільки **нові** hostile entries і нові CombatSituation, що вимагали б нового hostile entry після completion Founding.
 
 ---
 
@@ -91,13 +83,9 @@ Castle immunity блокує тільки **нові** hostile entries і нов
 
 Не сказано прямо, що відбувається з іншими Region старого Castle, для яких ця Region була єдиним territorial bridge.
 
-### Пропоноване рішення
+### ЗМІНА
 
-Completion Founding вважається остаточним вилученням цієї Region із territorial graph старого Castle.
-
-Одразу після створення нового Castle перераховується connectivity старого Castle. Усі його ordinary Region, які більше не мають безперервного шляху до старої Castle Region, автоматично стають Neutral за звичайним правилом final disconnection.
-
-Їх City/ResourceSite/active ResourceSiteUpgrade поводяться так само, як при будь-якій іншій автоматичній втраті Region.
+Поки ще зобороним заснування замку на уже приєднаній території
 
 ---
 
@@ -190,13 +178,4 @@ Army:
 
 З інших правил це логічно випливає, але для destructive/non-destructive semantics Founding краще мати пряме правило.
 
-### Пропоноване рішення
-
-Founding не reset-ить природний/міський стан Region:
-
-- City зберігається разом із `wealth` та `active_wealth_ratio`;
-- ResourceSite та їх levels зберігаються;
-- active ResourceSiteUpgrade продовжуються без reset;
-- поточний Neutral Defense після створення Castle більше не має gameplay-функції, бо Region перестає бути Neutral.
-
-Founding змінює territorial/economic role Region, а не створює новий hex або нову Region entity.
+### Поки залишається невизначеним
