@@ -87,7 +87,7 @@ Merge і split дозволені тільки Army у звичайному Camp
 - Target Combat Threshold;
 - Incidental Combat Threshold.
 
-Persistent thresholds можна змінювати під час Camp або Movement, доки Army не command-locked CombatSituation. Під час Regrouping persistent thresholds не змінюються: effective Defense Loss Threshold Army примусово дорівнює `0`, тому при атаці вона Retreat-ить, якщо є legal Retreat; якщо legal Retreat немає, загальне правило примусово робить effective threshold `100%`. Після завершення Regrouping знову діє збережений persistent threshold, який тоді можна змінити. Після Registration attacker уже locked; potential defender отримує lock на CombatSituation Start. Значення конкретного battle остаточно фіксуються на Battle Start.
+Persistent thresholds можна змінювати під час Camp або Movement, доки Army не command-locked CombatSituation. Під час Regrouping persistent thresholds не змінюються: effective Defense Loss Threshold Army примусово дорівнює `0`, тому при атаці вона Retreat-ить, якщо є legal Retreat; якщо legal Retreat немає, зазвичай effective threshold стає `100%`, крім Camp-bound атаки Castle Region (повністю розміщена «у замку» Army з effective threshold `0` достроково виходить із бою) та Transit-атаки Castle Region (звичайні thresholds діють без сусіднього Retreat destination). Після завершення Regrouping знову діє збережений persistent threshold, який тоді можна змінити. Після Registration attacker уже locked; potential defender отримує lock на CombatSituation Start. Значення конкретного battle остаточно фіксуються на Battle Start.
 
 При merge thresholds нової Army задаються явно. Після split нові Army отримують поточні thresholds вихідної Army, доки Player не змінить їх.
 
