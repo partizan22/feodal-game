@@ -256,7 +256,7 @@ City має довгостроковий wealth і частку active_wealth_ra
 
 # 30. City Raid
 
-City Raid — окрема миттєва дія Army у Camp проти City Defense; Neutral Defense не бере участі. Власну City атакувати не можна. Успіх дає Coins і скидає active_wealth_ratio; поразка спричиняє Regrouping в тій самій Region.
+City Raid — окрема миттєва дія Army у Camp проти City Defense; Neutral Defense не бере участі. Власну City атакувати не можна. Успіх дає Coins і скидає active_wealth_ratio; поразка залишає Army у тій самій Region; поза Castle Region починається Regrouping, у Castle Region — ні.
 
 [Детальна специфікація §30](rules/05_COMBAT.md).
 
