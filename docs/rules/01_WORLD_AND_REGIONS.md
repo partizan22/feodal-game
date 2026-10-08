@@ -24,7 +24,7 @@ Neutral Region може містити ресурси, Food production, Neutral 
 
 Owned Region формально належить одному гравцю та прив'язана до конкретного його Castle.
 
-Її економічні потоки надходять до цього Castle, крім глобальних ресурсів.
+Її економічні потоки розраховуються через цей Castle. Локальні Wood/Stone/Iron/Food надходять у Castle; Gold/Silver зараховуються на глобальний баланс Player лише після перевірки їх надходження через відповідний Castle.
 
 Власник сплачує регулярне утримання Region. Розмір утримання залежить від відстані до Castle через налаштовувану функцію.
 
@@ -40,13 +40,16 @@ Occupied Region формально продовжує належати попе�
 - формальний owner не змінюється і продовжує сплачувати утримання Region;
 - Region не дає формальному owner нормального економічного потоку;
 - occupier не отримує її економічний потік до Annexation;
+- Castle Region occupier не може Annex, а Occupation такого Castle блокує його економіку;
 - Occupation припиняється в момент, коли **остання Army occupier залишає Camp**, а не лише після її виходу за межі Region; контроль одразу повертається формальному owner.
+
+Якщо Occupied є Castle Region, Occupation означає і блокування Castle. При зміні occupier без відновлення Owned state блокування не знімається; при завершенні Occupation знімається автоматично.
 
 У Region не може одночасно бути кілька occupier. Якщо третій Player входить у цю Region з локальною метою Camp, він взаємодіє з поточним occupier; після перемоги й переходу в Camp він стає новим occupier. Якщо перемагає формальний owner, Occupation припиняється й відновлюється звичайний Owned state.
 
-Transit через Occupied Region не створює CombatSituation незалежно від того, хто проходить Region, включно з формальним owner. Для такого Transit не застосовуються Allow Transit та Aggressive/NonAggressive classification.
+Transit через Occupied Region дозволений третім Player, який не є formal owner або current occupier, і не створює CombatSituation. Allow Transit та Aggressive/NonAggressive classification для такого Transit не застосовуються.
 
-Якщо формальний owner входить у свою Occupied Region з локальною метою **Camp**, він атакує поточного occupier.
+Formal owner **не має права Transit** через власну Occupied Region. Його вхід можливий лише через атаку occupier із локальною метою **Camp**.
 
 ---
 
@@ -70,7 +73,16 @@ Player може миттєво й безкоштовно добровільно 
 
 Після відмови Region одразу стає Neutral, її City Wealth і рівні ResourceSite зберігаються, active ResourceSiteUpgrade продовжуються, а війська, що вже перебувають у ній, залишаються на місці за правилами Neutral Region. Якщо відмова остаточно розриває territorial connection інших Region цього Castle, вони також автоматично стають Neutral за правилами вище. Уже запущений Annexation іншого Player від самої відмови не скасовується. Власний active CastleFounding також не cancel-иться і не reset-иться лише через `Owned -> Neutral`, якщо founder лишається валідним; далі для progress застосовуються звичайні умови Founding у Neutral Region, включно з `Neutral Defense == 0` і pause через blocking foreign Camp-presence.
 
-Castle Region є винятком із звичайних правил війни у V1: її не можна атакувати і через неї не можна прокладати новий ворожий Transit. Якщо чужа Army вже почала Transit через Region до моменту завершення Founding Castle, вона має право завершити цей уже розпочатий Transit.
+Початковий Castle Player має статус **Capital Castle**. У V1 Capital перенести не можна. **Capital Region не можна атакувати; чужий Transit через Capital Region також заборонений.** Це єдиний ефект статусу Capital.
+
+Усі інші Castle Region підпорядковані звичайним правилам Owned/Occupied Region щодо атаки, Transit і територіального контролю, крім спеціальних винятків нижче:
+
+- Occupation Castle Region допускається, але інший Player не може Annex Castle Region. Формальний owner не може відмовитися від Castle Region.
+- Коли Castle Region стає Occupied, сам Castle блокується, незалежно від того, чи його внутрішні війська брали участь у попередньому battle. Блокування економіки й Army уточнено в тематичних документах.
+- Якщо третій Player перемагає поточного occupier і займає Camp, occupier змінюється, але облога Castle триває без окремого бою із заблокованими в Castle Army.
+- Облога завершується разом з Occupation, коли остання Army occupier залишає Camp або формальний owner звільняє Region.
+
+До завершення Castle Founding діють правила Neutral Region; після — правила Owned Castle Region. Чужа Army, яка **вже фізично почала Transit** через Region до completion Founding, має право завершити його без CombatSituation і без блокування Castle. Лише запланований Route такого права не надає.
 
 ---
 
