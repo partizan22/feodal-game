@@ -8,8 +8,9 @@
 
 CombatSituation реєструється, коли:
 
-- чужа Army входить у Owned non-Occupied Region — Camp або Transit;
+- чужа Army входить у Owned non-Occupied Region — Camp або Transit, **включно з Camp-bound входом унаслідок Retreat**;
 - Army входить у Occupied Region з локальною метою Camp і не є current occupier;
+- Army formal owner входить у власну ще non-Occupied Region, де вже є чужа Army, яка фізично ввійшла для Camp (`EnteringCamp`, у тому числі після Retreat), але ще не досягла Camp: створюється окрема CombatSituation у спільній FIFO, навіть якщо власних Army у Camp немає;
 - це включає Camp-bound Army формального owner, яка атакує occupier власної Castle Region; Army всередині заблокованого Castle не беруть участі;
 - Region стає Occupied, коли Camp-bound Army formal owner уже ввійшла в неї, але запізно для попередньої defense;
 - Army у Camp Neutral Region (але не в Regrouping) явно атакує конкретного іншого Player, який має в цій самій Region принаймні одну Army у територіальному стані `Camp`, **включно з Regrouping**. Лише entered-for-Camp без Army у `Camp` недостатньо для ініціації explicit attack.
@@ -182,7 +183,7 @@ Legal Retreat Region визначаються окремо для Attacker side 
 
 Neutral Defense саме по собі Retreat не блокує.
 
-Порожня foreign Owned non-Occupied Region може бути legal Retreat destination. Retreat entry є спеціальною взаємодією і **не реєструє нову CombatSituation**. Після Dt до Camp така Army встановлює Occupation цієї Region.
+Порожня foreign Owned non-Occupied Region може бути legal Retreat destination. **Retreat entry у чужу Owned Region реєструє звичайну territorial Camp-bound CombatSituation**, так само як будь-який інший вхід для Camp; винятку з Registration немає. За відсутності defender Army вона триває повний `Dt` до Battle Start; переможець одразу переходить у Camp і створює Occupation. Якщо situation очікує у FIFO, її Start і Battle Start визначаються загальними правилами черги.
 
 ## 23.3 Пріоритет вибору
 
@@ -206,7 +207,7 @@ Neutral Defense саме по собі Retreat не блокує.
 
 # 24. Наслідки Retreat, перемоги та Regrouping
 
-При звичайному player-vs-player Retreat Army одразу вважається такою, що залишила combat Region і ввійшла в обрану сусідню Region. Нової CombatSituation на цьому entry не створюється. Retreat у Neutral Region із Camp третього Player дозволений, якщо інші правила Retreat не забороняють destination; така Camp-presence третього Player сама по собі не блокує Retreat.
+При звичайному player-vs-player Retreat Army одразу вважається такою, що залишила combat Region і ввійшла в обрану сусідню Region. **Якщо це чужа Owned Region, на entry реєструється territorial Camp-bound CombatSituation за §16;** для інших destination діють їхні звичайні правила Registration. Retreat у Neutral Region із Camp третього Player дозволений, якщо інші правила Retreat не забороняють destination; така Camp-presence третього Player сама по собі не блокує Retreat.
 
 Далі Army протягом Dt рухається локально до Camp. Після Camp arrival вона входить у Regrouping ще на Dt.
 
