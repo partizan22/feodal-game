@@ -303,7 +303,7 @@ City Defense використовує fixed raid loss threshold із configurati
 
 При успіху reward визначається pre-raid effective_wealth, Coins одразу зараховуються Player, після чого active_wealth_ratio = 0. wealth і City Defense не змінюються. Raid при низькому ratio дозволений і знову скидає ratio до 0.
 
-При поразці Army не Retreat-ить у сусідню Region: вона лишається в тому самому Camp і одразу починає Regrouping на Dt.
+При поразці Army не Retreat-ить у сусідню Region: вона лишається в тому самому Camp. Поза Castle Region одразу починається Regrouping на Dt; у Castle Region Regrouping не виникає.
 
 Player не може ініціювати City Raid у Region, якщо він є attacker будь-якої unresolved CombatSituation у цій Region або potential defender Active CombatSituation.
 
