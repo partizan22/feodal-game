@@ -1,6 +1,6 @@
 # Феодали — Бойова система: детальна специфікація V1
 
-[Основні правила](../01_GAME_RULES_V1.md). Усі правила нижче збережені без змін із початкового документа.
+[Основні правила](../01_GAME_RULES_V1.md). Документ містить актуальні уточнення правил V1.
 
 # 16. CombatSituation: Registration, Start і FIFO
 
@@ -12,7 +12,7 @@ CombatSituation реєструється, коли:
 - Army входить у Occupied Region з локальною метою Camp і не є current occupier;
 - це включає Camp-bound Army формального owner, яка атакує occupier власної Castle Region; Army всередині заблокованого Castle не беруть участі;
 - Region стає Occupied, коли Camp-bound Army formal owner уже ввійшла в неї, але запізно для попередньої defense;
-- Army у Camp Neutral Region явно атакує конкретного іншого Player, який має в цій самій Region принаймні одну Army у територіальному стані `Camp`, **включно з Regrouping**. Лише entered-for-Camp без Army у `Camp` недостатньо для ініціації explicit attack.
+- Army у Camp Neutral Region (але не в Regrouping) явно атакує конкретного іншого Player, який має в цій самій Region принаймні одну Army у територіальному стані `Camp`, **включно з Regrouping**. Лише entered-for-Camp без Army у `Camp` недостатньо для ініціації explicit attack.
 
 У кожній Region існує одна спільна FIFO-черга **всіх** player-vs-player CombatSituation незалежно від пар Player. Одночасно Active може бути максимум одна.
 
@@ -81,7 +81,7 @@ Attacker має Target Combat Threshold і Incidental Combat Threshold. Для A
 
 # 19. Player-vs-player combat у Neutral Region
 
-Explicit attack у Neutral Region можливий Army у Camp проти конкретного іншого Player тільки якщо цей Player має в цій самій Neutral Region принаймні одну Army у територіальному стані `Camp`, **включно з Army у Regrouping**. Лише entered-for-Camp без Army у `Camp` недостатньо для ініціації атаки. Після Registration актуальність уже зафіксованої interaction на Start перевіряється ширше: defender Player повинен мати Camp/Regrouping presence або Army, що вже entered-for-Camp.
+Explicit attack у Neutral Region може ініціювати Army у `Camp`, **яка сама не перебуває в Regrouping**, проти конкретного іншого Player, якщо цей Player має в тій самій Neutral Region принаймні одну Army у `Camp`, **включно з Army у Regrouping**. Regrouping не захищає від атаки, але забороняє ініціювати її. Лише entered-for-Camp без Army у `Camp` недостатньо для ініціації атаки. Після Registration актуальність уже зафіксованої interaction на Start перевіряється ширше: defender Player повинен мати Camp/Regrouping presence або Army, що вже entered-for-Camp.
 
 На Registration defender Player фіксується. На Start situation або лишається атакою саме проти нього, або завершується без battle; retarget на третього Player не відбувається.
 
@@ -210,7 +210,7 @@ Neutral Defense саме по собі Retreat не блокує.
 
 Далі Army протягом Dt рухається локально до Camp. Після Camp arrival вона входить у Regrouping ще на Dt.
 
-Pre-battle Retreat вважається поразкою відповідного Defender без combat casualties. Він використовує ті самі movement/Regrouping rules, крім особливих правил оборони Castle Region нижче.
+Pre-battle Retreat вважається поразкою відповідного Defender без combat casualties. Він використовує ті самі movement/Regrouping rules, крім особливих правил оборони Castle Region нижче. **Якщо Camp-bound Attacker окупує Castle Region і Defender Army має змішані режими Knight, її pre-battle Retreat спершу виключає всю Army з combat calculation, але не переносить усі її Unit із Region. На наслідках Occupation Unit «у замку» відділяються кожен в окрему заблоковану Army, а Unit «поза замком» залишаються разом у початковій Army та відступають; бойових втрат не має жодна частина.**
 
 Якщо кілька defender Army Retreat-ять, усі використовують одну Defender retreat Region. Якщо destination — empty foreign Owned non-Occupied Region, після Camp arrival створюється одна Occupation цього Player.
 
@@ -224,11 +224,11 @@ Regrouping є додатковим обмеженням всієї Army у те�
 
 **Camp-bound атака, legal Retreat наявний.** Діють звичайні нульові thresholds і pre-battle Retreat; наслідки для Knight «у замку» / «поза замком» при Occupation описано нижче.
 
-Якщо Camp-bound Attacker перемагає і займає Camp Castle Region, створюючи Occupation, а для Defender є legal Retreat, результат визначається **для кожного Unit за режимом розміщення Knight на Battle Start**:
+Якщо Camp-bound Attacker перемагає і займає Camp Castle Region, створюючи Occupation, а для Defender є legal Retreat, результат визначається **для кожного Unit за режимом розміщення Knight на Battle Start**, **у тому числі для Army, що достроково вийшли із combat calculation через threshold `0` / pre-battle Retreat**:
 
 - Unit, Knight якого перебуває в режимі «у замку», залишається всередині Castle разом із Soldier, що вижили; Army з таких Unit переходить у територіальний стан `BlockedInCastle`. Немає Retreat та Regrouping; це стосується й Unit, який обрав pre-battle Retreat (він не має combat casualties).
 - Unit, Knight якого перебуває в режимі «поза замком», здійснює звичайний Retreat у сусідню Region, потім Regrouping.
-- Якщо Army містила Knight «у замку» та «поза замком», **тільки Unit Knight «у замку» відділяються, кожний в окрему Army** у `BlockedInCastle`; вони не зливаються. **Усі Unit «поза замком» залишаються разом у початковій Army**, яка відступає без додаткового поділу. Якщо Commander-in-Chief залишився у Castle, Commander відступаючої Army автоматично стає Knight з найбільшим Experience серед її Unit; за рівності Experience кандидат обирається випадково.
+- Якщо Army містила Knight «у замку» та «поза замком», **тільки Unit Knight «у замку» відділяються, кожний в окрему Army** у `BlockedInCastle`; вони не зливаються. **Усі Unit «поза замком» залишаються разом у початковій Army**, яка відступає без додаткового поділу. Якщо Commander-in-Chief залишився у Castle, Commander відступаючої Army автоматично стає Knight з найбільшим Experience серед її Unit; за рівності Experience кандидат обирається випадково з ігровим random seed (результат відтворюваний).
 - Якщо всі Knight Army були в режимі «у замку», Army не розділяється, переходить до `BlockedInCastle` й залишається в замку зі збереженням початкового складу й Commander, без Regrouping.
 - Усі власні війська всередині Castle блокуються при виникненні Occupation, навіть якщо вони не брали участі у відповідному battle.
 
@@ -238,11 +238,11 @@ Regrouping є додатковим обмеженням всієї Army у те�
 
 `BlockedInCastle` є п’ятим територіальним станом Army, а не Regrouping. Такі Army та їх Unit не можуть Movement, Attack, перейти в режим «поза замком» або брати участь у будь-якій CombatSituation. Soldier залишаються в Barracks, займаючи звичайну Capacity. Дозволено змінювати склад Unit **лише Knight, для яких заблокований Castle є home Castle**; Knight з іншим home Castle не можуть змінювати склад Unit у цьому Castle. Merge/split Army та зміна Commander дозволені за звичайних умов Barracks і складу. Нові Knight, створені в заблокованому Castle, також одразу блокуються.
 
-Якщо owner Camp-bound Army атакує occupier і перемагає, Occupation знімається, але заблоковані Castle Army не допомагають їй у battle. Якщо третій Player перемагає occupier і стає новим occupier, облога **не** знімається; Castle Army не вступають у додатковий бій. Якщо всі occupier Army залишили Camp, блокування й облога одразу завершуються; розблоковані Unit у Castle можуть брати участь у наступній обороні.
+Якщо owner Camp-bound Army атакує occupier і перемагає, Occupation знімається, але заблоковані Castle Army не допомагають їй у battle. Якщо третій Player перемагає occupier і стає новим occupier, облога **не** знімається; Castle Army не вступають у додатковий бій. Якщо всі occupier Army залишили Camp, блокування й облога одразу завершуються; те саме відбувається, коли owner перемагає occupier і відновлює Owned state. **Усі Army у `BlockedInCastle` переходять у `Camp` без Regrouping**, зберігають структуру, Commander та індивідуальні режими Knight «у замку». Після розблокування вони можуть брати участь у наступній обороні.
 
 Якщо виграє Camp-bound Attacker, після battle він завершує перехід у Camp; у foreign Owned Region це створює Occupation. Якщо Attacker мав Transit і виграв, він продовжує свій зафіксований Route без повторного проходження поточної Region.
 
-Поразка від Neutral Defense або City Defense є спеціальним винятком: Army не Retreat-ить у сусідню Region і не має окремого retreat-local Dt; вона лишається в тому самому Camp. Regrouping на Dt починається тільки поза Castle Region; у Castle Region Regrouping можливий виключно після Retreat із сусідньої Region.
+Поразка від Neutral Defense або City Defense є спеціальним винятком: Army не Retreat-ить у сусідню Region і не має окремого retreat-local Dt; вона лишається в тому самому Camp та одразу починає Regrouping на Dt. Обидва види такого бою відбуваються поза Castle Region: Neutral Defense атакують у Neutral Region, а Castle не можна заснувати в Region із City. У Castle Region Regrouping можливий лише після Retreat із сусідньої Region.
 
 ---
 
@@ -286,7 +286,7 @@ Commander-in-Chief використовує менший mortality coefficient, 
 
 Умовна шкода Knight не переноситься між combat.
 
-Якщо Commander-in-Chief гине, це визначається після завершення розподілу всіх casualties. Army **не розпадається**: серед живих Knight цієї Army автоматично новим Commander-in-Chief стає Knight із найбільшим Experience. Це не змінює результат уже розрахованого combat; Army зберігає thresholds і свій подальший Retreat/Camp/Movement/Regrouping context. Якщо живих Knight в Army не лишилося, сама Army припиняє існування. Оскільки кожний Unit має рівно одного Knight, який не може загинути за наявності живих Soldier у своєму Unit, Army без живих Knight не може мати живих Soldier. При рівному Experience використовується детермінований tie-breaker.
+Якщо Commander-in-Chief гине, це визначається після завершення розподілу всіх casualties. Army **не розпадається**: серед живих Knight цієї Army автоматично новим Commander-in-Chief стає Knight із найбільшим Experience. Це не змінює результат уже розрахованого combat; Army зберігає thresholds і свій подальший Retreat/Camp/Movement/Regrouping context. Якщо живих Knight в Army не лишилося, сама Army припиняє існування. Оскільки кожний Unit має рівно одного Knight, який не може загинути за наявності живих Soldier у своєму Unit, Army без живих Knight не може мати живих Soldier. При рівному Experience новий Commander обирається **випадково серед Knight із найбільшим Experience** з ігровим random seed, щоб результат був відтворюваним; це саме правило діє для відступаючої частини змішаної Army після окупації Castle.
 
 Всі випадкові рішення combat повинні бути відтворюваними при однаковому повному стані та однаковому random seed.
 
