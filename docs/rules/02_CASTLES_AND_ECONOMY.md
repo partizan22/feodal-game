@@ -189,7 +189,7 @@ Capacity перевіряється саме в момент виконання 
 
 Barracks має Capacity, що вимірюється в Soldier: один Soldier будь-якого Type займає одну одиницю Capacity. У ній знаходяться як reserve Soldier, так і Soldier сформованих Unit, чиї Knight перебувають у режимі «у замку» в цьому Castle. Сам Knight Capacity не займає.
 
-Knight разом зі своїм Unit може перейти з режиму «поза замком» у режим «у замку» в будь-якому власному Castle Player (не обов'язково home Castle), якщо Barracks цього Castle має достатньо вільної Capacity для всіх його Soldier. У чужому Castle такий перехід заборонений. Частковий вхід Unit не допускається. Knight з 0 Soldier може перейти «у замку» навіть при повній Barracks. Перемикання режиму дозволене й під час Regrouping.
+Knight разом зі своїм Unit може перейти з режиму «поза замком» у режим «у замку» в будь-якому власному Castle Player (не обов'язково home Castle), якщо Barracks цього Castle має достатньо вільної Capacity для всіх його Soldier. У чужому Castle такий перехід заборонений. Частковий вхід Unit не допускається. Knight з 0 Soldier може перейти «у замку» навіть при повній Barracks. Перемикання режиму дозволене й під час Regrouping та активної CombatSituation попри command-lock, з дотриманням Barracks Capacity. Режим для battle фіксується на Battle Start.
 
 Soldier Unit у режимі «поза замком» не займають Barracks Capacity. Якщо Barracks заповнена, Recruitment pause до появи вільного місця.
 
@@ -219,7 +219,7 @@ Food consumption є окремою системою. Reserve Soldier спожи�
 
 Для Army у Movement весь її Food-equivalent consumption додатково переводиться в Coins за coins_per_food.
 
-Castle-level Food production/flows та Food consumption Population, reserve Soldier і Army у Castle Region підсумовуються в одному Food balance Castle. Якщо Food бракує, загальний непокритий дефіцит компенсується Coins один раз, без пріоритету окремих груп споживачів і без додаткових penalties.
+Castle-level Food production/flows та Food consumption Population, reserve Soldier і **власних Army у неокупованій Castle Region** підсумовуються в одному Food balance Castle. Під час Occupation у Castle balance залишаються Population, reserve Soldier та Unit, що перебувають «у замку»; Army у Camp поза Castle споживають локальне Food за §6.2, а не Food Castle. Якщо Food бракує, загальний непокритий дефіцит компенсується Coins один раз, без пріоритету окремих груп споживачів і без додаткових penalties.
 
 Coin upkeep нараховується безперервно в Game Time за поточним станом/location Soldier або Knight: до переходу діє попередня ставка, після переходу — нова. Минулі нарахування не перераховуються.
 
