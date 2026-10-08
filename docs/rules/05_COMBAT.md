@@ -9,7 +9,7 @@
 CombatSituation реєструється, коли:
 
 - чужа Army входить у Owned non-Occupied Region з метою Transit — за звичайними правилами Transit;
-- Army входить у чужу Owned/Occupied Region з метою Camp (включно з Retreat): CombatSituation реєструється, **лише якщо в Region уже є Army іншого Player у `Camp`/Regrouping або Army іншого Player, яка раніше ввійшла для Camp (`EnteringCamp`)**. За відсутності таких Army нова CombatSituation не реєструється, Army переходить до Camp за звичайний `Dt`;
+- Army входить у чужу Owned/Occupied Region з метою Camp (включно з Retreat): CombatSituation реєструється, **лише якщо в Region уже є Army іншого Player у `Camp`/Regrouping або Army іншого Player, яка раніше ввійшла для Camp (`EnteringCamp`)**. За відсутності таких Army нова CombatSituation не реєструється, Army переходить до Camp за звичайний `Dt`; **присутність лише чужих Army у `Transit` не змінює цього правила і сама по собі не є підставою для Registration**;
 - Army formal owner входить у власну Region з метою Camp, якщо там уже є чужа Army у `Camp`/Regrouping або чужа Army, яка раніше ввійшла для Camp (`EnteringCamp`), навіть якщо Region ще не Occupied;
 - Якщо у Region уже є unresolved CombatSituation між різними Player, кожна наступна Camp-bound Army, яка при вході бачить чужу `Camp` або раніше введену `EnteringCamp` Army, реєструє власну CombatSituation в FIFO, навіть якщо належить Player першого attacker/defender. Defender не фіксується до Start; якщо на Start між цією Army та актуальним противником немає interaction, situation завершується без battle;
 - це включає Camp-bound Army формального owner, яка атакує occupier власної Castle Region; Army всередині заблокованого Castle не беруть участі;
