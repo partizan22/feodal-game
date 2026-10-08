@@ -38,7 +38,7 @@ Unit і Army зі станом `BlockedInCastle` не беруть участі 
 
 Army, що вже вийшла з Camp, та Army, яка входить після Start, не можуть брати участі в цій CombatSituation.
 
-Окремо defender Army, яка ввійшла для Transit **до Start** і на Start ще не вийшла, стає transit defender candidate. Вона продовжує Transit і не отримує lock автоматично. До Battle Start і до фактичного виходу з Region Player може явно залишити її для defense. Тоді її старий Movement/Route припиняється, Army переходить у звичайний Camp, стає potential defender і отримує combat command-lock.
+Окремо defender Army, яка ввійшла для Transit **до Start** і на Start ще не вийшла, стає transit defender candidate **лише якщо не є attacker іншої незавершеної CombatSituation**. Вона продовжує Transit і не отримує lock автоматично. До Battle Start і до фактичного виходу з Region Player може явно залишити її для defense. Тоді її старий Movement/Route припиняється, Army переходить у звичайний Camp, стає potential defender і отримує combat command-lock.
 
 Potential defender до Battle Start може отримати індивідуальне рішення pre-battle Retreat. Воно **не виконує Retreat одразу** і не змінює persistent Army threshold: тільки локально для цієї CombatSituation підміняє effective Defense Loss Threshold цієї Army на `0`. До Battle Start це рішення можна змінювати; чинним є останнє значення. На Battle Start воно lock-иться разом з іншими combat parameters.
 
