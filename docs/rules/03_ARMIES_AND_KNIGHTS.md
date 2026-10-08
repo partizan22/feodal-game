@@ -67,7 +67,7 @@ Active Recruitment також pause-иться при `empty_food` або `empty
 
 # 10. Unit та Army
 
-Територіальний стан задається для всієї Army і має рівно п’ять значень: `Camp`, `Transit`, `LeavingCamp` (вийшла з Camp і рухається до межі Region), `EnteringCamp` (увійшла в Region і рухається до Camp), `BlockedInCastle` (заблокована в Castle через Occupation). `Regrouping` і command-lock CombatSituation — не територіальні стани. `Regrouping` є додатковим обмеженням усієї Army лише у `Camp`; combat command-lock також може діяти на attacking Army під час Movement або Transit, коли її CombatSituation зареєстрована чи активна; у Castle Region можливий лише після Retreat із сусідньої Region.
+Територіальний стан задається для всієї Army і має рівно п’ять значень: `Camp`, `Transit`, `LeavingCamp` (вийшла з Camp і рухається до межі Region), `EnteringCamp` (увійшла в Region і рухається до Camp), `BlockedInCastle` (заблокована в Castle через Occupation). `Regrouping` і command-lock CombatSituation — не територіальні стани. `Regrouping` є додатковим обмеженням усієї Army лише у `Camp`; combat command-lock також може діяти на attacking Army під час Movement або Transit, коли її CombatSituation зареєстрована чи активна. У Castle Region Regrouping виникає лише після Retreat із сусідньої Region.
 
 Gameplay Unit складається рівно з одного Knight і нуля або більше Soldier. Knight без Soldier є повноцінним Unit.
 
