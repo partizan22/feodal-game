@@ -102,9 +102,9 @@ Unit містить рівно одного Knight та нуль або біль
 
 ---
 
-# 11. Castle та Camp у Castle Region
+Очікувана модель Army: рівно п’ять територіальних станів — `Camp`, `Transit`, `LeavingCamp`, `EnteringCamp`, `BlockedInCastle`. `Regrouping` і command-lock активної CombatSituation — додаткові обмеження, а не територіальні стани. `Regrouping` застосовується до всієї Army у `Camp`; у Castle Region виникає лише після відступу із сусідньої Region і не забороняє перемикати режим розміщення лицарів.
 
-Unit у Castle Region перебуває або всередині Castle, або у Camp. Для більшості дій стани рівнозначні, але відрізняються upkeep і зайнятістю Barracks. Перехід Castle/Camp миттєвий; Movement усієї Army починається одночасно для всіх її Unit. Заблоковані в Castle Unit не можуть Movement, Attack, перейти до Camp чи брати участь у CombatSituation, але можуть змінювати склад Unit, Army й Commander.
+Кожен Knight із Soldier у Castle Region має режим розміщення **«у замку»** або **«поза замком»**; це не територіальний стан Army. Перехід між режимами миттєвий, у тому числі під час Regrouping, і доступний у будь-якому Castle власного Player незалежно від home Castle Knight, за достатньої Barracks Capacity; у чужому Castle неможливий. Movement усієї Army починається одночасно для всіх Unit. При Occupation Knight у режимі «у замку» переходять до `BlockedInCastle`; якщо вся Army залишається у замку, вона не розділяється. Якщо режими змішані й наслідки різні, Army розділяється. Заблоковані Army не взаємодіють із зовнішніми військами; внутрішнє керування зберігається за визначеними правилами.
 
 [Детальна специфікація §11](rules/03_ARMIES_AND_KNIGHTS.md).
 
@@ -208,7 +208,7 @@ Retreat здійснюється в допустиму сусідню Region з 
 
 # 24. Наслідки Retreat, перемоги та Regrouping
 
-Після Retreat Army переміщується в сусідню Region, досягає Camp та проходить Regrouping. Виняток для не столичної Castle Region: після поразки від Camp-bound Attacker Castle-Unit залишаються всередині й блокуються, Camp-Unit відступають. Після перемоги Transit Attacker у не столичній Castle Region усі Defender Army залишаються в цій Region без Retreat і Regrouping, зберігаючи попередній стан Unit: `Castle` залишається `Castle`, `Camp` залишається `Camp`. Це стосується як учасників бою, так і тих, хто не брав участі через pre-battle Retreat або нульовий поріг втрат. Pre-battle Retreat теж вважається програшем. При звільненні Castle заблоковані Army не беруть участі в бою, а заміна occupier не завершує облогу. Переможець, залежно від наміру Camp або Transit, займає Camp, створює Occupation чи продовжує Route. Regrouping забороняє частину команд, але вважається Camp-presence для інших механік.
+Після Retreat Army переміщується в сусідню Region, досягає Camp та проходить Regrouping. Виняток для не столичної Castle Region: після поразки від Camp-bound Attacker Unit у режимі «у замку» залишаються всередині та блокуються, Unit «поза замком» відступають. Після перемоги Transit Attacker у не столичній Castle Region усі Defender Army залишаються в цій Region без Retreat і Regrouping, зберігаючи попередній режим розміщення: «у замку» залишається «у замку», «поза замком» — «поза замком». Це стосується як учасників бою, так і тих, хто не брав участі через pre-battle Retreat або нульовий поріг втрат. Pre-battle Retreat теж вважається програшем. При звільненні Castle заблоковані Army не беруть участі в бою, а заміна occupier не завершує облогу. Переможець, залежно від наміру Camp або Transit, займає Camp, створює Occupation чи продовжує Route. Regrouping забороняє частину команд, але вважається Camp-presence для інших механік.
 
 [Детальна специфікація §24](rules/05_COMBAT.md).
 
