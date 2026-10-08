@@ -79,7 +79,7 @@ Player може миттєво й безкоштовно добровільно 
 
 - Occupation Castle Region допускається, але інший Player не може Annex Castle Region. Формальний owner не може відмовитися від Castle Region.
 - Коли Castle Region стає Occupied, сам Castle блокується, незалежно від того, чи його внутрішні війська брали участь у попередньому battle. Блокування економіки й Army уточнено в тематичних документах.
-- Якщо третій Player перемагає поточного occupier і займає Camp, occupier змінюється, але облога Castle триває без окремого бою із заблокованими в Castle Army.
+- Якщо третій Player перемагає поточного occupier і займає Camp, occupier змінюється, але облога Castle триває без окремого бою із заблокованими в Castle Army у територіальному стані `BlockedInCastle`.
 - Облога завершується разом з Occupation, коли остання Army occupier залишає Camp або формальний owner звільняє Region.
 
 До завершення Castle Founding діють правила Neutral Region; після — правила Owned Castle Region. Чужа Army, яка **вже фізично почала Transit** через Region до completion Founding, має право завершити його без CombatSituation і без блокування Castle. Лише запланований Route такого права не надає.
