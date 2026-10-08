@@ -77,9 +77,9 @@ Unit має home Castle, який збігається з home Castle його K
 
 У V1 немає жорсткого ліміту Soldier у Unit або Unit в Army.
 
-Merge і split дозволені тільки Army у звичайному Camp одного Player і одного CampInRegion, якщо вони не command-locked CombatSituation. Regrouping merge/split забороняє, але не перешкоджає перемиканню індивідуального режиму «у замку» / «поза замком». Commander можна змінювати у Camp або під час звичайного Movement, якщо Army не command-locked; під час Regrouping зміна Commander заборонена.
+Merge і split дозволені тільки Army у звичайному Camp одного Player і одного CampInRegion, якщо вони не command-locked CombatSituation. Regrouping merge/split забороняє, але не перешкоджає перемиканню індивідуального режиму «у замку» / «поза замком». Таке перемикання дозволене і під час активної CombatSituation, попри command-lock, якщо виконані звичайні умови Barracks; бойовий режим фіксується на Battle Start. Commander можна змінювати у Camp або під час звичайного Movement, якщо Army не command-locked; під час Regrouping зміна Commander заборонена.
 
-Зміна складу Soldier виконується тільки через Castle reserve <-> Knight у home Castle і також не допускається для command-locked Army.
+Зміна складу Soldier виконується тільки через Castle reserve <-> Knight у home Castle і також не допускається для command-locked Army. Перебування Knight у чужому для нього home Castle, навіть якщо цей Castle належить тому самому Player і Knight розміщений «у замку», не дозволяє змінювати Soldier його Unit.
 
 Кожна Army має три persistent loss threshold:
 
