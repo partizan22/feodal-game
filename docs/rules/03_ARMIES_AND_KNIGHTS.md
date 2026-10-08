@@ -19,7 +19,7 @@ Knight може існувати без Soldier.
 
 Experience зростає після боїв залежно від масштабу противника та повільно з часом. Battle Experience отримують тільки живі після battle Knight, які реально входили до combat calculation. Knight, що виконали pre-battle Retreat до calculation, XP не отримують; загиблі в цьому battle Knight також не отримують XP. Базовий XP participating survivor визначається функцією від pre-combat strength противника та, за потреби, власної side і не залежить від фактичних втрат конкретного Unit. Commander-in-Chief отримує додатковий Experience bonus за статус Commander.
 
-Passive Experience нараховується всім існуючим живим Knight безперервно незалежно від `Castle / Camp / Movement / Regrouping` та combat lock. Ready unnamed Knight ще не є Knight entity і Experience не накопичує; dead Knight також не накопичує Experience.
+Passive Experience нараховується всім існуючим живим Knight безперервно незалежно від `Camp / Transit / LeavingCamp / EnteringCamp / BlockedInCastle`, Regrouping та combat lock. Ready unnamed Knight ще не є Knight entity і Experience не накопичує; dead Knight також не накопичує Experience.
 
 Battle Experience нараховується після будь-якого фактично виконаного combat calculation: player-vs-player battle, Attack Neutral Defense і City Raid. Для Neutral Defense/City Defense opponent scale визначається їх pre-combat defender strength; eligibility surviving Knight і Commander bonus лишаються такими самими.
 
@@ -67,6 +67,8 @@ Active Recruitment також pause-иться при `empty_food` або `empty
 
 # 10. Unit та Army
 
+Територіальний стан задається для всієї Army і має рівно п’ять значень: `Camp`, `Transit`, `LeavingCamp` (вийшла з Camp і рухається до межі Region), `EnteringCamp` (увійшла в Region і рухається до Camp), `BlockedInCastle` (заблокована в Castle через Occupation). `Regrouping` і command-lock CombatSituation — не територіальні стани, а додаткові обмеження Army у `Camp`. `Regrouping` застосовується до всієї Army; у Castle Region можливий лише після Retreat із сусідньої Region.
+
 Gameplay Unit складається рівно з одного Knight і нуля або більше Soldier. Knight без Soldier є повноцінним Unit.
 
 Unit має home Castle, який збігається з home Castle його Knight. Внутрішній склад Unit можна змінювати лише у home Castle за звичайних умов Barracks.
@@ -75,7 +77,7 @@ Unit має home Castle, який збігається з home Castle його K
 
 У V1 немає жорсткого ліміту Soldier у Unit або Unit в Army.
 
-Merge і split дозволені тільки Army у звичайному Camp одного Player і одного CampInRegion, якщо вони не command-locked CombatSituation. Regrouping merge/split забороняє. Commander можна змінювати у Camp або під час звичайного Movement, якщо Army не command-locked; під час Regrouping зміна Commander заборонена.
+Merge і split дозволені тільки Army у звичайному Camp одного Player і одного CampInRegion, якщо вони не command-locked CombatSituation. Regrouping merge/split забороняє, але не перешкоджає перемиканню індивідуального режиму «у замку» / «поза замком». Commander можна змінювати у Camp або під час звичайного Movement, якщо Army не command-locked; під час Regrouping зміна Commander заборонена.
 
 Зміна складу Soldier виконується тільки через Castle reserve <-> Knight у home Castle і також не допускається для command-locked Army.
 
@@ -91,26 +93,15 @@ Persistent thresholds можна змінювати під час Camp або Mo
 
 ---
 
-# 11. Castle та Camp у Castle Region
+# 11. Режими розміщення у Castle Region
 
-Військовий підрозділ може бути:
+Кожен Knight разом зі своїми Soldier у Castle Region має один із двох режимів розміщення: **«у замку»** або **«поза замком»**. Це не територіальні стани Army: до блокування Army перебуває в територіальному стані `Camp` незалежно від режимів її Knight. Режим визначається індивідуально для кожного Knight навіть усередині однієї Army; змішані режими не заважають об'єднанню Unit в одну Army.
 
-- у Castle;
-- у таборі (Camp) в Castle Region.
+Knight може перейти «у замку» в **будь-якому Castle власного Player**, незалежно від його home Castle; у Castle іншого Player — не може. Для входу всіх Soldier його Unit потрібна вільна Capacity Barracks поточного Castle. Knight без Soldier може ввійти навіть за повної Barracks. Перемикання «у замку» / «поза замком» миттєве, не є Movement і **дозволене під час Regrouping**. Під час command-lock діють загальні обмеження відповідної CombatSituation.
 
-Для можливих дій ці стани еквівалентні. Вони відрізняються лише upkeep.
+При Occupation Castle Region Knight у режимі «у замку» залишаються в Castle; Army, що складається лише з таких Knight, цілком переходить до територіального стану `BlockedInCastle`, **без розділення, збереженням складу та Commander**. Якщо Army містить також Knight «поза замком», вона розділяється за різними наслідками Occupation: заблоковані Knight відділяються за правилами §24, інші Retreat-ять. `BlockedInCastle` Army не бере участі в зовнішніх взаємодіях, не може Movement/Attack або змінити режим на «поза замком», але допускає внутрішні зміни Soldier (лише у home Castle), Army та Commander за спеціальними правилами блокування. Заміна occupier блокування не знімає; завершення Occupation знімає.
 
-Перехід між Castle і Camp у Castle Region миттєвий і не є Movement.
-
-Перехід у Castle можливий лише якщо Barracks має Capacity для всіх Soldier відповідного Unit.
-
-Стан Castle/Camp задається окремо для кожного Unit навіть усередині однієї Army. Unit в Castle і Unit у Camp тієї самої Castle Region вважаються такими, що знаходяться в одному місці, і можуть бути об'єднані в Army.
-
-Під час Occupation Castle Region власні Unit всередині Castle набувають стану `BlockedInCastle`. Вони не можуть рухатись, атакувати, переходити до Camp або брати участь у CombatSituation, але можуть змінювати склад Soldier, склад Army та Commander за звичайними правилами home Castle і Barracks. Якщо Occupation завершується, блокування знімається. За зміни occupier — не знімається. Звичайний Retreat інших Army не допускає входу всередину заблокованого Castle.
-
-Якщо така Army отримує Movement order, усі її Unit починають Movement синхронно й одразу; Unit, які перебували в Castle, миттєво виходять із нього та звільняють відповідну Barracks Capacity. Окремого Dt, попередньої команди «вийти з Castle» або додаткової перевірки Capacity для виходу немає.
-
-Надалі, коли різниця неважлива, термін Camp охоплює обидва варіанти перебування біля home Castle.
+При Movement order для звичайної Army у `Camp` усі Unit починають Movement синхронно; Knight «у замку» миттєво виходять із Castle, звільняючи Barracks Capacity, без додаткового Dt чи окремої команди.
 
 ---
 
