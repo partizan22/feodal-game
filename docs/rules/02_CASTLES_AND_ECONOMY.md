@@ -101,7 +101,7 @@ Castle Region є спеціальним випадком.
 
 Food consumption Army у Camp/Regrouping Castle Region не віднімається від локального production самої Region. Уся позитивна Food production Castle Region надходить у Castle з coefficient 1 **лише якщо Castle не заблокований**. Під час Occupation навіть Food production самої Castle Region не надходить у Castle.
 
-Food consumption власних Army у Camp/Regrouping Castle Region віднімається на рівні Food balance Castle разом із non-military consumption, доки Region не окупована. Якщо Castle заблокований, його Building/Population та Unit всередині Castle продовжують споживати Food із Castle stocks; Army occupier у Camp не споживають Food зі складів Castle, а забезпечують власне споживання за локальними Camp rules.
+Food consumption власних Army у Camp/Regrouping Castle Region віднімається на рівні Food balance Castle разом із non-military consumption, доки Region не окупована. Якщо Castle заблокований, його Building/Population та Unit всередині Castle продовжують споживати Food із Castle stocks; Army occupier у Camp не споживають Food зі складів Castle, а забезпечують власне споживання за локальними Camp rules. **Army формального owner у Camp окупованої Castle Region поза Castle** (можлива під час черги CombatSituation, коли кілька Army owner увійшли атакувати occupier) також споживає Food **за звичайними локальними правилами для кількох Army у Region без Castle (§6.1)**. Вона не використовує Food stocks Castle і бере участь у пропорційному розподілі місцевого Food production між Player разом з Army occupier.
 
 Якщо запас Food Castle дорівнює 0 і його Food balance від'ємний, непокрита частина компенсується Coins за тим самим coins_per_food.
 
