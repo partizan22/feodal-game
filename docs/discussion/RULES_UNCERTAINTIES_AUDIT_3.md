@@ -48,7 +48,7 @@
 
 **Питання.** Правила передбачають pre-battle Retreat для Army/side із threshold 0, але не визначають порядок, коли і Attacker, і всі Defender мають threshold 0. Чи вважається хтось переможцем, чи обидві сторони відступають?
 
-**Пропозиція.** Обидві сторони виконують pre-battle Retreat у межах одного Battle Start без combat calculation, casualties, XP і переможця. Destination кожної side обчислюється незалежно.
+**ЗМІНА.** У атакуючего небуває нульового порогу
 
 ## 9. Combat, якщо всі Defender виконали pre-battle Retreat
 
@@ -56,11 +56,14 @@
 
 **Пропозиція.** Combat calculation не проводиться; Attacker продовжує свій початковий Camp/Transit context так, ніби opposition не залишилося. Для Camp-bound Attacker після Camp arrival застосовуються звичайні Occupation rules; XP за неіснуючий battle немає.
 
+**Уточнення.**  Наслідок правильний, але формулювання неточне. Формально вважається що бій відбувся, атакуючий вважається переможцем, а захисники відступили без втрат. Бойова ситуації не припиняєтьяс достроково через zero-threshold всіх захисників, відступ відбувається в мемент Battle Start.
+
 ## 10. Combat tie reroll без гарантії завершення
 
 **Питання.** При одночасному досягненні thresholds повторно генерується Luck Factor. За деяких threshold і функцій (наприклад, однакові threshold=100% та однакові темпи втрат) tie може бути неминучим для всіх допустимих Luck Factor. Тоді reroll нескінченний.
 
-**Пропозиція.** Якщо tie неможливо усунути жодним допустимим Luck Factor, застосувати deterministic tie-breaker на основі повного combat seed; це дає одного переможця і програвшого без нескінченного циклу. Якщо tie усувний — звичайний reroll.
+** ВИРІШЕНО В ЧАТІ **
+
 
 ## 11. Player-vs-player Attack у Neutral Region при двох власних Army
 
@@ -76,9 +79,7 @@
 
 ## 13. Retreat destination для Defender у Neutral Region без entry direction
 
-**Питання.** Для звичайного territorial combat геометрія Defender Retreat залежить від напряму входу Attacker. Якщо CombatSituation виникла через зміну Occupation, коли attacking Army уже перебувала в Region, не завжди очевидно, який entry vector використовувати.
-
-**Пропозиція.** Зберігати для кожної Camp-bound Army останній border-entry direction до цієї Region і використовувати його для Retreat geometry відповідної CombatSituation. Якщо такого напряму принципово немає (наприклад, початкове розміщення), розглядати всі шість сусідів.
+**ВИДАЛЕНО**
 
 ---
 
