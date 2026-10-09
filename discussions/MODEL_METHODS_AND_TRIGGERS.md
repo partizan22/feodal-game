@@ -14,9 +14,9 @@
 
 ## Castle
 
-**User methods:** `user_name_next_ready_knight(name)`, `name_next_ready_knight(name)`.
+**User methods:** `user_name_next_ready_knight(name)`.
 
-**Domain methods:** `can_pay_local_cost(cost)`, `pay_local_cost(cost)`, `can_house_unit(knight)`, `move_soldiers_between_reserve_and_knight(knight, composition_delta)`, `add_recruited_soldier(type)`, `can_start_building_upgrade(building_type)`, `can_pay_local_cost()`, `apply_building_upgrade(building_type, target_level)`, `enqueue_knight_replacement()`, `complete_knight_replacement(replacement)`, `name_next_ready_knight(name)`, `can_annex_region(region, camp)`, `recalculate_region_connections()`.
+**Domain methods:** `can_pay_local_cost(cost)`, `pay_local_cost(cost)`, `can_house_unit(knight)`, `move_soldiers_between_reserve_and_knight(knight, composition_delta)`, `add_recruited_soldier(type)`, `can_start_building_upgrade(building_type)`, `apply_building_upgrade(building_type, target_level)`, `enqueue_knight_replacement()`, `complete_knight_replacement(replacement)`, `name_next_ready_knight(name)`, `can_annex_region(region, camp)`, `recalculate_region_connections()`.
 
 **Triggers:** `empty_food`, `storage_capacity`.
 
@@ -86,21 +86,21 @@
 
 **User methods:** `user_set_transit_decision(decision)`, `user_set_pre_battle_retreat_decision(army, retreat)`, `user_join_defense_from_transit(army)`.
 
-**Domain methods:** `start()`, `determine_transit_mode()`, `collect_potential_defenders()`, `resolve_pre_battle()`, `lock_combat_parameters()`, `get_legal_retreat_regions(role)`, `select_retreat_region(role)`, `resolve_combat()`, `apply_casualties(result)`, `ensure_commander_after_casualties()`, `apply_result(result)`, `select_retreat_region(role)`, `finish_without_battle(reason)`, `finish()`.
+**Domain methods:** `start()`, `determine_transit_mode()`, `collect_potential_defenders()`, `resolve_pre_battle()`, `lock_combat_parameters()`, `get_legal_retreat_regions(role)`, `select_retreat_region(role)`, `resolve_combat()`, `apply_casualties(result)`, `apply_result(result)`, `finish_without_battle(reason)`, `finish()`.
 
 **Triggers:** `battle_start`.
 
-**Trigger methods:** `check_trigger_battle_start()`, `on_trigger_battle_start()`, `finish_without_battle(reason)`.
+**Trigger methods:** `check_trigger_battle_start()`, `on_trigger_battle_start()`.
 
 ## CastleFounding
 
-**User methods:** `user_start_castle_founding(...)`, `validate_start()`.
+**User methods:** `user_start_castle_founding(...)`.
 
 **Domain methods:** `validate_start()`, `cancel()`, `complete()`.
 
 **Triggers:** `founder_invalid`, `can_progress`, `complete`.
 
-**Trigger methods:** `check_trigger_founder_invalid()`, `on_trigger_founder_invalid()`, `cancel()`, `check_trigger_can_progress()`, `on_trigger_can_progress()`, `check_trigger_complete()`, `on_trigger_complete()`.
+**Trigger methods:** `check_trigger_founder_invalid()`, `on_trigger_founder_invalid()`, `check_trigger_can_progress()`, `on_trigger_can_progress()`, `check_trigger_complete()`, `on_trigger_complete()`.
 
 ## Recruitment
 
