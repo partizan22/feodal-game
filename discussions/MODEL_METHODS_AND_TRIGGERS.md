@@ -26,7 +26,7 @@
 
 **User methods:** `user_change_allow_transit(value)`, `user_abandon_region()`.
 
-**Domain methods:** `find_active_camp(player)`, `get_or_create_camp(player)`, `register_combat(attacker, registration_reason, defender_player = null)`, `start_next_combat_if_possible()`, `resolve_arrival(army, movement)`, `set_occupied_by(player)`, `restore_owner_control(expected_occupier_player)`, `annex_to(player, castle)`, `become_neutral()`, `become_castle_region(new_castle, player)`, `set_connection_valid(value)`, `apply_resource_site_upgrade(...)`, `can_start_resource_site_upgrade(...)`, `on_army_presence_changed()`, `destroy_neutral_defense()`.
+**Domain methods:** `find_active_camp(player)`, `get_or_create_camp(player)`, `register_combat(attacker, registration_reason, defender_player = null)`, `start_next_combat_if_possible()`, `resolve_arrival(army, movement)`, `set_occupied_by(player)`, `restore_owner_control(expected_occupier_player)`, `annex_to(player, castle)`, `become_neutral()`, `become_castle_region(new_castle, player)`, `set_connection_valid(value)`, `apply_resource_site_upgrade(resource_type, from_level, target_level, quantity)`, `can_start_resource_site_upgrade(resource_type, quantity)`, `on_army_presence_changed()`, `destroy_neutral_defense()`.
 
 **Triggers:** `neutral_defense_recovery_complete`.
 
