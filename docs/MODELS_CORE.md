@@ -80,7 +80,7 @@ Core world/economy models.
 - `food_income` — сума позитивних `Region.food_surplus_to_castle` з `regions[]`. Негативний Food balance звичайних Region до Castle не передається.
 - `non_military_food_consumption` — Castle-level Food consumption від Population/Building effects.
 - `castle_stationed_food_consumption` — Food consumption `soldier_reserve` та всіх живих `stationed_knights[]` (Knight разом зі своїм Unit); включає війська всередині Castle навіть під час Occupation.
-- `castle_region_army_food_consumption` — тільки Food consumption власних Knight/Unit **поза Castle** в Army у `Camp`/Regrouping Castle Region; при Occupation дорівнює `0` (ці Army переходять на локальне Food). Knight, уже враховані в `castle_stationed_food_consumption`, вдруге не рахуються.
+- `castle_region_army_food_consumption` — `region.castle_owner_outside_camp_food_consumption` для неокупованої Castle Region, інакше `0`; Knight/Unit всередині Castle уже враховані в `castle_stationed_food_consumption`.
 - `food_balance` — `food_income - non_military_food_consumption - castle_stationed_food_consumption - castle_region_army_food_consumption`.
 - `food_coin_compensation` — якщо `food == 0 && food_balance < 0`, дорівнює `(-food_balance) * coins_per_food`, інакше `0`.
 - `coin_balance` — Coin income/upkeep самого Castle, включно з регулярним Coin upkeep `soldier_reserve`; Coin upkeep Unit у складі Army враховується в `Player.coin_balance` через `Army.coin_upkeep` і вдруге тут не нараховується.
@@ -156,7 +156,8 @@ Core world/economy models.
 - `distance_to_castle` — пряма стандартна hex-grid distance між цією Region і її Castle Region (`0` для Castle Region); не є path length і використовується DistanceEfficiency/territorial distance rules.
 - `has_any_troops` — чи є в Region хоча б одна фізично присутня Army незалежно від її Camp/Transit/Regrouping context.
 - `food_production`.
-- `camp_food_consumption` — сумарне Food consumption Army у Camp/Regrouping цієї Region; для Castle Region враховує тільки Knight/Unit із розміщенням **поза Castle** (`location_state = Camp`), бо розміщені всередині Castle враховуються у `Castle.castle_stationed_food_consumption`.
+- `camp_food_consumption` — сумарне Food consumption Army у Camp/Regrouping цієї Region; для Castle Region агрегує `Army.outside_castle_food_consumption`, бо розміщені всередині Castle Unit враховуються у `Castle.castle_stationed_food_consumption`.
+- `castle_owner_outside_camp_food_consumption` — для Castle Region сумарне `Army.outside_castle_food_consumption` власних (`Army.player == Region.player`) Army у Camp/Regrouping; використовується `Castle.castle_region_army_food_consumption`, щоб Castle не обходив `Region -> Army -> Knight`.
 - `food_balance` — для звичайної Region `food_production - camp_food_consumption`; для Castle Region дорівнює `food_production`, бо споживання Army Castle Region віднімається вже на рівні Castle.
 - `resource_production`, `gold_production`, `silver_production`.
 - `resource_surplus_to_castle` — передає позитивну Resource production до Castle тільки для Owned non-Occupied Region із `is_connection_valid == true` та `castle.is_blocked == false`, із distance efficiency; інакше `0`.
