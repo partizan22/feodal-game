@@ -46,11 +46,9 @@ Long-running construction, recruitment, founding and replacement processes.
 ### Trigger methods
 
 - `check_trigger_founder_invalid()` — відстежує перехід `founder_valid` у `false` для active Founding.
-- `on_trigger_founder_invalid()`
-- **Активні handlers CastleFounding:** `on_trigger_founder_invalid()` викликає `cancel()`; `on_trigger_complete()` викликає `complete()` рівно один раз, якщо `status` active і `can_progress`. `on_trigger_can_progress()` лише оновлює rate/планування progress. — викликає `cancel()`; це cancellation, а не pause.
-- `check_trigger_can_progress()`, `on_trigger_can_progress()`.
-- `check_trigger_complete()`, `on_trigger_complete()`.
-- **Активний handler completion:** `on_trigger_complete()` викликає `complete()` лише один раз для active instance, фіксує terminal `status` та припиняє повторне планування event.
+- `on_trigger_founder_invalid()` — для active Founding викликає `cancel()` рівно один раз, якщо `founder_valid == false`.
+- `check_trigger_can_progress()`, `on_trigger_can_progress()` — пасивна boundary-зміна `can_progress`; переплановує інтегрування `progress` за новим `progress_rate`, не запускає Founding заново.
+- `check_trigger_complete()`, `on_trigger_complete()` — active completion лише коли `status == active`, `can_progress == true` і `progress >= required_progress`; викликає `complete()` рівно один раз, переводить process у terminal status і знімає повторне планування.
 
 ---
 
@@ -91,9 +89,8 @@ Long-running construction, recruitment, founding and replacement processes.
 
 ### Trigger methods
 
-- `check_trigger_can_progress()`, `on_trigger_can_progress()`.
-- `check_trigger_current_recruit_finished()`
-- **Активний handler Recruitment:** `on_trigger_current_recruit_finished()` за наявності `castle.barracks_free_capacity > 0` викликає `finish_current_recruit()` рівно один раз і переплановує наступний FIFO cycle; за відсутності Capacity завершений progress зберігається. `on_trigger_can_progress()` оновлює rate/розклад., `on_trigger_current_recruit_finished()`.
+- `check_trigger_can_progress()`, `on_trigger_can_progress()` — пасивна boundary-зміна `can_progress`; оновлює effective `progress_rate` та планування наступного завершення.
+- `check_trigger_current_recruit_finished()`, `on_trigger_current_recruit_finished()` — при `status == active`, завершеному per-Soldier `progress` і `castle.barracks_free_capacity > 0` викликає `finish_current_recruit()` рівно один раз, оновлює FIFO order та планує наступний cycle. Якщо Capacity немає, завершений progress зберігається й completion виконується після звільнення місця, без повторного проходження timer.
 
 ---
 
@@ -126,7 +123,7 @@ Long-running construction, recruitment, founding and replacement processes.
 ### Triggers / Trigger methods
 
 - `complete` `[event trigger]`.
-- `check_trigger_complete()`, `on_trigger_complete()`.
+- `check_trigger_complete()`, `on_trigger_complete()` — active event: за `status` незавершеного instance і `progress >= required_progress` викликає `complete()` рівно один раз; атомарно встановлює terminal status, прибирає повторне планування event і оновлює залежні computed characteristics.
 
 ---
 
@@ -160,7 +157,7 @@ Long-running construction, recruitment, founding and replacement processes.
 ### Triggers / Trigger methods
 
 - `complete` `[event trigger]`.
-- `check_trigger_complete()`, `on_trigger_complete()`.
+- `check_trigger_complete()`, `on_trigger_complete()` — active event: за `status` незавершеного instance і `progress >= required_progress` викликає `complete()` рівно один раз; атомарно встановлює terminal status, прибирає повторне планування event і оновлює залежні computed characteristics.
 
 ---
 
@@ -189,4 +186,4 @@ Long-running construction, recruitment, founding and replacement processes.
 ### Triggers / Trigger methods
 
 - `complete` `[event trigger]`.
-- `check_trigger_complete()`, `on_trigger_complete()`.
+- `check_trigger_complete()`, `on_trigger_complete()` — active event: за `status` незавершеного instance і `progress >= required_progress` викликає `complete()` рівно один раз; атомарно встановлює terminal status, прибирає повторне планування event і оновлює залежні computed characteristics.
