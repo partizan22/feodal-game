@@ -93,6 +93,7 @@ Core world/economy models.
 - `barracks_free_capacity = barracks_capacity - barracks_used`.
 - `governor_capacity`, `external_region_count`.
 - `palace_capacity`, `active_knight_replacement_id`.
+- `palace_reserved_slots` — кількість живих `knights[]` + елементів `ready_knights_awaiting_name` + `knight_replacements[]` зі status queued/active (timer ще не завершено). Кожний Palace slot обліковується рівно один раз; `palace_reserved_slots <= palace_capacity`. Completed replacement уже представлений ready-entry, а не одночасно двома reservations.
 
 
 ### User methods
@@ -108,7 +109,7 @@ Core world/economy models.
 - `can_start_building_upgrade(building_type)` — перевіряє відсутність active upgrade цієї Building, повну upfront cost і, тільки для `0 -> 1`, усі config-driven minimum-level prerequisites.
 - `apply_building_upgrade(building_type, target_level)` — застосовує level; Palace level increase додає один ready Knight у FIFO `ready_knights_awaiting_name` без replacement delay.
 - `enqueue_knight_replacement()`, `complete_knight_replacement(replacement)` — death/vacated slot ставить replacement у послідовну timer queue; completion додає одного ready Knight у спільну FIFO чергу очікування імені та дозволяє старт timer наступного replacement.
-- `name_next_ready_knight(name)` — бере тільки head спільної FIFO-черги, створює Knight з указаним Player name і займає зарезервований Palace slot.
+- `name_next_ready_knight(name)` — бере тільки head спільної FIFO-черги, створює живого Knight з указаним Player name у home Castle, `location_state = Castle`, `stationed_castle = this Castle`, без Soldier; **одночасно створює окрему Army** цього Player з цим Knight як Commander, у Castle Region. Army має стан `Camp` у неокупованому Castle або `BlockedInCastle` при Occupation. Нового Palace slot не займає: уже зарезервований ready-entry замінюється живим Knight без зміни `palace_reserved_slots`.
 - `can_annex_region(region, camp)` — перевіряє `is_blocked == false`, що Region не є Castle Region і відповідає правилам Annexation Neutral/Occupied, `camp.can_annex_to(this)` (включно з накопиченим control progress, відсутністю blocking presence/Founding), Governor Capacity, valid territorial connection саме до **цього** Castle та наявність у `camp` хоча б одного живого Knight, чия Army має Camp-presence (`Camp` або `Regrouping`) і чий home Castle дорівнює цьому Castle. Method може напряму обходити `CampInRegion -> armies[] -> knights[]`.
 - `recalculate_region_connections()` — централізовано перераховує `Region.is_connection_valid` після occupation/loss/restore/annexation. Temporary disconnect через Occupation лише робить downstream Region invalid-connected; у Neutral вони переходять тільки після остаточної втрати ownership bridge Region.
 
