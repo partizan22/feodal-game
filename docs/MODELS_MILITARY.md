@@ -69,7 +69,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `defense_loss_threshold`.
 - `target_combat_threshold`.
 - `incidental_combat_threshold`.
-- `state` — `Camp / Movement / Regrouping` та потрібні V1 підстани. `Regrouping` вважається Camp-presence для всіх правил, крім заборони самій Army починати Movement або Attack. Очікування queued CombatSituation не є окремим фізичним state: Camp attacker залишається `Camp`, Movement attacker залишається в Movement context з paused progress.
+- `state` — територіальний стан `Camp / Movement / BlockedInCastle` із потрібними V1 підстанами Movement. `Regrouping` — модифікатор Army у `Camp` (відстежується через `regrouping_progress` і чинний режим Regrouping), а не окремий територіальний стан. `BlockedInCastle` не є Camp-presence для зовнішніх взаємодій. Очікування queued CombatSituation не змінює територіального стану: Camp attacker лишається в Camp, Movement attacker зберігає Movement context із paused progress.
 
 ### Динамічні характеристики
 
@@ -99,10 +99,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `user_change_commander(knight)` — дозволено у `Camp` або звичайному `Movement`, якщо Army не `is_command_locked`, а також як внутрішню реорганізацію `BlockedInCastle` Army: новий Commander — живий Knight цієї самої заблокованої Army, без переміщення Unit назовні. У `Regrouping` зміну заборонено.
 - `user_change_combat_thresholds(values)` — змінює persistent thresholds тільки у `Camp` або `Movement` і коли Army не `is_command_locked`. У `Regrouping` persistent values не змінюються; effective `defense_loss_threshold = 0`, а за відсутності legal Retreat battle logic примусово використовує `1.0`. Attacker після Registration та potential defender після CombatSituation Start locked; Transit defender candidate може змінювати persistent `defense_loss_threshold`, доки не приєднався до defense і не отримав lock.
 - `user_attack_player(target_camp)` — player-vs-player attack із Camp у Neutral Region. Дозволено тільки `state == Camp` (не Regrouping), якщо target Player має в цій самій Neutral Region хоча б одну Army у `Camp` **або Regrouping**; самі лише `is_entered_for_camp == true` без Camp-presence ініціацію не дозволяють. Attacking Army не може бути attacker іншої незавершеної CombatSituation або potential defender active CombatSituation. Викликає `Region.register_combat(..., defender_player = target_camp.player)`, тому окрема CombatSituation одразу фіксує цю Army як єдиного attacker і конкретного defender Player.
-- `user_raid_city(
-- **Ланцюг City Raid:** після миттєвого combat resolution і застосування casualties викликає `City.complete_raid()` лише за перемоги attacker; XP нараховується через `Knight.add_battle_experience()`, поразка запускає `start_loss_regrouping_in_current_camp()`.city)` — City Raid тільки для `state == Camp`. Заборонено, якщо Player цієї Army у цій Region є attacker будь-якої незавершеної CombatSituation або potential defender Active CombatSituation. Raid не входить у player-vs-player CombatSituation queue і відбувається миттєво.
-- `user_attack_neutral_defense(
-- **Ланцюг Neutral Defense:** миттєвий combat resolution → casualties → XP через `Knight.add_battle_experience()`; перемога викликає `Region.destroy_neutral_defense()`, поразка — `start_loss_regrouping_in_current_camp()` без local Retreat.)` — миттєва атака Neutral Defense цієї Region конкретною Army у `state == Camp`; Regrouping не може її ініціювати. Заборонено, якщо Player цієї Army у цій Region є attacker будь-якої незавершеної CombatSituation або potential defender Active CombatSituation. Якщо в Region є City, до abstract Defender strength додається full City Defense. Ця дія не створює CombatSituation і не входить у FIFO-чергу Region.
+- `user_raid_city(city)` — миттєва атака City Defense для Army у `Camp` без Regrouping; заборонена, якщо Player Army у цій Region є attacker незавершеної CombatSituation або potential defender Active CombatSituation. Перевіряє `city.region == current_region`; застосовує спільний combat calculation, `Knight.apply_casualties()` і `Knight.add_battle_experience()`. За перемоги викликає `City.complete_raid(player)`; за поразки — `start_loss_regrouping_in_current_camp()`. Не створює CombatSituation.
+- `user_attack_neutral_defense()` — миттєва атака Neutral Defense Army у `Camp` без Regrouping; ті самі обмеження CombatSituation. Перевіряє Neutral Region і наявність `neutral_defense > 0`, у strength захисника додає `Region.city.city_defense` за наявності City. Після розрахунку викликає `Knight.apply_casualties()` і `Knight.add_battle_experience()`; за перемоги — `Region.destroy_neutral_defense()`, за поразки — `start_loss_regrouping_in_current_camp()`. Не створює CombatSituation.
 
 ### Domain methods
 
@@ -131,7 +129,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Trigger methods
 
 - `check_trigger_regrouping_complete()` — прогнозує `Dt` completion.
-- `on_trigger_regrouping_complete()` — завершує Regrouping.
+- `on_trigger_regrouping_complete()` — якщо Army досі в Camp із активним Regrouping і `regrouping_progress >= Dt`, викликає `finish_regrouping()` рівно один раз; для вже завершеного або перерваного Regrouping повторно нічого не змінює.
 
 ---
 
@@ -174,7 +172,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `accept_army(army)`.
 - `on_army_left(army)` — якщо Camp спорожнів, деактивує instance; якщо Player є occupier, вихід останньої Army з Camp припиняє Occupation.
 - `get_defending_armies()` — повертає Camp/Regrouping Army; остаточний potential-defender set CombatSituation фіксується на Start і також включає Army, які вже entered-for-Camp та тому гарантовано стануть Camp/Regrouping до Battle Start.
-- `validate_reorganization(armies)` — для merge/split вимагає `state == Camp` для всіх Army та відсутність command lock; Regrouping merge/split блокує. Зміна Commander і composition перевіряються окремими правилами.
+- `validate_reorganization(armies)` — для звичайного merge/split вимагає `Camp`, відсутність Regrouping та command lock у всіх Army. Для внутрішнього merge/split допускає `BlockedInCastle` Army **лише одного й того самого Castle**, без зовнішніх Army, з перевіркою належності всіх Unit цьому Player; змішування Camp і BlockedInCastle заборонене. Зміна Commander та Unit composition перевіряються окремо.
 - `can_annex_to(castle)`.
 
 ### Triggers
