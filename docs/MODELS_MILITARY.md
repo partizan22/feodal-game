@@ -184,8 +184,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Trigger methods
 
-- `check_trigger_can_progress()`, `on_trigger_can_progress()`.
-- `check_trigger_ready_for_annexation()`, `on_trigger_ready_for_annexation()`.
+- `check_trigger_can_progress()`, `on_trigger_can_progress()` — пасивний handler перераховує `control_progress_rate` і переплановує completion при зміні blockers, без автоматичного Annexation.
+- `check_trigger_ready_for_annexation()`, `on_trigger_ready_for_annexation()` — фіксує готовність до user action; не викликає `user_annex_region()` автоматично.
 
 ---
 
@@ -241,8 +241,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Trigger methods
 
-- `check_trigger_direction_revealed()`, `on_trigger_direction_revealed()`.
-- `check_trigger_next_region_reached()`, `on_trigger_next_region_reached()`.
-- `check_trigger_camp_reached()`, `on_trigger_camp_reached()`.
+- `check_trigger_direction_revealed()`, `on_trigger_direction_revealed()` — активний handler встановлює `direction_revealed = true` та ініціює оновлення player-specific projection видимості; не змінює route.
+- `check_trigger_next_region_reached()`, `on_trigger_next_region_reached()` — handler викликає `advance_to_next_region()` та визначає наступну phase за фактичним станом Region/CombatSituation.
+- `check_trigger_camp_reached()`, `on_trigger_camp_reached()` — handler викликає `resolve_camp_arrival()` тільки після завершення combat waiting/lock; за unresolved CombatSituation completion відкладається.
 
 ---
