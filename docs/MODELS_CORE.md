@@ -24,7 +24,7 @@ Core world/economy models.
 - `*castles[]` — Castle цього Player.
 - `*armies[]` — Army цього Player за прямим `Army.player`.
 - `*camps[]` — active CampInRegion цього Player за прямим `CampInRegion.player`.
-- `coin_balance` — effective rate зміни Coins. Складає region/castle income та upkeep, звичайний `Army.coin_upkeep`, `Army.food_coin_compensation` для Army у Movement, `CampInRegion.food_coin_compensation` поза Castle Region і `Castle.food_coin_compensation` при нестачі Food у Castle.
+- `coin_balance` — effective rate зміни Coins. Складає `Region.coin_balance_for_owner` із `regions[]`, `Castle.coin_balance` і `Castle.food_coin_compensation` із `castles[]`, звичайний `Army.coin_upkeep` і `Army.food_coin_compensation` для Army у Movement із `armies[]`, а також `CampInRegion.food_coin_compensation` із `camps[]` для звичайних Region **та Occupied Castle Region**. У неокупованій Castle Region локальна Camp-компенсація дорівнює `0`, бо Food усіх власних Camp Unit враховується у Castle. Кожен дефіцит Food компенсується рівно один раз.
 - `gold_balance` — effective rate зміни Gold; агрегує `Region.gold_income_for_owner` з `regions[]`, тому Occupied/disconnected Region не дають Gold формальному owner.
 - `silver_balance` — effective rate зміни Silver; агрегує `Region.silver_income_for_owner` з `regions[]`, тому Occupied/disconnected Region не дають Silver формальному owner.
 - `empty_coins` — `coins == 0 && coin_balance <= 0`.
@@ -80,10 +80,10 @@ Core world/economy models.
 - `food_income` — сума позитивних `Region.food_surplus_to_castle` з `regions[]`. Негативний Food balance звичайних Region до Castle не передається.
 - `non_military_food_consumption` — Castle-level Food consumption від Population/Building effects.
 - `castle_stationed_food_consumption` — Food consumption `soldier_reserve` та всіх живих `stationed_knights[]` (Knight разом зі своїм Unit); включає війська всередині Castle навіть під час Occupation.
-- `castle_region_army_food_consumption` — `region.castle_owner_outside_camp_food_consumption` для неокупованої Castle Region, інакше `0`; Knight/Unit всередині Castle уже враховані в `castle_stationed_food_consumption`.
+- `castle_region_army_food_consumption` — `region.castle_owner_outside_camp_food_consumption` для неокупованої Castle Region, інакше `0`; Knight/Unit всередині Castle уже враховані в `castle_stationed_food_consumption`. Після Occupation зовнішні Camp Army формального owner та occupier використовують локальне Food, а не Food Castle.
 - `food_balance` — `food_income - non_military_food_consumption - castle_stationed_food_consumption - castle_region_army_food_consumption`.
 - `food_coin_compensation` — якщо `food == 0 && food_balance < 0`, дорівнює `(-food_balance) * coins_per_food`, інакше `0`.
-- `coin_balance` — Coin income/upkeep самого Castle, включно з регулярним Coin upkeep `soldier_reserve`; Coin upkeep Unit у складі Army враховується в `Player.coin_balance` через `Army.coin_upkeep` і вдруге тут не нараховується.
+- `coin_balance` — Coin income/upkeep самого Castle, включно з регулярним Coin upkeep `soldier_reserve`. Coin-producing Buildings Castle (включно з Bank effect) продовжують працювати при Occupation. City income сюди не входить: він враховується у `Region.coin_balance_for_owner`. Coin upkeep Unit у складі Army враховується в `Player.coin_balance` через `Army.coin_upkeep` і вдруге тут не нараховується.
 - `player_empty_coins` — `player.empty_coins`; проміжна характеристика для залежних computed characteristics інших Model без ланцюга relationships.
 - `warehouse_capacity`, `granary_capacity`, `storage_full`.
 - `is_blocked` — `region.is_occupied`; визначає блокування потоків із усіх прив'язаних Region, але не припиняє власні Coin-producing Buildings Castle.
@@ -102,14 +102,14 @@ Core world/economy models.
 ### Domain methods
 
 - `can_pay_local_cost(cost)`, `pay_local_cost(cost)`.
-- `can_house_unit(knight)` — перевіряє, що Knight належить власнику цього Castle, його Army має Camp-presence у Region цього Castle, а Barracks має Capacity для **всіх Soldier** Unit; home Castle може бути іншим. Вхід атомарний, partial entry немає; Knight з 0 Soldier не потребує Capacity.
+- `can_house_unit(knight)` — перевіряє, що Knight живий, належить власнику цього Castle, наразі розміщений **поза Castle** (`location_state = Camp`), його Army має Camp-presence у Region цього Castle, а Barracks має Capacity для **всіх Soldier** Unit; home Castle може бути іншим. Вхід атомарний, partial entry немає; Knight з 0 Soldier не потребує Capacity.
 - `move_soldiers_between_reserve_and_knight(knight, composition_delta)` — переносить Soldier тільки `Castle reserve <-> Knight`.
 - `add_recruited_soldier(type)`.
 - `can_start_building_upgrade(building_type)` — перевіряє відсутність active upgrade цієї Building, повну upfront cost і, тільки для `0 -> 1`, усі config-driven minimum-level prerequisites.
 - `apply_building_upgrade(building_type, target_level)` — застосовує level; Palace level increase додає один ready Knight у FIFO `ready_knights_awaiting_name` без replacement delay.
 - `enqueue_knight_replacement()`, `complete_knight_replacement(replacement)` — death/vacated slot ставить replacement у послідовну timer queue; completion додає одного ready Knight у спільну FIFO чергу очікування імені та дозволяє старт timer наступного replacement.
 - `name_next_ready_knight(name)` — бере тільки head спільної FIFO-черги, створює Knight з указаним Player name і займає зарезервований Palace slot.
-- `can_annex_region(region, camp)` — перевіряє Governor Capacity, допустимий зв'язок Region з цим Castle і наявність у `camp` хоча б одного Knight, чия Army має Camp-presence (`Camp` або `Regrouping`) і чий home Castle дорівнює цьому Castle. Method напряму обходить `CampInRegion -> armies[] -> knights[]`.
+- `can_annex_region(region, camp)` — перевіряє `is_blocked == false`, що Region не є Castle Region і відповідає правилам Annexation Neutral/Occupied, `camp.can_annex_to(this)` (включно з накопиченим control progress, відсутністю blocking presence/Founding), Governor Capacity, valid territorial connection саме до **цього** Castle та наявність у `camp` хоча б одного живого Knight, чия Army має Camp-presence (`Camp` або `Regrouping`) і чий home Castle дорівнює цьому Castle. Method може напряму обходити `CampInRegion -> armies[] -> knights[]`.
 - `recalculate_region_connections()` — централізовано перераховує `Region.is_connection_valid` після occupation/loss/restore/annexation. Temporary disconnect через Occupation лише робить downstream Region invalid-connected; у Neutral вони переходять тільки після остаточної втрати ownership bridge Region.
 
 ### Triggers
@@ -158,12 +158,12 @@ Core world/economy models.
 - `food_production`.
 - `camp_food_consumption` — сумарне Food consumption Army у Camp/Regrouping цієї Region; для Castle Region агрегує `Army.outside_castle_food_consumption`, бо розміщені всередині Castle Unit враховуються у `Castle.castle_stationed_food_consumption`.
 - `castle_owner_outside_camp_food_consumption` — для Castle Region сумарне `Army.outside_castle_food_consumption` власних (`Army.player == Region.player`) Army у Camp/Regrouping; використовується `Castle.castle_region_army_food_consumption`, щоб Castle не обходив `Region -> Army -> Knight`.
-- `food_balance` — для звичайної Region `food_production - camp_food_consumption`; для Castle Region дорівнює `food_production`, бо споживання Army Castle Region віднімається вже на рівні Castle.
+- `food_balance` — для звичайної Region `food_production - camp_food_consumption`; для **неокупованої** Castle Region дорівнює `food_production`, бо споживання власних Camp Army поза Castle віднімається на рівні Castle. Для **Occupied Castle Region** дорівнює `food_production - camp_food_consumption`: усі Army у Camp поза Castle (і occupier, і formal owner) використовують локальне Food за звичайними правилами, а Unit всередині заблокованого Castle продовжують споживати його запаси.
 - `resource_production`, `gold_production`, `silver_production`.
 - `resource_surplus_to_castle` — передає позитивну Resource production до Castle тільки для Owned non-Occupied Region із `is_connection_valid == true` та `castle.is_blocked == false`, із distance efficiency; інакше `0`.
 - `food_surplus_to_castle` — для звичайної Owned non-Occupied Region з `is_connection_valid == true` і `castle.is_blocked == false` передає до Castle тільки позитивний `food_balance` з distance efficiency; для неокупованої Castle Region передає весь позитивний `food_production` з coefficient `1`. Негативний balance звичайної Region до Castle не передається; Occupied/invalid-connected Region та Region із заблокованим Castle нічого не передають.
 - `gold_income_for_owner`, `silver_income_for_owner` — для Owned non-Occupied Region з `is_connection_valid == true` і `castle.is_blocked == false` дорівнюють відповідній production без distance penalty; інакше `0`.
-- `coin_balance_for_owner` — recurring Coin balance Region для formal owner. City income враховується тільки для Owned non-Occupied Region із valid connection та незаблокованим Castle; Region upkeep продовжує нараховуватися при Occupation, disconnection і блокуванні Castle до втрати ownership. Після переходу Region у Neutral upkeep припиняється.
+- `coin_balance_for_owner` — recurring Coin balance Region для formal owner. City income (`city.coin_income`, якщо City є) враховується тільки для Owned non-Occupied Region із `is_connection_valid == true` та `castle.is_blocked == false`; Region upkeep продовжує нараховуватися при Occupation, disconnection і блокуванні Castle до втрати ownership. Після переходу Region у Neutral upkeep припиняється. Відсутність City дає нульовий City income.
 - `city_wealth_growth_enabled` — `true` тільки для Owned non-Occupied Region, якщо її formal owner не `empty_coins`; для Neutral/Occupied Region `false`.
 - `neutral_defense_full_strength`.
 - `neutral_defense_recovery_rate` — ненульовий тільки для Neutral Region, коли `neutral_defense < neutral_defense_full_strength` і в Region немає жодних troops; будь-яка фізична присутність Army ставить recovery rate в `0`, а після виходу останньої Army recovery продовжується від поточного значення.
@@ -183,7 +183,7 @@ Core world/economy models.
 - `resolve_arrival(army, movement)` — визначає Camp/Transit context і реєструє CombatSituation лише за умовами §16: Camp-bound entry у чужу Owned/Occupied Region, **включно з player-vs-player і pre-battle Retreat**, створює situation за наявності чужої `Camp`/Regrouping або раніше введеної для Camp `EnteringCamp` Army; сама лише чужа Transit-presence не є підставою. Вхід formal owner до своєї ще non-Occupied Region також створює situation за наявності чужої `EnteringCamp` Army. Без registration Army продовжує `entry -> Camp`/`retreat-local` за `Dt`, після фактичного Camp arrival застосовуються Occupation/control consequences та для Retreat починається Regrouping. Transit у чужу Owned non-Occupied Region використовує окремі Transit registration rules; Transit через Occupied Region не створює situation. Army, що входить після CombatSituation Start, не може стати defender цієї CombatSituation. У Neutral Region сам вхід у Camp не запускає combat із Neutral Defense або City Defense.
 - `set_occupied_by(player)` — встановлює Occupation тільки при фактичному зайнятті Camp, зокрема після Camp arrival без battle або перемоги Camp-bound attacker. Якщо в Region вже рухаються Army formal owner, які запізнилися до попередньої defense, для Camp-bound Army реєструється окрема CombatSituation проти актуального occupier; Transit продовжується за правилами Occupied Region. Після зміни Occupation запускає `Castle.recalculate_region_connections()`.
 - `restore_owner_control(expected_occupier_player)` — Occupation припиняється після виходу останньої Army occupier із Camp; після restore запускається перерахунок connectivity Castle.
-- `annex_to(player, castle)` — встановлює formal owner/Castle і запускає перерахунок connectivity Castle.
+- `annex_to(player, castle)` — після успішної Annexation встановлює formal owner, новий Castle і очищує попередню Occupation. Перераховує connectivity **і нового Castle, і попереднього Castle/formal owner**, якщо Region була Occupied та перейшла від іншого власника; Region колишнього owner, які остаточно втратили зв'язок, стають Neutral за загальним правилом.
 - `become_neutral()` — очищує formal owner/Castle/Occupation, зберігаючи ResourceSite та City/її `wealth`; для колишнього Castle запускає перерахунок connectivity.
 - `become_castle_region(new_castle, player)`, `set_connection_valid(value)`.
 - `apply_resource_site_upgrade(...)`, `can_start_resource_site_upgrade(...)`.
@@ -218,7 +218,7 @@ Core world/economy models.
 - `active_wealth_ratio_balance` — recovery rate при `active_wealth_ratio < 1`; recovery не залежить від ownership, Occupation або стану Coins Player.
 - `effective_wealth = wealth * active_wealth_ratio`.
 - `city_defense = CityDefense(wealth)` — залежить тільки від повного `wealth`.
-- `coin_income` — recurring Coin income для owner Region на основі `effective_wealth`; `0` для Neutral/Occupied.
+- `coin_income` — локальний recurring Coin income City на основі `effective_wealth`; `0` для Neutral/Occupied. Ця характеристика сама по собі не гарантує надходження Player: `Region.coin_balance_for_owner` додатково перевіряє connection та блокування Castle, щоб City disconnected Owned Region не давало Coins.
 - `raid_reward` — разовий Coin reward Raid.
 
 ### Domain methods
