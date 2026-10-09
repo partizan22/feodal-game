@@ -104,7 +104,7 @@ Core world/economy models.
 ### Domain methods
 
 - `can_pay_local_cost(cost)`, `pay_local_cost(cost)` — перевіряють/списують Wood, Stone, Iron і Food з фактичних запасів Castle; від'ємний effective balance не забороняє upfront payment, якщо запасу достатньо.
-- `can_house_unit(knight)` — перевіряє, що Knight живий, належить власнику цього Castle, наразі розміщений **поза Castle** (`location_state = Camp`), його Army має Camp-presence у Region цього Castle, а Barracks має Capacity для **всіх Soldier** Unit; home Castle може бути іншим. Вхід атомарний, partial entry немає; Knight з 0 Soldier не потребує Capacity.
+- `can_house_unit(knight)` — перевіряє, що Castle **не заблокований**, Knight живий, належить власнику цього Castle, наразі розміщений **поза Castle** (`location_state = Camp`), його Army має Camp-presence у Region цього Castle, а Barracks має Capacity для **всіх Soldier** Unit; home Castle може бути іншим. При Occupation зовнішня Army не може перейти до внутрішнього складу заблокованого Castle. Вхід атомарний, partial entry немає; Knight з 0 Soldier не потребує Capacity.
 - `move_soldiers_between_reserve_and_knight(knight, composition_delta)` — переносить Soldier тільки `Castle reserve <-> Knight`.
 - `add_recruited_soldier(type)`.
 - `can_start_building_upgrade(building_type)` — перевіряє відсутність active upgrade цієї Building, повну upfront cost (локальну через `can_pay_local_cost()`, глобальну через `player.can_pay_global_cost()`) і, тільки для `0 -> 1`, усі config-driven minimum-level prerequisites. Самі по собі `empty_food`/`player_empty_coins` не забороняють BuildingUpgrade, якщо фактичної upfront cost достатньо.
