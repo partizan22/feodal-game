@@ -56,7 +56,7 @@
 
 **User methods:** `user_merge_armies(armies, commander, thresholds)`, `user_split_army(groups)`, `user_change_commander(knight)`, `user_change_combat_thresholds(values)`, `user_attack_player(target_camp)`, `user_raid_city(city)`, `user_attack_neutral_defense()`.
 
-**Domain methods:** `enter_region(region)`, `enter_camp(camp)`, `leave_camp()`, `start_movement(movement)`, `finish_movement()`, `set_combat_waiting(combat)`, `clear_combat_waiting()`, `start_regrouping()`, `finish_regrouping()`, `start_retreat_to(region)`, `start_loss_regrouping_in_current_camp()`, `remove_dead_knights()`, `ensure_commander_after_casualties()`.
+**Domain methods:** `enter_region(region)`, `enter_camp(camp)`, `leave_camp()`, `start_movement(movement)`, `finish_movement()`, `set_combat_waiting(combat)`, `clear_combat_waiting()`, `start_regrouping()`, `finish_regrouping()`, `start_retreat_to(region)`, `start_loss_regrouping_in_current_camp()`, `remove_dead_knights()`, `reassign_commander()`, `ensure_commander_after_casualties()`, `split_for_castle_occupation(castle)`, `block_in_castle(castle)`, `unblock_from_castle(castle)`.
 
 **Triggers:** `regrouping_complete`.
 
