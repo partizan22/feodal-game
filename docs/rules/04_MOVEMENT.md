@@ -16,7 +16,7 @@ Player задає Army фізичний Route та кінцеву Region. Лок
 - entry у Region -> Camp: Dt;
 - базовий звичайний Transit однієї Region: Dt;
 - CombatSituation Start -> Battle Start: Dt;
-- звичайний Retreat entry -> Camp: Dt, якщо цей перехід не очікує CombatSituation у FIFO; для Camp-bound Retreat у чужу Owned Region застосовуються звичайні Start -> Battle Start = Dt та правила паузи в черзі;
+- Retreat entry -> Camp: Dt, якщо за §16 не зареєстрована CombatSituation; інакше застосовуються Start -> Battle Start = Dt та правила FIFO;
 - Regrouping: Dt.
 
 У майбутньому speed modifier може змінювати тільки звичайний Transit без CombatSituation; інші перелічені інтервали лишаються рівно Dt.
@@ -45,7 +45,7 @@ Player може явно виконати refresh target opponent. Нове зн
 
 Звичайний Transit через Neutral Region не створює територіальної CombatSituation.
 
-При вході чужої Army в Owned non-Occupied Region CombatSituation реєструється і для Camp, і для Transit, **також коли вхід для Camp є наслідком Retreat**. Якщо formal owner входить у власну ще non-Occupied Region, де чужа Army вже `EnteringCamp` (включно з retreat-local), реєструється окрема territorial CombatSituation, яка очікує своєї черги FIFO; defender визначається на її Start.
+Для Transit у чужу Owned non-Occupied Region CombatSituation реєструється за звичайними правилами. Для Camp-bound входу у чужу Owned/Occupied Region (включно з Retreat) CombatSituation реєструється **лише за наявності чужої Army у `Camp` або раніше введеної для Camp `EnteringCamp`**; інакше Army завершує entry -> Camp за `Dt` без CombatSituation, **навіть якщо в Region є чужі Army у `Transit`**. Так само formal owner, входячи у власну ще non-Occupied Region, реєструє CombatSituation, якщо там уже є чужа `EnteringCamp` Army. Кожен наступний Camp-bound entry за наявності чужої Army реєструє власну situation в FIFO; defender визначається за актуальною присутністю противника на Start: пріоритет має чужий Player із доступними для defense Army у `Camp`/Regrouping, і лише за його відсутності враховуються доступні чужі Army у `EnteringCamp`; attacker будь-якої іншої unresolved CombatSituation (Active або queued) не може бути defender незалежно від територіального стану; можливий новий occupier після попереднього battle. Camp-bound attacker у FIFO не може перейти до `Camp` до розв'язання власної situation, навіть коли `Dt` вже минуло. Якщо queued Camp-bound situation завершується на Start без battle через зникнення interaction, очікування у FIFO зараховується до `entry -> Camp`: якщо від входу минуло щонайменше `Dt`, Army одразу стає `Camp`, інакше завершує залишок часу. Наслідки Camp arrival застосовуються перед Start наступної situation. Army у `EnteringCamp`, зафіксовані як potential defenders на Start, завершують перехід до Camp до Battle Start; Transit Army defender Player можуть приєднатися за загальними правилами §17, якщо самі не є attackers інших unresolved CombatSituations.
 
 Для Transit такої CombatSituation на Start використовується snapshot target_opponent, зафіксований при Registration:
 
@@ -60,7 +60,7 @@ Occupied Region є винятком: третій Player (не formal owner та
 
 Allow Transit є fallback rule тільки для NonAggressive Transit через Owned non-Occupied Region.
 
-На CombatSituation Start battle context існує, якщо defender має Army у Camp/Regrouping або Army, що вже entered-for-Camp. Army, яка вже entered-for-Camp, до Battle Start гарантовано досягає Camp або переходить у Regrouping і для участі в battle еквівалентна звичайній Camp/Regrouping Army. Якщо таких Army немає, attacking Transit Army продовжує Route. Defender Transit Army самі по собі не створюють можливості interception.
+На CombatSituation Start battle context існує, якщо defender має доступну Army у Camp/Regrouping або Army, що вже entered-for-Camp; attacker іншої unresolved CombatSituation не враховується як defender. Army, яка вже entered-for-Camp, до Battle Start гарантовано досягає Camp або переходить у Regrouping і для участі в battle еквівалентна звичайній Camp/Regrouping Army. Якщо таких Army немає, attacking Transit Army продовжує Route. Defender Transit Army самі по собі не створюють можливості interception.
 
 Якщо Camp/Camp-bound defense context є, defender протягом Dt може один раз вручну обрати:
 
