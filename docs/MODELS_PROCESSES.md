@@ -24,7 +24,7 @@ Long-running construction, recruitment, founding and replacement processes.
 
 - `founder_valid` — founder Knight живий, фізично має потрібний current Camp, `founder_knight.player == player` і не має Soldier. Leave Region/death/отримання Soldier скасовує process.
 - `founder_progress_eligible` — `founder_valid && founder_knight.is_camp_presence`; Regrouping не pause-ить Founding.
-- `can_progress` — `founder_progress_eligible`; для Neutral Region `neutral_defense == 0`; `region.blocking_camp_presence_player_ids[]` не містить іншого Player. Foreign Transit Army не блокує Founding, навіть якщо через її Transit у Region існує CombatSituation. Саме foreign Camp/Camp-bound presence, а не наявність CombatSituation, призупиняє Founding.
+- `can_progress` — `founder_progress_eligible`, Region залишається Neutral, `region.neutral_defense == 0`, `region.blocking_camp_presence_player_ids[]` не містить іншого Player. Foreign Transit Army не блокує Founding, навіть якщо через її Transit у Region існує CombatSituation. Саме foreign Camp/Camp-bound presence, а не наявність CombatSituation, призупиняє Founding.
 - `progress_rate`, `required_progress`, `is_complete`.
 
 ### User methods
@@ -33,7 +33,7 @@ Long-running construction, recruitment, founding and replacement processes.
 
 ### Domain methods
 
-- `validate_start()` — Region має бути Neutral або власною annexed non-Castle Region, active Founding у ній відсутній, founder валідний і фізично присутній, а blocking foreign Camp/Camp-bound presence відсутня на момент старту. Для Neutral Region не потрібні contiguity, Governor Capacity або попередній control-progress; інші стартові умови/вартість перевіряються тут.
+- `validate_start()` — Region має бути **тільки Neutral**, з `neutral_defense == 0`, без City та active Founding; founder валідний, фізично перебуває у Camp/Regrouping цієї Region, не має Soldier, а blocking foreign Camp/Camp-bound presence відсутня на момент старту. Contiguity, Governor Capacity і попередній Annexation progress не потрібні; upfront local/global cost перевіряється тут.
 - `cancel()` — terminal state без refund при founder invalid.
 - `complete()` — створює Castle через `Player.create_castle()`; founder стає Knight нового Castle і займає його початковий Palace slot.
 
