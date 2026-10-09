@@ -38,7 +38,8 @@ Core world/economy models.
 - `can_pay_global_cost(cost)` — перевіряє одноразову вартість у Coins/Gold/Silver.
 - `pay_global_cost(cost)` — списує одноразову глобальну частину вартості після validation.
 - `add_coins(amount)` — зараховує разовий Coin reward, зокрема City Raid reward.
-- `create_castle(region, name, founder_knight)` — створює новий Castle після завершення Founding: ініціалізує `Warehouse = 1`, `Granary = 1`, `Palace = 1`, викликає `Region.become_castle_region()` і `Knight.change_home_castle()`. Founder займає початковий Palace slot нового Castle; додатковий Knight при створенні Castle не генерується.
+- `create_castle(region, name, founder_knight)`
+- **Залежності `create_castle()`:** `Player.castles[]`, `Region.player/castle`, `Knight.castle`, `Castle.palace_reserved_slots`, `Castle.ready_knights_awaiting_name`; викликає `Region.become_castle_region()` і `Knight.change_home_castle()` в одній транзакції. Перенесення founder не створює додаткового Knight; якщо у старому home Castle звільняється Palace slot, застосовується його звичайна replacement-процедура. — створює новий Castle після завершення Founding: ініціалізує `Warehouse = 1`, `Granary = 1`, `Palace = 1`, викликає `Region.become_castle_region()` і `Knight.change_home_castle()`. Founder займає початковий Palace slot нового Castle; додатковий Knight при створенні Castle не генерується.
 
 ### Triggers
 
@@ -109,10 +110,12 @@ Core world/economy models.
 - `add_recruited_soldier(type)`.
 - `can_start_building_upgrade(building_type)` — перевіряє відсутність active upgrade цієї Building, повну upfront cost (локальну через `can_pay_local_cost()`, глобальну через `player.can_pay_global_cost()`) і, тільки для `0 -> 1`, усі config-driven minimum-level prerequisites. Самі по собі `empty_food`/`player_empty_coins` не забороняють BuildingUpgrade, якщо фактичної upfront cost достатньо.
 - `apply_building_upgrade(building_type, target_level)` — застосовує level; Palace level increase додає один ready Knight у FIFO `ready_knights_awaiting_name` без replacement delay.
-- `enqueue_knight_replacement()`, `complete_knight_replacement(replacement)` — death/vacated slot ставить replacement у послідовну timer queue; completion додає одного ready Knight у спільну FIFO чергу очікування імені та дозволяє старт timer наступного replacement.
+- `enqueue_knight_replacement()`, `complete_knight_replacement(replacement)`
+- **Залежності replacement queue:** використовує `knight_replacements[]`, `active_knight_replacement_id`, `ready_knights_awaiting_name`; `enqueue_knight_replacement()` запускає timer, якщо active head немає; `complete_knight_replacement()` завершує лише active head і запускає наступний queued timer. Повторне завершення не створює другого ready Knight. — death/vacated slot ставить replacement у послідовну timer queue; completion додає одного ready Knight у спільну FIFO чергу очікування імені та дозволяє старт timer наступного replacement.
 - `name_next_ready_knight(name)` — бере тільки head спільної FIFO-черги, створює живого Knight з указаним Player name у home Castle, `location_state = Castle`, `stationed_castle = this Castle`, без Soldier; **одночасно створює окрему Army** цього Player з цим Knight як Commander, у Castle Region. Army має стан `Camp` у неокупованому Castle або `BlockedInCastle` при Occupation. Нового Palace slot не займає: уже зарезервований ready-entry замінюється живим Knight без зміни `palace_reserved_slots`.
 - `can_annex_region(region, camp)` — перевіряє `is_blocked == false`, що Region не є Castle Region і відповідає правилам Annexation Neutral/Occupied, `camp.can_annex_to(this)` (включно з накопиченим control progress, відсутністю blocking presence/Founding), Governor Capacity, valid territorial connection саме до **цього** Castle та наявність у `camp` хоча б одного живого Knight, чия Army має Camp-presence (`Camp` або `Regrouping`) і чий home Castle дорівнює цьому Castle. Method може напряму обходити `CampInRegion -> armies[] -> knights[]`.
-- `recalculate_region_connections()` — централізовано перераховує `Region.is_connection_valid` після occupation/loss/restore/annexation. Temporary disconnect через Occupation лише робить downstream Region invalid-connected; у Neutral вони переходять тільки після остаточної втрати ownership bridge Region.
+- `recalculate_region_connections()`
+- **Залежності перерахунку:** `regions[]`, `Region.neighbors[]`, `Region.player`, `Region.is_occupied`, `Region.is_connection_valid`. Перерахунок і каскадне `Region.become_neutral()` виконуються до стабілізації територіального графа, без проміжних зовнішніх команд. — централізовано перераховує `Region.is_connection_valid` після occupation/loss/restore/annexation. Temporary disconnect через Occupation лише робить downstream Region invalid-connected; у Neutral вони переходять тільки після остаточної втрати ownership bridge Region.
 
 ### Triggers
 
@@ -191,7 +194,8 @@ Core world/economy models.
 - `become_castle_region(new_castle, player)` — після завершення Founding робить Region Owned Castle Region, встановлює `castle = new_castle`, `player`, `occupier_player_id = null`, `is_connection_valid = true` для Castle Region; зберігає ResourceSite levels і active ResourceSiteUpgrade. Уже фізично розпочатий чужий Transit може завершитися без нової CombatSituation за правилами Founding.
 - `set_connection_valid(value)` — змінює збережену характеристику `is_connection_valid` за результатом перерахунку територіального графа; тимчасовий розрив через Occupation не скидає ownership.
 - `apply_resource_site_upgrade(...)`, `can_start_resource_site_upgrade(...)`.
-- `on_army_presence_changed()`.
+- `on_army_presence_changed()`
+- **Викликає `on_army_presence_changed()`:** перерахунок `camps[]`, `camp_player_ids[]`, `blocking_camp_presence_player_ids[]`, `has_any_troops`, `is_occupied`, `active_combat_situation` та залежних `CampInRegion.can_progress`, `CastleFounding.can_progress`, `neutral_defense_recovery_rate`. Якщо остання Army occupier залишила Camp — `restore_owner_control()`; не створює CombatSituation лише через перерахунок присутності..
 - `destroy_neutral_defense()`.
 
 ### Triggers
