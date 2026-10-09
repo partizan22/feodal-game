@@ -46,9 +46,11 @@ Long-running construction, recruitment, founding and replacement processes.
 ### Trigger methods
 
 - `check_trigger_founder_invalid()` — відстежує перехід `founder_valid` у `false` для active Founding.
-- `on_trigger_founder_invalid()` — викликає `cancel()`; це cancellation, а не pause.
+- `on_trigger_founder_invalid()`
+- **Активні handlers CastleFounding:** `on_trigger_founder_invalid()` викликає `cancel()`; `on_trigger_complete()` викликає `complete()` рівно один раз, якщо `status` active і `can_progress`. `on_trigger_can_progress()` лише оновлює rate/планування progress. — викликає `cancel()`; це cancellation, а не pause.
 - `check_trigger_can_progress()`, `on_trigger_can_progress()`.
 - `check_trigger_complete()`, `on_trigger_complete()`.
+- **Активний handler completion:** `on_trigger_complete()` викликає `complete()` лише один раз для active instance, фіксує terminal `status` та припиняє повторне планування event.
 
 ---
 
@@ -90,7 +92,8 @@ Long-running construction, recruitment, founding and replacement processes.
 ### Trigger methods
 
 - `check_trigger_can_progress()`, `on_trigger_can_progress()`.
-- `check_trigger_current_recruit_finished()`, `on_trigger_current_recruit_finished()`.
+- `check_trigger_current_recruit_finished()`
+- **Активний handler Recruitment:** `on_trigger_current_recruit_finished()` за наявності `castle.barracks_free_capacity > 0` викликає `finish_current_recruit()` рівно один раз і переплановує наступний FIFO cycle; за відсутності Capacity завершений progress зберігається. `on_trigger_can_progress()` оновлює rate/розклад., `on_trigger_current_recruit_finished()`.
 
 ---
 
