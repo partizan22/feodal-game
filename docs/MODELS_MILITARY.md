@@ -37,8 +37,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `player` — `castle.player`; проміжна характеристика для computed characteristics інших Model без ланцюга relationships.
 - `current_region` — `army.current_region`.
 - `current_camp` — `army.camp`.
-- `is_regrouping` — чи `army.state == Regrouping`.
-- `is_camp_presence` — `current_camp != null && army.state in {Camp, Regrouping}`.
+- `is_regrouping` — `army.is_regrouping` (Army лишається у територіальному стані `Camp`).
+- `is_camp_presence` — `current_camp != null && army.state == Camp`, незалежно від `army.is_regrouping`.
 - `experience_balance`.
 
 ### User methods
@@ -69,7 +69,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `defense_loss_threshold`.
 - `target_combat_threshold`.
 - `incidental_combat_threshold`.
-- `state` — територіальний стан `Camp / Movement / BlockedInCastle` із потрібними V1 підстанами Movement. `Regrouping` — модифікатор Army у `Camp` (відстежується через `regrouping_progress` і чинний режим Regrouping), а не окремий територіальний стан. `BlockedInCastle` не є Camp-presence для зовнішніх взаємодій. Очікування queued CombatSituation не змінює територіального стану: Camp attacker лишається в Camp, Movement attacker зберігає Movement context із paused progress.
+- `state` — територіальний стан `Camp / Movement / BlockedInCastle` із потрібними V1 підстанами Movement. `Regrouping` — модифікатор Army у `Camp`, а не окремий територіальний стан. `BlockedInCastle` не є Camp-presence для зовнішніх взаємодій. Очікування queued CombatSituation не змінює територіального стану: Camp attacker лишається в Camp, Movement attacker зберігає Movement context із paused progress.
+- `is_regrouping` — прямий boolean-модифікатор Army у `Camp`; потрібний, щоб відрізнити початок Regrouping із `regrouping_progress == 0` від звичайного Camp. Поза `Camp` завжди `false`.
 
 ### Динамічні характеристики
 
@@ -111,8 +112,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `finish_movement()`.
 - `set_combat_waiting(combat)` — застосовує command-lock queued attacker без зміни фізичного state. Для Camp Army `camp` і Camp-presence зберігаються; для Movement Army Movement переходить у paused-for-combat state без втрати route/context.
 - `clear_combat_waiting()` — при CombatSituation Start/termination знімає waiting-lock; подальший Movement/Camp context визначається поточною CombatSituation.
-- `start_regrouping()` — переводить Army у Regrouping і скидає progress. Camp зберігається; Army продовжує бути звичайною Camp-presence для Food, Annexation, Founding, Occupation, defense та Camp lifecycle. Persistent thresholds зберігаються без змін; для defense effective threshold під час Regrouping = `0` (або `1.0`, якщо legal Retreat відсутній).
-- `finish_regrouping()` — повертає Army у Camp після `Dt`; знову діють збережені persistent thresholds.
+- `start_regrouping()` — залишає `state = Camp`, встановлює `is_regrouping = true` і скидає progress. Camp зберігається; Army продовжує бути звичайною Camp-presence для Food, Annexation, Founding, Occupation, defense та Camp lifecycle. Persistent thresholds зберігаються без змін; для defense effective threshold під час Regrouping = `0` (або `1.0`, якщо legal Retreat відсутній).
+- `finish_regrouping()` — після `Dt` скидає `is_regrouping = false`, лишає `state = Camp`; знову діють збережені persistent thresholds.
 - `start_retreat_to(region)` — звичайний player-vs-player Retreat: Army одразу фізично входить у допустиму retreat Region і починає `retreat-local` із метою Camp. Викликає `Region.resolve_arrival()` за тими самими Camp-bound registration conditions §16: у чужій Owned/Occupied Region CombatSituation створюється лише за наявності відповідної чужої Camp/Regrouping/раніше entered-for-Camp presence. За відсутності situation після `Dt` Army переходить у Camp, застосовує control/Occupation consequences і починає Regrouping; за наявності situation діють FIFO та CombatSituation Start -> Battle Start. Спільний Retreat кількох Army однієї side не створює дубльованих Occupation.
 - `start_loss_regrouping_in_current_camp()` — спеціальний результат поразки від Neutral Defense або City Defense: без Retreat у сусідню Region і без окремого post-defeat `Dt`; Army лишається/переходить у той самий Camp і одразу починає Regrouping.
 - `remove_dead_knights()`.
@@ -129,7 +130,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Trigger methods
 
 - `check_trigger_regrouping_complete()` — прогнозує `Dt` completion.
-- `on_trigger_regrouping_complete()` — якщо Army досі в Camp із активним Regrouping і `regrouping_progress >= Dt`, викликає `finish_regrouping()` рівно один раз; для вже завершеного або перерваного Regrouping повторно нічого не змінює.
+- `on_trigger_regrouping_complete()` — якщо `state == Camp`, `is_regrouping == true` і `regrouping_progress >= Dt`, викликає `finish_regrouping()` рівно один раз; для завершеного Regrouping повторно нічого не змінює.
 
 ---
 
@@ -157,7 +158,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `player_id` — ID `player`; проміжна scalar characteristic для computed characteristics інших Model без другого relationship hop.
 - `food_consumption` — сума `Army.food_consumption` усіх `armies[]`, включно з Regrouping; для Castle Region локальна частина відокремлюється у `local_food_consumption`.
 - `local_food_consumption` — для звичайної Region дорівнює `food_consumption`; для Castle Region враховує тільки Knight/Unit із `location_state = Camp` (поза Castle), а не Soldier/Unit, що споживають Food із запасів Castle.
-- `has_eligible_presence` — чи є хоча б одна Army з `state in {Camp, Regrouping}`.
+- `has_eligible_presence` — чи є хоча б одна Army з `state == Camp` (включно з `is_regrouping == true`); `BlockedInCastle` не враховується як зовнішня Camp-presence.
 - `food_coin_compensation` — для звичайної Region та для **Occupied Castle Region** обчислюється з локального дефіциту: якщо `region.food_production < region.camp_food_consumption`, частка цього Camp дорівнює `local_food_consumption / region.camp_food_consumption` від непокритого дефіциту, помноженого на `coins_per_food`; інакше `0`. Для неокупованої Castle Region дорівнює `0`: власні Camp Army споживають Food Castle, а не локальний Food.
 - `has_valid_adjacent_owned_region` — `player_id in region.valid_connected_neighbor_player_ids[]`; не обходить `Region -> neighbors[] -> Player`.
 - `can_progress` — Annexation progress можливий за ownership/Neutral Defense/adjacency rules, тільки якщо `region.has_active_founding == false` і `region.blocking_camp_presence_player_ids[]` не містить іншого Player. Foreign Transit Army не блокує Annexation, навіть якщо через її Transit у Region існує CombatSituation. Саме foreign Camp/Camp-bound presence, а не наявність CombatSituation, призупиняє progress. Regrouping Army свого Player підтримує progress так само, як Camp Army.
