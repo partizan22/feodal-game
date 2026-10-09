@@ -190,7 +190,8 @@ Core world/economy models.
 - `become_neutral()` — очищує formal owner/Castle/Occupation, встановлює `is_connection_valid = false`, зберігає ResourceSite levels, City `wealth` та `active_wealth_ratio`, а також active ResourceSiteUpgrade (вони продовжуються). Для попереднього Castle запускає перерахунок connectivity та остаточну втрату downstream Region без власного зв'язку. Army фізично залишаються в Region; активні Camp episodes не видаляються лише через зміну ownership.
 - `become_castle_region(new_castle, player)` — після завершення Founding робить Region Owned Castle Region, встановлює `castle = new_castle`, `player`, `occupier_player_id = null`, `is_connection_valid = true` для Castle Region; зберігає ResourceSite levels і active ResourceSiteUpgrade. Уже фізично розпочатий чужий Transit може завершитися без нової CombatSituation за правилами Founding.
 - `set_connection_valid(value)` — змінює збережену характеристику `is_connection_valid` за результатом перерахунку територіального графа; тимчасовий розрив через Occupation не скидає ownership.
-- `apply_resource_site_upgrade(...)`, `can_start_resource_site_upgrade(...)`.
+- `can_start_resource_site_upgrade(resource_type, quantity)` — використовує `resource_sites`, `resource_site_upgrades[]`, `player`, `castle`, `is_occupied`, `is_connection_valid` і поточні level buckets. Перевіряє ownership, доступність незарезервованих Site потрібного рівня та layered rule; upfront cost перевіряється через `Castle.can_pay_local_cost()` і `Player.can_pay_global_cost()`; самі reservations не вважаються completed levels.
+- `apply_resource_site_upgrade(resource_type, from_level, target_level, quantity)` — після завершення `ResourceSiteUpgrade.complete()` атомарно переносить рівно зарезервовану кількість Site між level buckets у `resource_sites`, незалежно від поточного ownership; повторне застосування terminal process заборонено.
 - `on_army_presence_changed()` — викликається після `Army.enter_region()`, `Army.enter_camp()`, `Army.leave_camp()`, завершення Retreat, split/merge та знищення Army. Інфраструктура актуалізує system-computed `armies[]`/`camps[]` і залежні `camp_player_ids[]`, `blocking_camp_presence_player_ids[]`, `has_any_troops`, `CampInRegion.can_progress`, `CastleFounding.can_progress`, `neutral_defense_recovery_rate`. Якщо з Camp пішла остання Army поточного occupier, викликає `restore_owner_control(expected_occupier_player)`; **не змінює напряму computed** `is_occupied` чи `active_combat_situation` і не реєструє CombatSituation тільки через факт перерахунку присутності.
 - `destroy_neutral_defense()`.
 
@@ -227,7 +228,7 @@ Core world/economy models.
 
 ### Domain methods
 
-- `complete_raid(player)` — зараховує reward за pre-raid `effective_wealth` і скидає `active_wealth_ratio = 0`; `wealth` і `city_defense` не змінюються.
+- `complete_raid(player)` — використовує `effective_wealth`/`raid_reward` до зміни ratio, викликає `Player.add_coins(reward)` для переданого attacker Player та атомарно скидає `active_wealth_ratio = 0`; `wealth` і `city_defense` не змінюються. Повторний виклик для того самого успішного Raid у межах однієї транзакції не допускається.
 
 ### Triggers
 
