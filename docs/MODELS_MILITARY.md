@@ -105,9 +105,9 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Domain methods
 
-- `enter_region(region)` — фіксує фізичний вхід Army у Region.
+- `enter_region(region)` — фіксує фізичний вхід Army у Region через `current_region` і викликає `Region.on_army_presence_changed()` для попередньої та нової Region; подальшу перевірку Camp-bound/Transit interaction виконує `Region.resolve_arrival()` із Movement context.
 - `enter_camp(camp)` — переводить Army у `state = Camp`, встановлює `camp`, викликає `CampInRegion.accept_army()` і `Region.on_army_presence_changed()`. Якщо на цей момент існує active Movement, він завершується/закривається; старий route більше не продовжується. Для retreat-local після цього окремо запускається Regrouping.
-- `leave_camp()` — через `CampInRegion.on_army_left()` очищує `camp` і викликає `Region.on_army_presence_changed()`; якщо це остання Army occupier у Camp, Occupation припиняється в цей момент.
+- `leave_camp()` — через `CampInRegion.on_army_left()` очищує `camp`, скидає `is_regrouping = false` при фактичному виході з Camp і викликає `Region.on_army_presence_changed()`; якщо це остання Army occupier у Camp, Occupation припиняється в цей момент.
 - `start_movement(movement)` — дозволено тільки якщо Army не Regrouping і не command-locked CombatSituation; перед початком Movement усі Knight цієї Army з `location_state = Castle` автоматично переходять у `Camp` через `Knight.leave_castle_for_movement()`.
 - `finish_movement()`.
 - `set_combat_waiting(combat)` — застосовує command-lock queued attacker без зміни фізичного state. Для Camp Army `camp` і Camp-presence зберігаються; для Movement Army Movement переходить у paused-for-combat state без втрати route/context.
@@ -120,7 +120,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `reassign_commander()` — якщо попередній Commander більше не належить Army (загинув або відокремився при Castle Occupation), обирає живого Knight із найбільшим `experience`; при рівності для occupation split і бойових втрат застосовує випадковий tie-breaker з відтворюваним game random seed за правилами §11 і §25. Порожня Army припиняє існування.
 - `ensure_commander_after_casualties()` — після розподілу всіх casualties за потреби викликає `reassign_commander()`; уже завершений бойовий розрахунок не змінюється.
 - `split_for_castle_occupation(castle)` — під час Occupation Castle Region залишає Army, що повністю складається з Knight у режимі «у замку», цілою, а для змішаної Army відокремлює кожного Knight «у замку» в окрему внутрішню Army; зовнішні Unit залишаються разом у вихідній Army для Retreat. Командирам, які відокремилися, призначає заміну через `reassign_commander()`. Враховує також pre-battle Retreat без casualties.
-- `block_in_castle(castle)` — переводить внутрішню Army цього Castle у `BlockedInCastle`, **очищує `camp` через `CampInRegion.on_army_left()`**, зберігає `current_region = castle.region`, Unit, Commander, thresholds і `Knight.stationed_castle`. Не бере участі у зовнішніх CombatSituation, Movement чи Attack, але допускає внутрішні merge/split/реорганізацію за §24; викликає `Region.on_army_presence_changed()`.
+- `block_in_castle(castle)` — переводить внутрішню Army цього Castle у `BlockedInCastle`, **очищує `camp` через `CampInRegion.on_army_left()`**, скидає `is_regrouping = false`, зберігає `current_region = castle.region`, Unit, Commander, thresholds і `Knight.stationed_castle`. Не бере участі у зовнішніх CombatSituation, Movement чи Attack, але допускає внутрішні merge/split/реорганізацію за §24; викликає `Region.on_army_presence_changed()`.
 - `unblock_from_castle(castle)` — після завершення Occupation переводить `BlockedInCastle` Army цього Castle у `Camp`, встановлює `camp = Region.get_or_create_camp(player)` через `CampInRegion.accept_army()`, `is_regrouping = false`; зберігає Unit, Commander, thresholds і `Knight.stationed_castle`, викликає `Region.on_army_presence_changed()`. Не змінює локальний режим Knight «у замку».
 
 ### Triggers
