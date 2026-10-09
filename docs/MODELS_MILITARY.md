@@ -84,6 +84,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `*active_defender_combat_situation` — Active CombatSituation, де Army входить у зафіксований список potential defenders, або `null`.
 - `is_combat_waiting` — `attacking_combat_situation.status == Registered`. Це command-lock, а не фізичний location/state.
 - `soldier_count`, `food_consumption`.
+- `outside_castle_food_consumption` — сума `Knight.food_consumption` для `knights[]` із `location_state = Camp`; використовується для локального Food у Castle Region, щоб не рахувати Unit у Barracks двічі.
 - `attack_strength`, `defense_strength`.
 - `coin_upkeep`.
 - `food_coin_compensation` — для Army у Movement дорівнює `food_consumption * coins_per_food`, включно з `transit`, `final-local`, `retreat-local` та paused-for-combat Movement; для Camp/Regrouping дорівнює `0`, бо там використовується local Food. Attacker, що чекає queued CombatSituation з Camp, продовжує local Food consumption.
