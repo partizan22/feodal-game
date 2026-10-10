@@ -74,22 +74,20 @@ GameEvent — одна логічно миттєва зміна світу.
 
 ## 5. EventContext
 
-Кожна GameEvent має власний EventContext / UnitOfWork, який живе лише одну ітерацію worker-а.
+Кожна GameEvent має власний EventContext / UnitOfWork, який живе лише одну ітерацію worker-а. Окремий клас `IdentityMap` не потрібний: реєстр `(model_type, model_id) -> Model` належить самому `EventContext`.
 
 Контекст щонайменше містить:
 - `Te`;
-- IdentityMap;
+- внутрішній реєстр моделей (функція IdentityMap);
 - список initialized Model;
 - список dirty / changed Model;
 - службовий стан DFS;
 - службові дані, потрібні для commit;
 - ліміти/діагностику ланцюга Actions.
 
-IdentityMap:
+Реєстр контексту: `(model_type, model_id) -> один instance Model`.
 
-`(model_type, model_id) -> один instance Model`
-
-Один і той самий instance в межах GameEvent ініціалізується лише один раз.
+`EventContext::get(type, id)` перевіряє реєстр, створює й реєструє новий instance перед викликом `Model::initialize()`. Саму ініціалізацію реалізує базовий `Model`. Поки вона не завершена, instance не можна використовувати як повноцінну Model. Одна й та сама Model у межах GameEvent ініціалізується лише один раз.
 
 Стан EventContext не переноситься як mutable state між різними GameEvent довгоживучого worker-а.
 
@@ -192,6 +190,8 @@ Domain relationship — логічний зв'язок між Model, а не SQL
 
 Domain relationship і фізичне представлення в SQL — різні рівні.
 
+Тип relationship (прямий або system-computed) **не визначається** cardinality. Дозволені прямі та system-computed зв'язки як одиничні, так і колекційні. Прямий зв'язок зберігається у domain state; system-computed розв'язується інфраструктурою. Повні правила getter/setter та lazy loading — у `docs/BASE_MODEL.md`.
+
 ## 10. Централізований опис relationships
 
 Relationships не повинні бути розкидані по окремих реалізаціях DFS конкретних Model.
@@ -205,12 +205,18 @@ Relationships не повинні бути розкидані по окреми�
 
 Declaration може також містити persistence metadata:
 - related model type;
+- cardinality (single/collection);
+- mode (direct/system-computed);
 - direction;
 - inverse relationship;
 - JSON path typed reference;
 - чи потрібна SQL FK projection;
 - як отримати id для FK;
 - junction mapping, якщо потрібно.
+
+Кожен оголошений relationship має віртуальний accessor `<name>_id` для доступу до ID або ID[] без завантаження моделей. Приклади: `$army->player_id` та `$player->armies_id`. Єдиний суфікс `_id` використовується і для колекцій. Явно оголошені звичайні характеристики, що зберігають ID/ID[], не стають relationships лише через назву; їх getter має пріоритет, неоднозначні декларації заборонені.
+
+Relationship getter повертає Model або `LazyCollection`. Кожна нова ітерація колекції отримує актуальний snapshot ID (у system-computed зокрема через SQL lookup), поточний `foreach` обходить фіксований snapshot; елементи ініціалізуються лише під час перебору. Нове звернення до `_id` повертає актуальний ID/ID[] без завантаження моделей. Для direct collection із уже актуальним state зайвий SQL не потрібний. System-computed зв'язки read-only; direct можна присвоювати як через об'єкт, так і через `_id`. Присвоєння direct collection (Model[] або ID[]) повністю замінює склад.
 
 ## 11. Зберігання state всередині Model
 
@@ -279,7 +285,7 @@ Wrapper:
 
 FK/junction fields — не незалежне джерело game state. Вони є persistence projection domain relationship.
 
-Під час `commit()` infrastructure синхронізує projection fields зі state/relationship values.
+При зміні прямого relationship setter **негайно** синхронізує відповідні FK/junction projections у поточній SQL-транзакції GameEvent. Це необхідно, щоб reverse lookup одразу бачив актуальні зв'язки. Проєкції не стають другим джерелом domain state. При фінальному commit перевіряється/забезпечується їхня узгодженість, але оновлення не відкладається до цього моменту.
 
 Для relationship, де reverse lookup не потрібний, typed reference може залишатися лише в JSON без окремого SQL FK.
 
@@ -293,13 +299,13 @@ Commit повинен:
 - зберегти змінений direct state;
 - зберегти актуальні dynamic characteristics;
 - перерахувати та зберегти актуальні computed characteristics;
-- синхронізувати FK/junction projections relationships;
+- забезпечити узгодженість FK/junction projections, уже синхронізованих setter-ами в транзакції;
 - записати history snapshot, якщо history mode увімкнений;
 - зафіксувати службові записи GameEvent/scheduled trigger checks в одній узгодженій операції.
 
 Computed characteristics є частиною persisted state після commit і використовуються як зафіксовані параметри наступного часового інтервалу.
 
-Точні DB transaction boundaries та retry/idempotency strategy можуть бути деталізовані вже у ТЗ реалізації, але GameEvent не повинна залишати частково застосований game state.
+SQL-транзакція **обов'язково** охоплює `event_action()`, DFS, trigger checks та фінальне збереження. Негайні projection writes видимі наступним lookup у цій транзакції, але не зовнішнім транзакціям до commit; при помилці відбувається rollback. Locking, retry/idempotency деталізуються в ТЗ.
 
 ## 16. `external_signature`
 
@@ -386,7 +392,7 @@ Model A змінила структурний state
 
 1. Вибрати наступну GameEvent.
 2. Зафіксувати її `Te`.
-3. Створити EventContext / IdentityMap.
+3. Створити EventContext із внутрішнім реєстром моделей і відкрити SQL-транзакцію.
 4. Ініціалізувати root Model на `Te`.
 5. Виконати відповідний `event_action()`.
 6. Зробити snapshot поточного `initialized_models`.
@@ -631,7 +637,7 @@ Debug rewind — окремий інструмент поверх history, а н
 - не можна частково commit-ити тільки частину взаємопов'язаних змін;
 - scheduled trigger checks, snapshots і model states повинні лишитися узгодженими.
 
-Точна SQL transaction strategy, lock strategy, retry та idempotency визначаються в ТЗ реалізації.
+Межі SQL-транзакції зафіксовані: вона починається перед `event_action()` та включає всі подальші фази GameEvent до commit. У разі помилки весь набір змін, зокрема негайні FK/junction writes, відкочується. Lock strategy, retry та idempotency визначаються в ТЗ реалізації.
 
 ## 34. User actions і черга worker
 
@@ -675,6 +681,7 @@ Worker:
     Te = event.game_time
 
     context = new EventContext(Te)
+    context.begin_transaction()
 
     root = context.load(event.model)
     root.event_action(event.payload)
@@ -732,7 +739,7 @@ Commit:
 persist direct state
 persist dynamic state
 recompute + persist computed state
-sync relationship projections
+ensure relationship projections consistency (direct updates already made by setters)
 persist trigger-check/GameEvent changes
 write history snapshot where enabled
 commit atomically
@@ -753,6 +760,10 @@ commit atomically
 11. Trigger action завжди є окремою GameEvent.
 12. `check_trigger() == 0` означає окрему GameEvent на тому самому `Te`.
 13. Worker не містить game business logic.
-14. SQL FK/junction — projection domain relationships, а не друге джерело game state.
+14. SQL FK/junction — projection domain relationships, а не друге джерело game state; direct relationship setters оновлюють їх одразу в транзакції.
 15. GameEvent повинна commit-итися атомарно або не commit-итися взагалі.
 16. Складні структурні залежності дозволено явно оновлювати через domain actions, а не насильно виражати через computed/trigger cascade.
+17. Relationship mode (direct/system-computed) не залежить від cardinality; system-computed read-only.
+18. Віртуальний `_id` повертає ID або ID[] без завантаження моделей, а getter звичайних ID characteristics має пріоритет.
+19. Lazy collection не кешує склад між ітераціями; кожний `foreach` фіксує власний актуальний snapshot ID.
+20. EventContext володіє внутрішнім IdentityMap-реєстром; `Model` реалізує ініціалізацію.
