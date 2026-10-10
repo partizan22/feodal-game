@@ -751,7 +751,7 @@ commit atomically
 2. Всі Model однієї GameEvent використовують один `Te`.
 3. Model temporal state advance виконується максимум один раз за GameEvent.
 4. Dynamic characteristic не читає relationships.
-5. Computed characteristic не переходить через relationship пов'язаної Model до третьої Model.
+5. Computed characteristic не виконує **явного** переходу через другий relationship (`$this->relation->other_relation->value`). Очікуваний механізм отримання такого результату — `$this->relation->computed_value`: пов'язана Model сама обчислює свої подальші залежності; транзитивні залежності через computed characteristics дозволені.
 6. Всі computed characteristics зберігаються при commit.
 7. Характеристики Model змінюються тільки methods самої Model.
 8. `external_signature` містить тільки міжмодельні computed dependencies.
