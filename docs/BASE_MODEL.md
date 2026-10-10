@@ -72,13 +72,14 @@ Computed characteristic може читати характеристики бе�
 
 **SQL-проєкції:** при кожній зміні прямого relationship відповідні FK/junction projections синхронізуються **негайно всередині поточної транзакції GameEvent**, щоб наступний reverse SQL lookup уже бачив зміну. Domain state лишається authoritative, а projection — його відображення. Транзакція охоплює `event_action()`, DFS, trigger checks і фінальний commit; при помилці весь SQL запис відкочується, а інші транзакції не бачать незавершених змін. Якщо зв'язок не має FK/junction projection, зайвий запис SQL не потрібний.
 
-DFS отримує ID сусідів із тієї самої централізованої декларації, після чого за потреби ініціалізує відповідні Model через `EventContext`. Окремого механізму завантаження для DFS немає.
+DFS отримує ID актуальних сусідів із тієї самої централізованої декларації та об'єднує їх із `previous_dfs_edges`, накопиченими setter-ом самої Model. За потреби ініціалізує Model через `EventContext`. Окремого механізму завантаження для DFS немає.
 
 ## 6. Setter і контроль змін
 
 Зміни direct characteristics і допустимі зміни dynamic state проходять через контрольований setter або wrapper, який делегує setter parent Model. Базовий клас:
 - перевіряє declaration, тип і допустимість запису;
 - позначає зміну для UnitOfWork / dirty tracking;
+- перед зміною direct relationship накопичує втрачені DFS-ребра в `previous_dfs_edges` самої Model за централізованою декларацією, не стираючи їх при повторних змінах;
 - при зміні direct relationship негайно оновлює відповідні SQL FK/junction projections у відкритій транзакції;
 - не дозволяє записувати computed characteristics як звичайні direct values;
 - не допускає прямого запису характеристик іншої Model: викликається її публічний domain method.
@@ -93,6 +94,8 @@ DFS отримує ID сусідів із тієї самої централіз
 - Поточний `external_signature` обчислюється на момент перевірки за поточним state; після initialization computed getters завжди виконують актуальні формули.
 - Signature не має окремого persisted hash та не кешується як computed value.
 
+Якщо до `external_signature` входить характеристика-зв'язок, вона представлена **ID пов'язаної моделі** (для колекції — ID[]), а не `external_signature` пов'язаних моделей. Зміна складу зв'язку відображається через ID; зміни стану пов'язаних моделей поширюються окремо через DFS.
+
 Базовий клас порівнює baseline і поточну signature. Конкретні моделі визначають її склад; базовий клас не вгадує залежності.
 
 ## 8. Універсальний DFS
@@ -106,13 +109,15 @@ dfs(M):
     M.dfs_visited = true
     if M.external_signature() == M.initial_external_signature:
         return
-    for U in relationship_graph.neighbors(M):
+    for U in union(M.previous_dfs_edges, current_dfs_neighbors(M)):
         context.initialize(U)   # лише якщо ще не initialized
         U.dfs()
 ```
 
 - `dfs_visited` живе тільки одну GameEvent; це не те саме, що initialized.
-- Сусідів визначає централізований relationship declaration, а не індивідуальний код обходу кожної Model.
+- Актуальних сусідів визначає централізований relationship declaration, а втрачені DFS-ребра накопичує setter у `previous_dfs_edges` самої Model. DFS обходить об'єднання обох наборів; не кожен relationship є DFS-ребром.
+- `previous_dfs_edges` — event-local технічний стан Model, не persisted characteristic; повторні зміни накопичуються, а повернення початкового зв'язку не очищує список. EventContext лише керує обходом.
+- Старе ребро не означає безумовного оновлення сусіда: propagation відбувається тільки за зміни `external_signature` моделі-джерела.
 - DFS **не змінює ігровий state, не виконує actions, не перераховує та не зберігає computed values, не запускає triggers**. Він лише проходить граф для актуалізації залучених моделей.
 - Нові моделі, ініціалізовані під час DFS, не додаються до початкового списку roots, але беруть участь у рекурсивному обході.
 - Порядок обходу не повинен впливати на значення характеристик: computed getters не мають side effects або кешу.
@@ -143,7 +148,7 @@ dfs(M):
 ```text
 abstract Model:
     id, context, state, lifecycle_phase
-    initial_external_signature, dfs_visited
+    initial_external_signature, dfs_visited, previous_dfs_edges
 
     initialize(persisted_state, Te)
     get_characteristic(name)
@@ -152,7 +157,7 @@ abstract Model:
     get_relationship_id(name)      # ID/null або ID[] без завантаження моделей
     set_direct_relationship(name, value_or_ids)
     external_signature()          # визначає нащадок
-    domain_related_models()       # за централізованим declaration
+    domain_related_models()       # актуальні DFS-сусіди + previous_dfs_edges
     dfs()                         # спільна реалізація
     check_all_triggers()          # спільний dispatcher
     serialize_for_commit(Te)
@@ -176,6 +181,9 @@ ConcreteModel extends Model:
 - dynamic advance використовує лише власні збережені параметри, не читає relationships;
 - `initial_external_signature` незмінна після `event_action()`;
 - DFS обходить залежні Model лише за зміни signature, не змінює їхній game state та не викликає actions;
+- setter прямого зв'язку зберігає втрачені DFS-ребра до перезапису; DFS бачить старих і нових сусідів, але не поширює зміни за незмінної signature;
+- багаторазові зміни прямого зв'язку накопичують старі ребра; system-computed зворотна колекція не потребує власного setter tracking;
+- relationship у `external_signature` представлений ID/ID[], а не signature пов'язаних моделей;
 - тригери, створені при `N=0`, не виконуються у поточній GameEvent;
 - після commit persisted computed values доступні наступній GameEvent як saved parameters;
 - setter direct relationship доступний через Model та через `_id`, із негайним SQL projection update;

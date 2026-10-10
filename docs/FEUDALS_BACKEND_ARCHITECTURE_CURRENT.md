@@ -322,6 +322,8 @@ SQL-транзакція **обов'язково** охоплює `event_action(
 
 Signature може складатися як із raw values, так і з semantic aggregates.
 
+Якщо до `external_signature` входить характеристика-зв'язок, вона представлена **ID пов'язаної моделі** (для колекції — ID[]), а не `external_signature` пов'язаних моделей. Зміна складу зв'язку відображається через ID; зміни стану пов'язаних моделей поширюються окремо через DFS.
+
 `external_signature` не зберігається в БД окремим persisted hash.
 
 Для кожного instance під час initialization фіксується `initial_external_signature`.
@@ -344,6 +346,10 @@ for M in roots:
 
 `dfs()` реалізований у базовому Model.
 
+Перед зміною прямої характеристики-зв'язку універсальний setter перевіряє централізовану декларацію напрямків DFS та накопичує **втрачені DFS-ребра** в `previous_dfs_edges` самої моделі. Зберігаються тільки DFS-значущі ребра. Список — тимчасовий технічний стан моделі на одну GameEvent, не persisted characteristic. Повторні зміни накопичують ребра з дедуплікацією; повернення початкового значення не очищує список. Зворотні system-computed колекції змінюються через setter прямого зв'язку і окремого відстеження не потребують.
+
+При DFS модель бере **об'єднання `previous_dfs_edges` та актуальних DFS-ребер**, визначених за поточними зв'язками і централізованою декларацією. EventContext керує обходом та ініціалізацією, але не зберігає й не визначає ребра. Наявність старого ребра не означає безумовного propagation: перехід до сусідів відбувається лише якщо `external_signature` моделі відрізняється від `initial_external_signature`.
+
 Алгоритм:
 
 ```text
@@ -356,7 +362,7 @@ dfs(M):
     if M.external_signature == M.initial_external_signature:
         return
 
-    for U in domain_related_models(M):
+    for U in union(M.previous_dfs_edges, current_dfs_neighbors(M)):
         initialize(U) if needed
         U.dfs()
 ```
@@ -720,7 +726,7 @@ dfs_visited = true
 if external_signature == initial_external_signature:
     return
 
-for related_model in relationship_graph.neighbors(this):
+for related_model in union(previous_dfs_edges, current_dfs_neighbors(this)):
     initialize related_model if needed
     related_model.dfs()
 ```
