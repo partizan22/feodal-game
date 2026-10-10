@@ -53,7 +53,7 @@ Runtime-поля не є game characteristics і не потрапляють д�
 
 Getter повертає relationship-об'єкти через внутрішній реєстр `EventContext`, а вкладені `_class`-структури — як wrappers, прив'язані до parent Model і JSON path. Не можна видавати mutable arrays/references, що обходять контроль state.
 
-Computed characteristic може читати характеристики безпосередньо пов'язаних моделей, але не переходити через зв'язок цієї моделі до третьої (`A -> B -> C`). Dynamic advance не читає жодних relationships. Ці обмеження стосуються формул характеристик, а не domain methods.
+Computed characteristic може читати характеристики безпосередньо пов'язаних моделей, але **не може явно переходити через другий relationship** (`$this->relation->other_relation->value`). **Очікуваний механізм** для такої залежності — звернення до обчислювальної характеристики безпосередньо пов'язаної моделі (`$this->relation->computed_value`): саме ця модель відповідає за подальші залежності та їх обчислення. Транзитивні залежності через computed characteristics не заборонені. Dynamic advance не читає жодних relationships. Ці обмеження стосуються формул характеристик, а не domain methods.
 
 ## 5. Relationships і lazy loading
 
