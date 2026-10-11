@@ -45,14 +45,14 @@ Player може явно виконати refresh target opponent. Нове зн
 
 Звичайний Transit через Neutral Region не створює територіальної CombatSituation.
 
-Допустимий вхід Army у чужу Owned/Occupied Region або власну Occupied Region створює CombatSituation незалежно від наявності defender при Registration; вхід owner у власну non-Occupied Region — виняток. На Start фіксуються доступні defenders у Camp/Regrouping або entered-for-Camp; за їх відсутності БС скасовується без battle. Спеціальні правила Transit (зокрема прохід третього Player через Occupied Region без БС), Allow Transit, FIFO, command-lock і зарахування часу очікування зберігаються. У V1 Transit Army не долучаються до оборони та продовжують маршрут незалежно від бою.
+Допустимий вхід Army у чужу Owned/Occupied Region або власну Occupied Region створює CombatSituation незалежно від наявності defender при Registration; вхід owner у власну non-Occupied Region — виняток. На Start фіксуються доступні defenders у Camp/Regrouping або entered-for-Camp; за їх відсутності БС скасовується без battle. Спеціальні правила Transit (зокрема допустимість проходу третього Player через Occupied Region), Allow Transit, FIFO, command-lock і зарахування часу очікування зберігаються. У V1 Transit Army не долучаються до оборони та продовжують маршрут незалежно від бою.
 
 Для Transit такої CombatSituation на Start використовується snapshot target_opponent, зафіксований при Registration:
 
 - якщо formal owner поточної Region == target_opponent -> Aggressive Transit;
 - інакше -> NonAggressive Transit.
 
-Occupied Region є винятком: третій Player (не formal owner та не occupier) може Transit без CombatSituation, Allow Transit і Aggressive/NonAggressive classification. Formal owner не має права Transit через власну Occupied Region — для входу він мусить атакувати occupier з метою Camp. Чужий Transit через Capital Region заборонений. У не столичних Castle Region діють звичайні правила Owned/Occupied. Виняток: Transit, уже розпочатий фізичним входом у Neutral Region до completion Castle Founding, завершується без CombatSituation.
+Occupied Region є винятком: третій Player (не formal owner та не occupier) може Transit із реєстрацією CombatSituation, Allow Transit і Aggressive/NonAggressive classification. Formal owner не має права Transit через власну Occupied Region — для входу він мусить атакувати occupier з метою Camp. Чужий Transit через Capital Region заборонений. У не столичних Castle Region діють звичайні правила Owned/Occupied. Виняток: Transit, уже розпочатий фізичним входом у Neutral Region до completion Castle Founding, завершується без CombatSituation.
 
 ---
 
