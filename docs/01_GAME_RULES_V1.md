@@ -144,7 +144,7 @@ Transit означає прохід без зупинки у Camp. Formal owner 
 
 # 16. CombatSituation: Registration, Start і FIFO
 
-Кожна CombatSituation має одну Attacker Army та Defender side й проходить стадії Registration, Start, Battle Start. Усі player-vs-player CombatSituation однієї Region впорядковані у FIFO-чергу. Кілька атакуючих Army формують окремі situations. Camp-bound entry у чужу Owned/Occupied Region (включно з Retreat) реєструє CombatSituation лише за наявності чужих Army у Camp або раніше введених для Camp Army в `EnteringCamp`; інакше Camp досягається за звичайний `Dt` без CombatSituation, **навіть за наявності чужих Army лише у `Transit`**. Вхід formal owner у власну ще non-Occupied Region з чужою `EnteringCamp` Army також реєструє CombatSituation. Кожен наступний Camp-bound entry за наявності чужої Army створює власну situation у FIFO; defender визначається на Start за актуальною присутністю: пріоритет має чужий Player із доступними Army у `Camp`/Regrouping, а за його відсутності — доступні чужі Army у `EnteringCamp`. Attacker іншої unresolved CombatSituation (Active або queued) не може бути defender, навіть якщо він у `Camp` або `EnteringCamp`; це обмеження діє також для добровільного приєднання Transit Army до defense. Після попереднього battle defender може змінитися разом з occupier. Camp-bound attacker з невирішеною situation не переходить у `Camp`, навіть коли минуло `Dt`; час очікування при цьому зараховується. Якщо попередній бій усунув interaction, queued situation завершується без battle. Якщо на Start раніше зареєстрованої Camp-bound situation більше немає interaction із чужими Camp/EnteringCamp Army, вона завершується без battle. Час очікування у FIFO зараховується до `entry -> Camp`: якщо від входу минуло щонайменше `Dt`, Army відразу переходить у `Camp`, інакше завершує залишок `Dt`. Наслідки Camp arrival застосовуються до Start наступної situation. Якщо interaction існує, Battle Start настає через `Dt`; після перемоги Camp-bound Attacker одразу переходить у `Camp`, а зміни контролю застосовуються до Start наступної situation у FIFO.
+Для правил розрізняємо три типи БС (без окремих моделей): **(1)** БС у зайнятій Region — реєструється при допустимому вході будь-якої Army, крім входу формального власника у свою неокуповану Region; захисники у Camp/Regrouping/entered-for-Camp визначаються на Start, за їх відсутності БС скасовується; **(2)** БС між Player у Neutral Region — при Registration фіксуються attacker і target Player, який вже має Army у Camp/Regrouping **або entered-for-Camp**; конкретні defenders визначаються на Start, за їх відсутності БС скасовується; **(3)** атаки Neutral Defense або City Raid — миттєві БС, всі етапи в одному game event. Для player-vs-player БС діє спільна FIFO-черга Region; Transit Army у V1 не можуть долучатися до defense й продовжують маршрут незалежно від battle.
 
 [Детальна специфікація §16](rules/05_COMBAT.md).
 
@@ -168,7 +168,7 @@ Attacker має Target та Incidental Combat Threshold, обидва більш
 
 # 19. Player-vs-player combat у Neutral Region
 
-У Neutral Region Army у Camp **без Regrouping** може окремою дією атакувати Camp конкретного іншого Player, **включно з Army-захисником у Regrouping**. Army в Regrouping сама не може ініціювати Attack. Така атака створює CombatSituation; інші власні Army автоматично до Attacker не приєднуються.
+У Neutral Region Army у Camp **без Regrouping** може атакувати конкретного Player, який має Army в Camp/Regrouping **або entered-for-Camp**. Army в Regrouping сама не може ініціювати Attack. Така атака створює CombatSituation; інші власні Army автоматично до Attacker не приєднуються.
 
 [Детальна специфікація §19](rules/05_COMBAT.md).
 
@@ -224,7 +224,7 @@ Retreat здійснюється в допустиму сусідню Region з 
 
 # 26. Neutral Defense
 
-Neutral Defense — абстрактна оборона Neutral Region, а не Army. Її можна атакувати окремою миттєвою дією з Camp, поза CombatSituation. Якщо є City, при цій атаці враховується її Defense. Neutral Defense відновлюється за передбачених умов.
+Neutral Defense — абстрактна оборона Neutral Region, а не Army. Її можна атакувати окремою миттєвою дією з Camp, у формі миттєвої CombatSituation. Якщо є City, при цій атаці враховується її Defense. Neutral Defense відновлюється за передбачених умов.
 
 [Детальна специфікація §26](rules/01_WORLD_AND_REGIONS.md).
 
@@ -256,7 +256,7 @@ City має довгостроковий wealth і частку active_wealth_ra
 
 # 30. City Raid
 
-City Raid — окрема миттєва дія Army у Camp проти City Defense; Neutral Defense не бере участі. Власну City атакувати не можна. Успіх дає Coins і скидає active_wealth_ratio; поразка залишає Army у тій самій Region; після поразки починається Regrouping; City Raid у Castle Region неможливий, оскільки заснування Castle в Region із City заборонене.
+City Raid — миттєва CombatSituation, ініційована Army у Camp проти City Defense; Neutral Defense не бере участі. Власну City атакувати не можна. Успіх дає Coins і скидає active_wealth_ratio; поразка залишає Army у тій самій Region; після поразки починається Regrouping; City Raid у Castle Region неможливий, оскільки заснування Castle в Region із City заборонене.
 
 [Детальна специфікація §30](rules/05_COMBAT.md).
 
