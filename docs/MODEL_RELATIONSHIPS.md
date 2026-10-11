@@ -68,7 +68,7 @@
 ## Region ↔ CombatSituation
 - **Бойові ситуації в області** — `1:N`. `CombatSituation.region` (П) ↔ `Region.combat_situations[]` (О, тільки актуальні `Registered` та `Active`; історія не входить).
 - **Поточна активна бойова ситуація** — похідна вибірка з попереднього зв'язку, **не незалежний FK-зв'язок**: `Region.active_combat_situation` (О, `0..1`) ↔ `CombatSituation.region` (П).
-- **Хвіст черги** — `1:0..1` для Region: `Region.last_combat_situation` (П, остання актуальна БС або `null`) ↔ —. Це окреме посилання на елемент того самого набору БС.
+- **Хвіст черги** — `1:0..1` для Region: `Region.combat_situation_queue_tail` (П, остання актуальна БС або `null`) ↔ —. Це окреме посилання на елемент того самого набору БС.
 - **Область входу атакувальника (snapshot)** — `1:N`, nullable. `CombatSituation.attacker_entry_from_region` (П) ↔ —.
 - `Region.next_queued_combat` **прибрано**; чергою керує сама CombatSituation, а не Region.
 
@@ -82,7 +82,7 @@
 
 ## CombatSituation ↔ CombatSituation
 - **Попередня/наступна БС в FIFO-черзі однієї Region** — самозв'язок `1:0..1` у межах актуальної черги. `CombatSituation.previous_combat_situation` (П, `null` для голови) ↔ `CombatSituation.next_combat_situation` (О, system-computed зворотний пошук). Жодних DFS-залежностей через цей зв'язок.
-- При завершенні БС вона сама визначає наступну **до** власного завершення/виключення з актуальних моделей та запускає її; наступна на старті перевіряє актуальність ситуації. Якщо наступної немає, очищується `Region.last_combat_situation`. Історичне посилання `previous_combat_situation` після завершення попередньої БС очищувати не потрібно. `registration_order` для цієї черги не потрібен.
+- При завершенні БС вона сама визначає наступну **до** власного завершення/виключення з актуальних моделей та запускає її; наступна на старті перевіряє актуальність ситуації. Якщо наступної немає, очищується `Region.combat_situation_queue_tail`. Історичне посилання `previous_combat_situation` після завершення попередньої БС очищувати не потрібно. `registration_order` для цієї черги не потрібен.
 
 ## Knight ↔ Army
 - **Армія лицаря** — `1:N`. `Knight.army` (П) ↔ `Army.knights[]` (О).
@@ -100,7 +100,7 @@
 ## Army ↔ CombatSituation
 - **Атакувальна армія** — `1:0..1` серед актуальних CombatSituation. `CombatSituation.attacker` (П) ↔ `Army.attacking_combat_situation` (О, максимум одна незавершена).
 - **Потенційні захисники** — `M:N`. `CombatSituation.potential_defenders[]` (П, колекція, snapshot на Start) ↔ `Army.active_defender_combat_situation` (О, лише Active).
-- **Кандидати на захист із транзиту** — `M:N`. `CombatSituation.transit_defender_candidates[]` (П, колекція) ↔ —. Цей зв'язок не тотожний участі у захисті.
+- **Кандидати на захист із транзиту** — відкладено після V1: `CombatSituation.transit_defender_candidates[]` не заповнюється й не створює актуального зв'язку.
 
 ## Додаткові зауваження до інвентаризації
 
