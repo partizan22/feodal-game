@@ -185,7 +185,7 @@ Legal Retreat Region визначаються окремо для Attacker side 
 
 Neutral Defense саме по собі Retreat не блокує.
 
-Порожня foreign Owned non-Occupied Region може бути legal Retreat destination. Retreat entry перевіряє присутність чужих Army у `Camp`/Regrouping або раніше введених `EnteringCamp`: за їх відсутності CombatSituation не реєструється і Retreat Army досягає Camp через `Dt`, створюючи Occupation; за наявності реєструється CombatSituation за загальними правилами FIFO.
+Порожня foreign Owned non-Occupied Region може бути legal Retreat destination. Retreat entry у чужу Owned Region реєструє CombatSituation незалежно від наявності defenders; за їх відсутності на Start БС скасовується, а Army завершує перехід до Camp з урахуванням вже витраченого часу.
 
 ## 23.3 Пріоритет вибору
 
