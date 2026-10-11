@@ -90,7 +90,7 @@ Player може миттєво й безкоштовно добровільно 
 
 Neutral Defense — абстрактна поточна сила Neutral Region, а не Army.
 
-Вхід Army у Camp Neutral Region сам по собі не запускає battle. Neutral Defense атакується окремою миттєвою дією конкретної Army у Camp; Regrouping Army не може її ініціювати. Ця дія не створює CombatSituation і не входить у player-vs-player FIFO.
+Вхід Army у Camp Neutral Region сам по собі не запускає battle. Neutral Defense атакується окремою миттєвою дією конкретної Army у Camp; Regrouping Army не може її ініціювати. Ця дія створює миттєву CombatSituation (Registration, Start і завершення в одному game event) і не входить у player-vs-player FIFO.
 
 Якщо в Region є City, defender strength при атаці Neutral Defense дорівнює:
 
