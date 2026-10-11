@@ -47,7 +47,7 @@ Occupied Region формально продовжує належати попе�
 
 У Region не може одночасно бути кілька occupier. Якщо третій Player входить у цю Region з локальною метою Camp, він взаємодіє з поточним occupier; після перемоги й переходу в Camp він стає новим occupier. Якщо перемагає формальний owner, Occupation припиняється й відновлюється звичайний Owned state.
 
-Transit через Occupied Region дозволений третім Player, який не є formal owner або current occupier, і не створює CombatSituation. Allow Transit та Aggressive/NonAggressive classification для такого Transit не застосовуються.
+Transit через Occupied Region дозволений третім Player, який не є formal owner або current occupier, і реєструє CombatSituation при вході (за відсутності defenders на Start скасовується). Allow Transit та Aggressive/NonAggressive classification для такого Transit не застосовуються.
 
 Formal owner **не має права Transit** через власну Occupied Region. Його вхід можливий лише через атаку occupier із локальною метою **Camp**.
 
