@@ -82,7 +82,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `player_id` — ID `player`; проміжна scalar characteristic для computed characteristics інших Model без другого relationship hop.
 - `*movement` — active Movement або `null`; якщо Army є queued attacker (`is_combat_waiting == true`), Movement може зберігати незавершений route/context, але progress призупинений.
 - `*attacking_combat_situation` — незавершена CombatSituation, де ця Army є attacker, або `null`; invariant: максимум одна.
-- `*active_defender_combat_situation` — Active CombatSituation, де Army входить у зафіксований список potential defenders, або `null`.
+- `*active_defender_combat_situation` — Active CombatSituation, де Army входить у зафіксований на Start список `CombatSituation.defenders[]`, або `null`.
 - `is_combat_waiting` — `attacking_combat_situation.status == Registered`. Це command-lock, а не фізичний location/state.
 - `soldier_count`, `food_consumption`.
 - `outside_castle_food_consumption` — сума `Knight.food_consumption` для `knights[]` із `location_state = Camp`; використовується для локального Food у Castle Region, щоб не рахувати Unit у Barracks двічі.
