@@ -99,7 +99,7 @@
 
 ## Army ↔ CombatSituation
 - **Атакувальна армія** — `1:0..1` серед актуальних CombatSituation. `CombatSituation.attacker` (П) ↔ `Army.attacking_combat_situation` (О, максимум одна незавершена).
-- **Потенційні захисники** — `M:N`. `CombatSituation.potential_defenders[]` (П, колекція, snapshot на Start) ↔ `Army.active_defender_combat_situation` (О, лише Active).
+- **Потенційні захисники** — кратність зв'язку ще не визначена (потребує окремого рішення). `CombatSituation.potential_defenders[]` (П, колекція, snapshot на Start) ↔ `Army.active_defender_combat_situation` (О, лише Active).
 - **Кандидати на захист із транзиту** — відкладено після V1: `CombatSituation.transit_defender_candidates[]` не заповнюється й не створює актуального зв'язку.
 
 ## Додаткові зауваження до інвентаризації
