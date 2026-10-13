@@ -99,13 +99,12 @@
 
 ## Army ↔ CombatSituation
 - **Атакувальна армія** — `1:0..1` серед актуальних CombatSituation. `CombatSituation.attacker` (П) ↔ `Army.attacking_combat_situation` (О, максимум одна незавершена).
-- **Потенційні захисники** — кратність зв'язку ще не визначена (потребує окремого рішення). `CombatSituation.potential_defenders[]` (П, колекція, snapshot на Start) ↔ `Army.active_defender_combat_situation` (О, лише Active).
-- **Кандидати на захист із транзиту** — відкладено після V1: `CombatSituation.transit_defender_candidates[]` не заповнюється й не створює актуального зв'язку.
+- **Армії-захисники** — `1:N`, для Army `0..1` серед Active CombatSituation. `CombatSituation.defenders[]` (П, остаточний список на Start) ↔ `Army.active_defender_combat_situation` (О, лише Active).
 
 ## Додаткові зауваження до інвентаризації
 
 1. **ID і похідні скаляри не є додатковими зв'язками.** Наприклад, `Army.player_id`, `CampInRegion.player_id`, `Region.player_id`, `Region.camp_player_ids[]`, `Region.blocking_camp_presence_player_ids[]`, `Castle.active_knight_replacement_id` не створюють самі по собі окремої пари навігаційних характеристик. Для `active_knight_replacement_id` може знадобитися окремо формалізувати семантику вибору конкретного KnightReplacement.
-2. **Структуровані поля** на кшталт `CombatSituation.transit_defender_join_decisions`, `defenders_retreat_decisions` та `locked_combat_parameters` можуть містити ID Army, але специфікації не визначають їх як окремі навігаційні зв'язки. Вони не додані як самостійні зв'язки.
+2. **Структуровані поля** на кшталт `CombatSituation.defenders_retreat_decisions` та `locked_combat_parameters` можуть містити ID Army, але специфікації не визначають їх як окремі навігаційні зв'язки. Вони не додані як самостійні зв'язки.
 3. **Похідні проєкції** `Region.active_combat_situation`, `Castle.recruitment` та інші filtered views треба врахувати при формалізації способу отримання ID, але не дублювати незалежними фізичними зв'язками.
 4. **Самозв'язки** підтримуються форматом на рівних правах із міжмодельними. Поточний явний приклад — `Region.neighbors[]`.
 5. **Не зафіксовано тут**: SQL-таблиці/колонки, authoritative side для зміни, тип direct/system-computed за майбутньою централізованою схемою, DFS-напрямки. Це окремий наступний крок; вигадувати їх на підставі лише назви характеристики не можна.
