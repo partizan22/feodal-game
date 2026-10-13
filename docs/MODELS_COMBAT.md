@@ -17,7 +17,6 @@ Player-vs-player CombatSituation and combat lifecycle.
 - `region`.
 - `attacker` — єдина attacking Army; фіксується на Registration.
 - `registration_reason` — entry into foreign Owned/Occupied Region або own Occupied Region (за дозволеними Movement rules; крім входу owner у own non-Occupied Region) / explicit Neutral Camp attack / instant Neutral Defense attack / instant City Raid.
-- `registration_order` — FIFO order у єдиній player-vs-player черзі Region.
 - `attacker_entry_from_region` — snapshot `Movement.entry_from_region` під час Registration для Camp-bound/Transit interaction (включно з Retreat і queued situation); `null` лише для explicit attack між Camp у Neutral Region. Не переобчислюється з mutable `Movement.route[]` на Start/Battle Start. Використовується для напрямків attacker/defender Retreat.
 - `status` — `Registered / Active / Resolved`.
 - `start_time` — встановлюється тільки при CombatSituation Start; `null` для queued Registered.
