@@ -27,14 +27,14 @@ Core world/economy models.
 
 ### Інші обчислювальні характеристики
 
-- `coin_balance` — effective rate зміни Coins. Складає `Region.coin_balance_for_owner` із `regions[]`, `Castle.coin_balance` і `Castle.food_coin_compensation` із `castles[]`, звичайний `Army.coin_upkeep` і `Army.food_coin_compensation` для Army у Movement із `armies[]`, а також `CampInRegion.food_coin_compensation` із `camps[]` для Region окрім власних Region з замком. У власній Castle Region локальна Camp-компенсація дорівнює `0`, бо Food усіх власних Camp Unit враховується у Castle. Кожен дефіцит Food компенсується рівно один раз.
+- `coin_balance` — чистий баланс надходжень і витрат Coins до застосування обмежень запасу. Складає `Region.coin_balance_for_owner` із `regions[]`, `Castle.coin_balance` і `Castle.food_coin_compensation` із `castles[]`, звичайний `Army.coin_upkeep` і `Army.food_coin_compensation` для Army у Movement із `armies[]`, а також `CampInRegion.food_coin_compensation` із `camps[]` для Region окрім власних Region з замком. У власній Castle Region локальна Camp-компенсація дорівнює `0`, бо Food усіх власних Camp Unit враховується у Castle. Кожен дефіцит Food компенсується рівно один раз.
 - `coins_rate` — `coin_balance` з обмеженням на мінімальний запас `coins = 0`: за нульового запасу від’ємна швидкість обрізається до `0`.
-- `gold_balance` — effective rate зміни Gold; агрегує `Region.gold_income_for_owner` з `regions[]`, тому Occupied/disconnected Region не дають Gold формальному owner.
+- `gold_balance` — чистий баланс зміни Gold без обмежень запасу; агрегує `Region.gold_income_for_owner` з `regions[]`, тому Occupied/disconnected Region не дають Gold формальному owner.
 - `gold_rate` — `gold_balance` з обмеженням на мінімальний запас `gold = 0`.
-- `silver_balance` — effective rate зміни Silver; агрегує `Region.silver_income_for_owner` з `regions[]`, тому Occupied/disconnected Region не дають Silver формальному owner.
+- `silver_balance` — чистий баланс зміни Silver без обмежень запасу; агрегує `Region.silver_income_for_owner` з `regions[]`, тому Occupied/disconnected Region не дають Silver формальному owner.
 - `silver_rate` — `silver_balance` з обмеженням на мінімальний запас `silver = 0`.
 
-- `empty_coins` — `coins == 0 && coin_balance <= 0`.
+- `empty_coins` — `coins == 0 && coin_balance <= 0` (баланс зберігає дефіцит навіть коли `coins_rate = 0`).
 
 
 ### User methods
@@ -87,9 +87,9 @@ Core world/economy models.
 
 ### Інші обчислювальні характеристики
 
-- `resource_balance` — effective rate для `wood`, `stone`, `iron`; агрегує `Region.resource_surplus_to_castle` з `regions[]` окремо для кожного ресурсу. Якщо відповідний ресурс досяг `warehouse_capacity`, його позитивний effective rate стає `0` (надлишок production втрачається), без впливу на інші два ресурси. Одноразові витрати застосовуються методами, а не як від'ємний production rate.
+- `resource_balance` — чистий баланс надходжень `wood`, `stone`, `iron`; агрегує `Region.resource_surplus_to_castle` з `regions[]` окремо для кожного ресурсу, без обмеження місткості. Одноразові витрати застосовуються методами, а не як від'ємний production rate.
 - `resources_rate` — для кожного з `wood`, `stone`, `iron` застосовує `resource_balance` окремо: при досягненні `warehouse_capacity` позитивний баланс обрізається до `0`; при нульовому запасі від’ємна швидкість не допускається.
-- `food_balance` — `food_income - non_military_food_consumption - castle_stationed_food_consumption - castle_region_army_food_consumption`, з урахуванням межі `granary_capacity`: якщо `food >= granary_capacity` і raw balance позитивний, effective `food_balance = 0` (надлишок втрачається); від'ємний balance не обрізається, щоб запас Food міг зменшуватися. Цей effective rate використовується для `empty_food` і компенсації дефіциту.
+- `food_balance` — чистий баланс `food_income - non_military_food_consumption - castle_stationed_food_consumption - castle_region_army_food_consumption`, без застосування межі `granary_capacity` чи нульового запасу. Баланс використовується для розрахунку дефіциту й компенсації, а фактичне накопичення визначає `food_rate`.
 - `food_rate` — застосовує `food_balance` з обмеженнями `granary_capacity` та мінімального запасу `food = 0`; надлишок за повного сховища й дефіцит за нульового запасу дають швидкість `0`.
 
 - `food_income` — сума позитивних `Region.food_surplus_to_castle` з `regions[]`. Негативний Food balance звичайних Region до Castle не передається.
@@ -100,7 +100,7 @@ Core world/economy models.
 - `coin_balance` — Coin income/upkeep самого Castle, включно з регулярним Coin upkeep `soldier_reserve`. Coin-producing Buildings Castle (включно з Bank effect) продовжують працювати при Occupation. City income сюди не входить: він враховується у `Region.coin_balance_for_owner`. Coin upkeep Unit у складі Army враховується в `Player.coin_balance` через `Army.coin_upkeep` і вдруге тут не нараховується.
 - `warehouse_capacity`, `granary_capacity` — незалежні межі: одна Warehouse Capacity застосовується **окремо** до Wood, Stone та Iron; Granary Capacity — до Food.
 - `storage_full` — структуровані прапорці `wood / stone / iron / food` за фактичним досягненням відповідних capacity; заповнення одного ресурсу не блокує інші.
-- `empty_food` — `food == 0 && food_balance <= 0`.
+- `empty_food` — `food == 0 && food_balance <= 0` (баланс зберігає дефіцит навіть коли `food_rate = 0`).
 - `barracks_capacity`.
 - `barracks_used` — `soldier_reserve` + сумарна кількість Soldier усіх `stationed_knights[]` незалежно від їх home Castle; 1 Soldier будь-якого Type = 1 Capacity, Knight сам Capacity не займає.
 - `barracks_free_capacity = barracks_capacity - barracks_used`.
@@ -248,9 +248,9 @@ Core world/economy models.
 
 ### Інші обчислювальні характеристики
 
-- `wealth_balance` — позитивний тільки коли `active_wealth_ratio == 1` і `region.city_wealth_growth_enabled == true`.
+- `wealth_balance` — необмежений баланс зростання Wealth, позитивний тільки коли `active_wealth_ratio == 1` і `region.city_wealth_growth_enabled == true`.
 - `wealth_rate` — `wealth_balance` з допустимими межами `wealth` (зокрема без виходу в від’ємне значення).
-- `active_wealth_ratio_balance` — recovery rate при `active_wealth_ratio < 1`; recovery не залежить від ownership, Occupation або стану Coins Player.
+- `active_wealth_ratio_balance` — баланс відновлення частки Wealth без обрізання на межі `1`; відновлення не залежить від ownership, Occupation або стану Coins Player.
 - `active_wealth_ratio_rate` — `active_wealth_ratio_balance` з обмеженням діапазону `0..1`; при досягненні `1` додатна швидкість дорівнює `0`.
 
 - `city_defense = CityDefense(wealth)` — залежить тільки від повного `wealth`.
