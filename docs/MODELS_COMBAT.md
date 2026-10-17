@@ -57,7 +57,7 @@ Player-vs-player CombatSituation and combat lifecycle.
 
 На Registration фіксуються attacker, Movement snapshot та причина; `defender_player` і `defenders[]` визначаються на Start для всіх PvP БС. Battle parameters фіксуються на Battle Start.
 
-Якщо в Region немає Active/earlier Registered CombatSituation, Start відбувається одразу. Інакше situation лишається Registered у єдиній FIFO-черзі Region. Attacker отримує waiting command-lock без зміни фізичного state: Movement attacker зберігає Movement context із paused progress. Нові player-vs-player situations стають у чергу виключно за `registration_order`; пріоритетів і «незалежних» паралельних PvP situations у Neutral Region немає.
+Якщо в Region немає Active/earlier Registered CombatSituation, Start відбувається одразу. Інакше situation лишається Registered у єдиній FIFO-черзі Region. Attacker отримує waiting command-lock без зміни фізичного state: Movement attacker зберігає Movement context із paused progress. Нові player-vs-player situations стають у чергу виключно за `порядком FIFO-реєстрації`; пріоритетів і «незалежних» паралельних PvP situations у Neutral Region немає.
 
 ### Start
 
@@ -96,13 +96,13 @@ Transit через Occupied Region реєструє CombatSituation, але `all
 
 `attacker_destination_mode` (`Camp` або `Transit`) як і раніше визначається початковим Movement task і не переобчислюється CombatSituation.
 
-### Potential defenders
+### Defenders
 
-Potential defender фіксується тільки на Start CombatSituation.
+Склад `defenders[]` остаточно фіксується на Start CombatSituation.
 
-Potential defenders на Start — усі **доступні** Army defender Player у `Camp`/`Regrouping` і всі доступні Army, що вже мають `is_entered_for_camp == true` не пізніше Start. Army, яка є attacker іншої unresolved CombatSituation, не є доступним defender. Останні не утворюють окремої категорії battle participation: оскільки entry -> Camp і Start -> Battle Start обидва завжди дорівнюють `Dt`, на Battle Start вони гарантовано вже будуть у Camp або Regrouping і беруть участь на тих самих умовах. Це включає `retreat-local` Army, яка ввійшла в Region до Start.
+До `defenders[]` на Start належать — усі **доступні** Army defender Player у `Camp`/`Regrouping` і всі доступні Army, що вже мають `is_entered_for_camp == true` не пізніше Start. Army, яка є attacker іншої unresolved CombatSituation, не є доступним defender. Останні не утворюють окремої категорії battle participation: оскільки entry -> Camp і Start -> Battle Start обидва завжди дорівнюють `Dt`, на Battle Start вони гарантовано вже будуть у Camp або Regrouping і беруть участь на тих самих умовах. Це включає `retreat-local` Army, яка ввійшла в Region до Start.
 
-**Відкладено після V1:** Transit defender candidates та явне приєднання до defense до Battle Start. У V1 Transit Army не стають кандидатами, не долучаються до defense і продовжують маршрут незалежно від результату battle.
+Transit Army не долучаються до defense у V1 і продовжують маршрут незалежно від результату battle. Можливість такого долучення залишається відкладеною ідеєю в правилах, без полів або методів у поточній моделі.
 
 Не може брати участь:
 
@@ -153,7 +153,7 @@ Queued PvP situation не має зафіксованих `defender_player` чи
 
 Attack на Neutral Defense та City Raid є миттєвими CombatSituation, але не входять у цю queue.
 
-Player не може атакувати Neutral Defense або City в цій Region, якщо він є attacker будь-якої незавершеної CombatSituation у цій Region або potential defender Active CombatSituation у цій Region.
+Player не може атакувати Neutral Defense або City в цій Region, якщо він є attacker будь-якої незавершеної CombatSituation у цій Region або defender Active CombatSituation у цій Region.
 
 ### User methods
 
