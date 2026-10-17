@@ -69,7 +69,7 @@ Core world/economy models.
 - `levels` — рівні всіх Building Castle як одна структурна характеристика.
 - `soldier_reserve` — не призначені Knight Soldier за типами.
 - `is_capital` — `true` лише для початкового Castle Player; для новозаснованих Castle `false`. Capital Region має спеціальні правила входу/атаки.
-- `ready_knights_awaiting_name` — збережена FIFO-черга готових безіменних Knight; додається Palace upgrade та KnightReplacement, вилучається після надання імені.
+- `ready_knights_awaiting_name` — кількість готових безіменних Knight; додається Palace upgrade та KnightReplacement, вилучається після надання імені.
 
 ### Динамічні характеристики
 
