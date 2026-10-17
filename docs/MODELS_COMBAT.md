@@ -42,7 +42,6 @@ Player-vs-player CombatSituation and combat lifecycle.
 ### Інші обчислювальні характеристики
 
 - `battle_start_progress_rate` / `required_battle_start_progress` — дають рівно `Dt` від Start до Battle Start.
-
 - `is_queued` — `status == Registered`; situation без попередників одразу переходить у `Active`, тому стабільний `Registered` стан означає очікування у FIFO-черзі.
 - `is_active` — `status == Active`.
 - `is_battle_valid` — чи після pre-battle resolution лишилися умови реального battle.
