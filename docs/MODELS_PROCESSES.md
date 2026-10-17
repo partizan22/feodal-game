@@ -26,7 +26,8 @@ Long-running construction, recruitment, founding and replacement processes.
 
 ### Інші обчислювальні характеристики
 
-- `progress_rate`, `required_progress`, `is_complete`.
+- `progress_rate` — швидкість зміни відповідної динамічної характеристики.
+- `required_progress`, `is_complete`.
 
 
 - `founder_valid` — founder Knight живий, фізично має потрібний current Camp, `founder_knight.player == player` і не має Soldier. Leave Region/death/отримання Soldier скасовує process.
@@ -79,7 +80,8 @@ Long-running construction, recruitment, founding and replacement processes.
 
 ### Інші обчислювальні характеристики
 
-- `progress_rate`, `required_progress`, `current_recruit_finished`. Якщо progress already complete, але Capacity зникла, completion залишається ready до появи місця.
+- `progress_rate` — швидкість зміни відповідної динамічної характеристики.
+- `required_progress`, `current_recruit_finished`. Якщо progress already complete, але Capacity зникла, completion залишається ready до появи місця.
 
 
 - `current_order`.
@@ -125,7 +127,6 @@ Long-running construction, recruitment, founding and replacement processes.
 ### Інші обчислювальні характеристики
 
 - `progress_rate` — після успішного start не pause-иться через `empty_food`, `empty_coins` або подальшу зміну prerequisite state.
-
 - `required_progress`, `is_complete`.
 
 
@@ -164,7 +165,6 @@ Long-running construction, recruitment, founding and replacement processes.
 ### Інші обчислювальні характеристики
 
 - `progress_rate` — після start постійний за config transition і не pause-иться через Occupation/disconnection/Neutral/owner change.
-
 - `required_progress` — залежить від level transition, але **не** від `quantity`.
 - `is_complete`.
 
@@ -204,7 +204,6 @@ Long-running construction, recruitment, founding and replacement processes.
 ### Інші обчислювальні характеристики
 
 - `progress_rate` — ненульовий тільки для active queue head.
-
 - `is_queue_head` — визначається через `castle.active_knight_replacement_id` серед replacement, timer яких ще не завершився.
 - `required_progress`, `is_complete`.
 
