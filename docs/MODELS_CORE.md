@@ -43,9 +43,10 @@ Core world/economy models.
 
 ### Domain methods
 
-- `can_pay_global_cost(cost)` — перевіряє одноразову вартість у Coins/Gold/Silver.
-- `pay_global_cost(cost)` — списує одноразову глобальну частину вартості після validation.
-- `add_coins(amount)` — зараховує разовий Coin reward, зокрема City Raid reward.
+- `can_afford(cost)` — перевіряє достатність глобальних ресурсів Player для одноразової оплати без зміни запасів; точну структуру `cost` визначимо пізніше.
+- `update_resources(delta)` — атомарно змінює глобальні ресурси Player (Coins, Gold, Silver): додатні значення додають, від’ємні списують. Перевіряє допустимість ресурсів і залишків; при помилці не застосовує жодної зміни. Точну структуру `delta` визначимо пізніше.
+- `spend_resources(cost)` — приймає невід’ємні кількості глобальних ресурсів, перевіряє їх і викликає `update_resources()` з від’ємними змінами.
+- `add_resources(resources)` — приймає невід’ємні кількості глобальних ресурсів і викликає `update_resources()` з додатними змінами.
 - `create_castle(region, name, founder_knight)` — після завершення Founding створює Castle з `Warehouse = 1`, `Granary = 1`, `Palace = 1`; викликає `Region.become_castle_region()` і `Knight.change_home_castle()` атомарно. Використовує `Player.castles[]`, `Region.player/castle` і `Knight.castle`. Founder переходить до нового home Castle; попередній Castle одразу ставить одну заміну в `KnightReplacement`. Стартовий рівень Palace нового Castle не створює додаткового Knight: першим Knight є founder.
 
 ### Triggers
@@ -115,11 +116,14 @@ Core world/economy models.
 
 ### Domain methods
 
-- `can_pay_local_cost(cost)`, `pay_local_cost(cost)` — перевіряють/списують Wood, Stone, Iron і Food з фактичних запасів Castle; від'ємний effective balance не забороняє upfront payment, якщо запасу достатньо.
+- `can_afford(cost)` — перевіряє достатність локальних (Wood, Stone, Iron, Food) і глобальних (Coins, Gold, Silver) ресурсів для всієї вартості без зміни запасів; глобальну частину делегує `Player.can_afford()`. Від’ємний effective balance не забороняє upfront payment за достатнього фактичного запасу.
+- `update_resources(delta)` — атомарно застосовує додатні та від’ємні зміни локальних і глобальних ресурсів; глобальну частину делегує `Player.update_resources()`. Перед застосуванням перевіряє всі зміни, щоб при нестачі ресурсу або помилці не відбулося часткового оновлення. Точну структуру аргументу визначимо пізніше.
+- `spend_resources(cost)` — приймає невід’ємні кількості локальних і глобальних ресурсів та викликає `update_resources()` з від’ємними змінами.
+- `add_resources(resources)` — приймає невід’ємні кількості локальних і глобальних ресурсів та викликає `update_resources()` з додатними змінами.
 - `can_house_unit(knight)` — перевіряє, що Castle **не заблокований**, Knight живий, належить власнику цього Castle, наразі розміщений **поза Castle** (`location_state = Camp`), його Army має Camp-presence у Region цього Castle, а Barracks має Capacity для **всіх Soldier** Unit; home Castle може бути іншим. При Occupation зовнішня Army не може перейти до внутрішнього складу заблокованого Castle. Вхід атомарний, partial entry немає; Knight з 0 Soldier не потребує Capacity.
 - `move_soldiers_between_reserve_and_knight(knight, composition_delta)` — перевіряє `knight.castle == this`, `knight.stationed_castle == this`, відсутність combat command-lock, достатність `soldier_reserve` для додавання та допустимий результат за типами. Атомарно змінює `soldier_reserve` і викликає `Knight.set_soldiers(new_composition)`; сумарна Barracks occupancy не змінюється від перенесення.
 - `add_recruited_soldier(type)`.
-- `can_start_building_upgrade(building_type)` — перевіряє відсутність active upgrade цієї Building, повну upfront cost (локальну через `can_pay_local_cost()`, глобальну через `player.can_pay_global_cost()`) і, тільки для `0 -> 1`, усі config-driven minimum-level prerequisites. Самі по собі `empty_food`/`player.empty_coins` не забороняють BuildingUpgrade, якщо фактичної upfront cost достатньо.
+- `can_start_building_upgrade(building_type)` — перевіряє відсутність active upgrade цієї Building, повну upfront cost через `can_afford()` і, тільки для `0 -> 1`, усі config-driven minimum-level prerequisites. Самі по собі `empty_food`/`player.empty_coins` не забороняють BuildingUpgrade, якщо фактичної upfront cost достатньо.
 - `apply_building_upgrade(building_type, target_level)` — застосовує level; кожне підвищення рівня Palace збільшує `ready_knights_awaiting_name` на 1 без затримки заміни.
 - `enqueue_knight_replacement()` — після загибелі Knight або зміни його home Castle викликає `knight_replacement.enqueue()`; кожний випадок додає рівно одну заміну. Завершення таймерів виконує KnightReplacement.
 - `name_next_ready_knight(name)` — за `ready_knights_awaiting_name > 0` зменшує лічильник на 1 і створює живого Knight з указаним Player name у home Castle, `location_state = Castle`, `stationed_castle = this Castle`, без Soldier; **одночасно створює окрему Army** цього Player з цим Knight як Commander у Castle Region. У неокупованому Castle Army отримує `state = Camp`, `camp = Region.get_or_create_camp(player)`; в окупованому Castle — `state = BlockedInCastle`, `camp = null`. Готових безіменних Knight стає на одного менше; Palace slots не відстежуються.
@@ -211,7 +215,7 @@ Core world/economy models.
 - `become_neutral()` — очищує formal owner/Castle/Occupation, встановлює `is_connection_valid = false`, зберігає ResourceSite levels, City `wealth` та `active_wealth_ratio`, а також active ResourceSiteUpgrade (вони продовжуються). Для попереднього Castle запускає перерахунок connectivity та остаточну втрату downstream Region без власного зв'язку. Army фізично залишаються в Region; активні Camp episodes не видаляються лише через зміну ownership.
 - `become_castle_region(new_castle, player)` — після завершення Founding робить Region Owned Castle Region, встановлює `castle = new_castle`, `player`, `occupier_player_id = null`, `is_connection_valid = true` для Castle Region; зберігає ResourceSite levels і active ResourceSiteUpgrade. Уже фізично розпочатий чужий Transit може завершитися без нової CombatSituation за правилами Founding.
 - `set_connection_valid(value)` — змінює збережену характеристику `is_connection_valid` за результатом перерахунку територіального графа; тимчасовий розрив через Occupation не скидає ownership.
-- `can_start_resource_site_upgrade(resource_type, quantity)` — використовує `resource_sites`, `resource_site_upgrades[]`, `player`, `castle`, `is_occupied`, `is_connection_valid` і поточні level buckets. Перевіряє ownership, доступність незарезервованих Site потрібного рівня та layered rule; upfront cost перевіряється через `Castle.can_pay_local_cost()` і `Player.can_pay_global_cost()`; самі reservations не вважаються completed levels.
+- `can_start_resource_site_upgrade(resource_type, quantity)` — використовує `resource_sites`, `resource_site_upgrades[]`, `player`, `castle`, `is_occupied`, `is_connection_valid` і поточні level buckets. Перевіряє ownership, доступність незарезервованих Site потрібного рівня та layered rule; upfront cost перевіряється через `Castle.can_afford()`; самі reservations не вважаються completed levels.
 - `apply_resource_site_upgrade(resource_type, from_level, target_level, quantity)` — після завершення `ResourceSiteUpgrade.complete()` атомарно переносить рівно зарезервовану кількість Site між level buckets у `resource_sites`, незалежно від поточного ownership; повторне застосування terminal process заборонено.
 - `on_army_presence_changed()` — викликається після `Army.enter_region()`, `Army.enter_camp()`, `Army.leave_camp()`, завершення Retreat, split/merge та знищення Army. Інфраструктура актуалізує system-computed `armies[]`/`camps[]` і залежні `camp_player_ids[]`, `blocking_camp_presence_player_ids[]`, `has_any_troops`, `CampInRegion.can_progress`, `CastleFounding.can_progress`, `neutral_defense_recovery_rate`. Якщо з Camp пішла остання Army поточного occupier, викликає `restore_owner_control(expected_occupier_player)`; **не змінює напряму computed** `is_occupied` чи `active_combat_situation` і не реєструє CombatSituation тільки через факт перерахунку присутності.
 - `destroy_neutral_defense()`.
@@ -258,7 +262,7 @@ Core world/economy models.
 
 ### Domain methods
 
-- `complete_raid(player)` — використовує `effective_wealth`/`raid_reward` до зміни ratio, викликає `Player.add_coins(reward)` для переданого attacker Player та атомарно скидає `active_wealth_ratio = 0`; `wealth` і `city_defense` не змінюються. Повторний виклик для того самого успішного Raid у межах однієї транзакції не допускається.
+- `complete_raid(player)` — використовує `effective_wealth`/`raid_reward` до зміни ratio, викликає `Player.add_resources()` для зарахування `reward` у Coins для переданого attacker Player та атомарно скидає `active_wealth_ratio = 0`; `wealth` і `city_defense` не змінюються. Повторний виклик для того самого успішного Raid у межах однієї транзакції не допускається.
 
 ### Triggers
 
