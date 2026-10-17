@@ -20,12 +20,18 @@ Long-running construction, recruitment, founding and replacement processes.
 
 - `progress`.
 
-### Обчислювальні характеристики
+### Обчислювальні зв'язки
+
+- Немає.
+
+### Інші обчислювальні характеристики
+
+- `progress_rate`, `required_progress`, `is_complete`.
+
 
 - `founder_valid` — founder Knight живий, фізично має потрібний current Camp, `founder_knight.player == player` і не має Soldier. Leave Region/death/отримання Soldier скасовує process.
 - `founder_progress_eligible` — `founder_valid && founder_knight.is_camp_presence`; Regrouping не pause-ить Founding.
 - `can_progress` — `founder_progress_eligible`, Region залишається Neutral, `region.neutral_defense == 0`, `region.blocking_camp_presence_player_ids[]` не містить іншого Player. Foreign Transit Army не блокує Founding, навіть якщо через її Transit у Region існує CombatSituation. Саме foreign Camp/Camp-bound presence, а не наявність CombatSituation, призупиняє Founding.
-- `progress_rate`, `required_progress`, `is_complete`.
 
 ### User methods
 
@@ -67,11 +73,17 @@ Long-running construction, recruitment, founding and replacement processes.
 
 - `progress` — progress **поточного одного Soldier**, а не всього order; при pause зберігається.
 
-### Обчислювальні характеристики
+### Обчислювальні зв'язки
+
+- Немає.
+
+### Інші обчислювальні характеристики
+
+- `progress_rate`, `required_progress`, `current_recruit_finished`. Якщо progress already complete, але Capacity зникла, completion залишається ready до появи місця.
+
 
 - `current_order`.
 - `can_progress` — є current order, `castle.empty_food == false`, `castle.player_empty_coins == false`, `castle.barracks_free_capacity > 0`.
-- `progress_rate`, `required_progress`, `current_recruit_finished`. Якщо progress already complete, але Capacity зникла, completion залишається ready до появи місця.
 
 ### User methods
 
@@ -106,10 +118,16 @@ Long-running construction, recruitment, founding and replacement processes.
 
 - `progress`.
 
-### Обчислювальні характеристики
+### Обчислювальні зв'язки
+
+- Немає.
+
+### Інші обчислювальні характеристики
 
 - `progress_rate` — після успішного start не pause-иться через `empty_food`, `empty_coins` або подальшу зміну prerequisite state.
+
 - `required_progress`, `is_complete`.
+
 
 ### User methods
 
@@ -139,11 +157,17 @@ Long-running construction, recruitment, founding and replacement processes.
 
 - `progress`.
 
-### Обчислювальні характеристики
+### Обчислювальні зв'язки
+
+- Немає.
+
+### Інші обчислювальні характеристики
 
 - `progress_rate` — після start постійний за config transition і не pause-иться через Occupation/disconnection/Neutral/owner change.
+
 - `required_progress` — залежить від level transition, але **не** від `quantity`.
 - `is_complete`.
+
 
 ### User methods
 
@@ -173,11 +197,17 @@ Long-running construction, recruitment, founding and replacement processes.
 
 - `progress`.
 
-### Обчислювальні характеристики
+### Обчислювальні зв'язки
+
+- Немає.
+
+### Інші обчислювальні характеристики
+
+- `progress_rate` — ненульовий тільки для active queue head.
 
 - `is_queue_head` — визначається через `castle.active_knight_replacement_id` серед replacement, timer яких ще не завершився.
-- `progress_rate` — ненульовий тільки для active queue head.
 - `required_progress`, `is_complete`.
+
 
 ### Domain methods
 
