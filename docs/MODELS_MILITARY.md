@@ -94,7 +94,6 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Інші обчислювальні характеристики
 
 - `regrouping_progress_rate` — так підібраний, щоб Regrouping тривав рівно `Dt`.
-
 - `is_combat_waiting` — `attacking_combat_situation.status == Registered`. Це command-lock, а не фізичний location/state.
 - `is_entered_for_camp` — `true`, коли Army уже фізично ввійшла в current Region і ще рухається локально до Camp (`Movement.phase` є `final-local` або `retreat-local` з локальною метою `Camp`); leaving-Camp movement і чистий Transit дають `false`. Це проміжна характеристика для інших computed characteristics без ланцюга relationships.
 - `is_command_locked` — true для attacker будь-якої незавершеної CombatSituation та для defender Active CombatSituation; блокує Movement, merge/split, Commander/unit-composition reorganization та інші commands, які могли б змінити participant state. Combat-specific decisions залишаються доступними.
@@ -171,7 +170,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 ### Інші обчислювальні характеристики
 
-- `control_progress_rate`, `required_control_progress`, `is_ready_for_annexation`.
+- `control_progress_rate` — швидкість зміни відповідної динамічної характеристики.
+- `required_control_progress`, `is_ready_for_annexation`.
 
 
 - `has_eligible_presence` — чи є хоча б одна Army з `state == Camp` (включно з `is_regrouping == true`); `BlockedInCastle` не враховується як зовнішня Camp-presence.
@@ -236,7 +236,6 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 ### Інші обчислювальні характеристики
 
 - `progress_rate` — `0`, якщо Movement paused через queued/Active CombatSituation interaction. Для Camp-exit -> next Region entry та entry -> Camp фаза завжди має тривалість `Dt`. Для звичайного Transit без CombatSituation базова тривалість `Dt`, потенційно з майбутнім movement-speed coefficient.
-
 - `direction_reveal_progress` — для Transit досягається після половини local Transit progress; після цього іншим Player, яким доступна ця інформація, може бути показаний лише наступний exit direction Army.
 - `phase_completion_progress`.
 
