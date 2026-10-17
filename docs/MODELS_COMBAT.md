@@ -35,17 +35,23 @@ Player-vs-player CombatSituation and combat lifecycle.
 
 - `battle_start_progress` — рахується тільки для Active CombatSituation; від Start до Battle Start завжди `Dt`.
 
-### Обчислювальні характеристики
+### Обчислювальні зв'язки
+
+- Немає.
+
+### Інші обчислювальні характеристики
+
+- `battle_start_progress_rate` / `required_battle_start_progress` — дають рівно `Dt` від Start до Battle Start.
 
 - `is_queued` — `status == Registered`; situation без попередників одразу переходить у `Active`, тому стабільний `Registered` стан означає очікування у FIFO-черзі.
 - `is_active` — `status == Active`.
-- `battle_start_progress_rate` / `required_battle_start_progress` — дають рівно `Dt` від Start до Battle Start.
 - `is_battle_valid` — чи після pre-battle resolution лишилися умови реального battle.
 - `attacker_loss_threshold` — target threshold, якщо фактичний `defender_player == target_opponent`, і incidental threshold інакше (включно з Neutral Camp-bound entry при `target_opponent == null`). У V1 пороги > 0; без legal Retreat effective threshold `1.0`.
 - `defender_combat_threshold` — на Battle Start для кожної defender Army береться effective threshold: `0`, якщо для неї встановлено pre-battle Retreat decision, інакше її persistent `defense_loss_threshold`. Спочатку перевіряється side-level Retreat availability. Якщо defender side не має legal Retreat Region, її combat threshold примусово стає `1.0` і жодна Army не виконує pre-battle Retreat. Якщо legal Retreat є, Army з effective threshold `0` спочатку виконують Retreat без casualties; після їх виключення спільний `defender_combat_threshold` дорівнює мінімальному effective threshold серед Army, що лишилися. Якщо жодної defender Army не лишилося, battle не відбувається.
 - `defender_loss_threshold` — чинне значення `defender_combat_threshold`; один спільний threshold для всієї defense side, що lock-иться на Battle Start.
 - `attacker_strength` — `attacker.attack_strength` для будь-якого player-vs-player battle.
 - `defender_strength` — сума `defense_strength` participating defender Army для PvP defense; для instant Neutral Defense/City Raid використовується абстрактна оборона.
+
 
 ### Registration
 
