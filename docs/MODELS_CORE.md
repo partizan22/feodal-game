@@ -46,7 +46,7 @@ Core world/economy models.
 - `can_pay_global_cost(cost)` — перевіряє одноразову вартість у Coins/Gold/Silver.
 - `pay_global_cost(cost)` — списує одноразову глобальну частину вартості після validation.
 - `add_coins(amount)` — зараховує разовий Coin reward, зокрема City Raid reward.
-- `create_castle(region, name, founder_knight)` — після завершення Founding створює Castle з `Warehouse = 1`, `Granary = 1`, `Palace = 1`; викликає `Region.become_castle_region()` і `Knight.change_home_castle()` атомарно. Використовує `Player.castles[]`, `Region.player/castle`, `Knight.castle` та Palace slots обох Castle. Founder займає перший slot нового Castle; старий home Castle запускає звичайний replacement для звільненого slot. Додатковий Knight у новому Castle не створюється.
+- `create_castle(region, name, founder_knight)` — після завершення Founding створює Castle з `Warehouse = 1`, `Granary = 1`, `Palace = 1`; викликає `Region.become_castle_region()` і `Knight.change_home_castle()` атомарно. Використовує `Player.castles[]`, `Region.player/castle` і `Knight.castle`. Founder переходить до нового home Castle; попередній Castle одразу ставить одну заміну в `KnightReplacement`. Стартовий рівень Palace нового Castle не створює додаткового Knight: першим Knight є founder.
 
 ### Triggers
 
@@ -82,17 +82,16 @@ Core world/economy models.
 - `*knights[]` — Knight, для яких цей Castle є home Castle.
 - `*stationed_knights[]` — живі Knight з `Knight.stationed_castle == this Castle` незалежно від home Castle; reverse relationship для фактичного розміщення Unit у Barracks.
 - `*building_upgrades[]` — BuildingUpgrade цього Castle, включно з history instances; active визначається їх `status`.
-- `*recruitment` — active Recruitment Queue Castle або `null`.
-- `*knight_replacements[]` — KnightReplacement цього Castle.
+- `*recruitment` — постійна Recruitment-модель цього Castle з можливо порожньою чергою.
+- `*knight_replacement` — постійна KnightReplacement-модель цього Castle, що послідовно виконує заміни.
 
 ### Інші обчислювальні характеристики
 
 - `resource_balance` — чистий баланс надходжень `wood`, `stone`, `iron`; агрегує `Region.resource_surplus_to_castle` з `regions[]` окремо для кожного ресурсу, без обмеження місткості. Одноразові витрати застосовуються методами, а не як від'ємний production rate.
 - `resources_rate` — для кожного з `wood`, `stone`, `iron` застосовує `resource_balance` окремо: при досягненні `warehouse_capacity` позитивний баланс обрізається до `0`; при нульовому запасі від’ємна швидкість не допускається.
-- `food_balance` — чистий баланс `food_income - non_military_food_consumption - castle_stationed_food_consumption - castle_region_army_food_consumption`, без застосування межі `granary_capacity` чи нульового запасу. Баланс використовується для розрахунку дефіциту й компенсації, а фактичне накопичення визначає `food_rate`.
+- `food_balance` — чистий баланс `sum(Region.food_surplus_to_castle з regions[]) - non_military_food_consumption - castle_stationed_food_consumption - castle_region_army_food_consumption`, без застосування межі `granary_capacity` чи нульового запасу. Баланс використовується для розрахунку дефіциту й компенсації, а фактичне накопичення визначає `food_rate`.
 - `food_rate` — застосовує `food_balance` з обмеженнями `granary_capacity` та мінімального запасу `food = 0`; надлишок за повного сховища й дефіцит за нульового запасу дають швидкість `0`.
 
-- `food_income` — сума позитивних `Region.food_surplus_to_castle` з `regions[]`. Негативний Food balance звичайних Region до Castle не передається.
 - `non_military_food_consumption` — Castle-level Food consumption від Population/Building effects.
 - `castle_stationed_food_consumption` — Food consumption `soldier_reserve` та всіх живих `stationed_knights[]` (Knight разом зі своїм Unit); включає війська всередині Castle навіть під час Occupation.
 - `castle_region_army_food_consumption` — `region.castle_owner_outside_camp_food_consumption` для неокупованої Castle Region, інакше `0`; Knight/Unit всередині Castle уже враховані в `castle_stationed_food_consumption`. Після Occupation зовнішні Camp Army формального owner та occupier використовують локальне Food, а не Food Castle.
@@ -105,17 +104,14 @@ Core world/economy models.
 - `barracks_used` — `soldier_reserve` + сумарна кількість Soldier усіх `stationed_knights[]` незалежно від їх home Castle; 1 Soldier будь-якого Type = 1 Capacity, Knight сам Capacity не займає.
 - `barracks_free_capacity = barracks_capacity - barracks_used`.
 - `governor_capacity`, `external_region_count`.
-- `palace_capacity`, `active_knight_replacement_id`.
-- `palace_reserved_slots` — кількість живих `knights[]` + елементів `ready_knights_awaiting_name` + `knight_replacements[]` зі status queued/active (timer ще не завершено). Кожний Palace slot обліковується рівно один раз; `palace_reserved_slots <= palace_capacity`. Completed replacement уже представлений ready-entry, а не одночасно двома reservations.
 
 
 
-- `player_empty_coins` — `player.empty_coins`; проміжна характеристика для залежних computed characteristics інших Model без ланцюга relationships.
 - `is_blocked` — `region.is_occupied`; визначає блокування потоків із усіх прив'язаних Region, але не припиняє власні Coin-producing Buildings Castle.
 
 ### User methods
 
-- `user_name_next_ready_knight(name)` — user action власника Castle: перевіряє доступність head спільної FIFO-черги та ім'я, викликає `name_next_ready_knight(name)`.
+- `user_name_next_ready_knight(name)` — user action власника Castle: перевіряє, що `ready_knights_awaiting_name > 0`, та коректність імені, викликає `name_next_ready_knight(name)`.
 
 ### Domain methods
 
@@ -123,10 +119,10 @@ Core world/economy models.
 - `can_house_unit(knight)` — перевіряє, що Castle **не заблокований**, Knight живий, належить власнику цього Castle, наразі розміщений **поза Castle** (`location_state = Camp`), його Army має Camp-presence у Region цього Castle, а Barracks має Capacity для **всіх Soldier** Unit; home Castle може бути іншим. При Occupation зовнішня Army не може перейти до внутрішнього складу заблокованого Castle. Вхід атомарний, partial entry немає; Knight з 0 Soldier не потребує Capacity.
 - `move_soldiers_between_reserve_and_knight(knight, composition_delta)` — перевіряє `knight.castle == this`, `knight.stationed_castle == this`, відсутність combat command-lock, достатність `soldier_reserve` для додавання та допустимий результат за типами. Атомарно змінює `soldier_reserve` і викликає `Knight.set_soldiers(new_composition)`; сумарна Barracks occupancy не змінюється від перенесення.
 - `add_recruited_soldier(type)`.
-- `can_start_building_upgrade(building_type)` — перевіряє відсутність active upgrade цієї Building, повну upfront cost (локальну через `can_pay_local_cost()`, глобальну через `player.can_pay_global_cost()`) і, тільки для `0 -> 1`, усі config-driven minimum-level prerequisites. Самі по собі `empty_food`/`player_empty_coins` не забороняють BuildingUpgrade, якщо фактичної upfront cost достатньо.
-- `apply_building_upgrade(building_type, target_level)` — застосовує level; Palace level increase додає один ready Knight у FIFO `ready_knights_awaiting_name` без replacement delay.
-- `enqueue_knight_replacement()`, `complete_knight_replacement(replacement)` — використовують `knight_replacements[]`, `active_knight_replacement_id` та `ready_knights_awaiting_name`. Звільнення Palace slot створює queued replacement; якщо active timer немає, перший queued стає active. Completion обробляє тільки active head: додає одного ready Knight у спільну FIFO name queue, переводить replacement у terminal `timer_complete` і запускає наступний queued timer. Повторний виклик completion для terminal instance нічого не додає.
-- `name_next_ready_knight(name)` — бере тільки head спільної FIFO-черги, створює живого Knight з указаним Player name у home Castle, `location_state = Castle`, `stationed_castle = this Castle`, без Soldier; **одночасно створює окрему Army** цього Player з цим Knight як Commander у Castle Region. У неокупованому Castle Army отримує `state = Camp`, `camp = Region.get_or_create_camp(player)`; в окупованому Castle — `state = BlockedInCastle`, `camp = null`. Нового Palace slot не займає: ready-entry замінюється живим Knight без зміни `palace_reserved_slots`.
+- `can_start_building_upgrade(building_type)` — перевіряє відсутність active upgrade цієї Building, повну upfront cost (локальну через `can_pay_local_cost()`, глобальну через `player.can_pay_global_cost()`) і, тільки для `0 -> 1`, усі config-driven minimum-level prerequisites. Самі по собі `empty_food`/`player.empty_coins` не забороняють BuildingUpgrade, якщо фактичної upfront cost достатньо.
+- `apply_building_upgrade(building_type, target_level)` — застосовує level; кожне підвищення рівня Palace збільшує `ready_knights_awaiting_name` на 1 без затримки заміни.
+- `enqueue_knight_replacement()` — після загибелі Knight або зміни його home Castle викликає `knight_replacement.enqueue()`; кожний випадок додає рівно одну заміну. Завершення таймерів виконує KnightReplacement.
+- `name_next_ready_knight(name)` — за `ready_knights_awaiting_name > 0` зменшує лічильник на 1 і створює живого Knight з указаним Player name у home Castle, `location_state = Castle`, `stationed_castle = this Castle`, без Soldier; **одночасно створює окрему Army** цього Player з цим Knight як Commander у Castle Region. У неокупованому Castle Army отримує `state = Camp`, `camp = Region.get_or_create_camp(player)`; в окупованому Castle — `state = BlockedInCastle`, `camp = null`. Готових безіменних Knight стає на одного менше; Palace slots не відстежуються.
 - `can_annex_region(region, camp)` — перевіряє `is_blocked == false`, що Region не є Castle Region і відповідає правилам Annexation Neutral/Occupied, `camp.can_annex_to(this)` (включно з накопиченим control progress, відсутністю blocking presence/Founding), Governor Capacity, valid territorial connection саме до **цього** Castle та наявність у `camp` хоча б одного живого Knight, чия Army має Camp-presence (`Camp` або `Regrouping`) і чий home Castle дорівнює цьому Castle. Method може напряму обходити `CampInRegion -> armies[] -> knights[]`.
 - `recalculate_region_connections()` — використовує `regions[]`, `Region.neighbors[]`, `Region.player`, `Region.is_occupied` і `Region.is_connection_valid`; викликає `Region.set_connection_valid()` та, лише після **остаточної** втрати ownership bridge, `Region.become_neutral()` для downstream Region. Temporary disconnect через Occupation не змінює formal ownership. Каскадний перерахунок виконується до стабілізації графа в одній транзакції без проміжних user commands.
 

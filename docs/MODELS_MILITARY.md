@@ -61,7 +61,7 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `set_soldiers(new_composition)`, `set_army(army)`.
 - `add_battle_experience(amount)`.
 - `apply_casualties(...)` — втрати Unit спочатку застосовуються до `soldiers`; Knight не може загинути, доки в нього лишається хоча б один Soldier.
-- `die()` — переводить Knight у dead state, звільняє `stationed_castle` (Barracks Capacity) та викликає `castle.enqueue_knight_replacement()` для звільненого Palace slot. Commander тут не перепризначається негайно: це робиться після завершення розподілу всіх casualties combat, щоб не вибрати Knight, який також загине в цьому самому combat.
+- `die()` — переводить Knight у dead state, звільняє `stationed_castle` (Barracks Capacity) та викликає `castle.enqueue_knight_replacement()` після загибелі Knight. Commander тут не перепризначається негайно: це робиться після завершення розподілу всіх casualties combat, щоб не вибрати Knight, який також загине в цьому самому combat.
 - `change_home_castle(new_castle)` — змінює home Castle, не підміняючи фактичне `stationed_castle` без окремого переміщення. Якщо active Knight залишає старий home Castle (зокрема founder після завершення Castle Founding), його старий Palace slot вважається звільненим і запускає той самий `KnightReplacement` queue mechanism, що й після death. У новому Castle цей Knight займає власний slot і не породжує додаткового Knight.
 
 ---
