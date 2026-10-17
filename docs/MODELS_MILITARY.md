@@ -27,19 +27,27 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `experience`
 
-### Обчислювальні характеристики
+### Обчислювальні зв'язки
+
+- Немає.
+
+### Інші обчислювальні характеристики
+
+- `experience_balance`.
+
+- `experience_rate` — `experience_balance` з обмеженням на невід’ємне значення `experience`.
 
 - `soldier_count`.
 - `food_consumption = soldier_count + 1` для active Knight.
 - `experience_coefficient`.
 - `unit_attack_strength`, `unit_defense_strength`.
 - `coin_upkeep`.
-- `player` — `castle.player`; проміжна характеристика для computed characteristics інших Model без ланцюга relationships.
 - `current_region` — `army.current_region`.
 - `current_camp` — `army.camp`.
 - `is_regrouping` — `army.is_regrouping` (Army лишається у територіальному стані `Camp`).
 - `is_camp_presence` — `current_camp != null && army.state == Camp`, незалежно від `army.is_regrouping`.
-- `experience_balance`.
+
+- `player` — `castle.player`; проміжна характеристика для computed characteristics інших Model без ланцюга relationships.
 
 ### User methods
 
@@ -76,22 +84,28 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `regrouping_progress`.
 
-### Обчислювальні характеристики
+### Обчислювальні зв'язки
 
 - `*knights[]`.
-- `player_id` — ID `player`; проміжна scalar characteristic для computed characteristics інших Model без другого relationship hop.
 - `*movement` — active Movement або `null`; якщо Army є queued attacker (`is_combat_waiting == true`), Movement може зберігати незавершений route/context, але progress призупинений.
 - `*attacking_combat_situation` — незавершена CombatSituation, де ця Army є attacker, або `null`; invariant: максимум одна.
 - `*active_defender_combat_situation` — Active CombatSituation, де Army входить у зафіксований на Start список `CombatSituation.defenders[]`, або `null`.
+
+### Інші обчислювальні характеристики
+
+- `regrouping_progress_rate` — так підібраний, щоб Regrouping тривав рівно `Dt`.
+
 - `is_combat_waiting` — `attacking_combat_situation.status == Registered`. Це command-lock, а не фізичний location/state.
+- `is_entered_for_camp` — `true`, коли Army уже фізично ввійшла в current Region і ще рухається локально до Camp (`Movement.phase` є `final-local` або `retreat-local` з локальною метою `Camp`); leaving-Camp movement і чистий Transit дають `false`. Це проміжна характеристика для інших computed characteristics без ланцюга relationships.
+- `is_command_locked` — true для attacker будь-якої незавершеної CombatSituation та для defender Active CombatSituation; блокує Movement, merge/split, Commander/unit-composition reorganization та інші commands, які могли б змінити participant state. Combat-specific decisions залишаються доступними.
+
+
+- `player_id` — ID `player`; проміжна scalar characteristic для computed characteristics інших Model без другого relationship hop.
 - `soldier_count`, `food_consumption`.
 - `outside_castle_food_consumption` — сума `Knight.food_consumption` для `knights[]` із `location_state = Camp`; використовується для локального Food у Castle Region, щоб не рахувати Unit у Barracks двічі.
 - `attack_strength`, `defense_strength`.
 - `coin_upkeep`.
 - `food_coin_compensation` — для Army у Movement дорівнює `food_consumption * coins_per_food`, включно з `transit`, `final-local`, `retreat-local` та paused-for-combat Movement; для Camp/Regrouping дорівнює `0`, бо там використовується local Food. Attacker, що чекає queued CombatSituation з Camp, продовжує local Food consumption.
-- `is_entered_for_camp` — `true`, коли Army уже фізично ввійшла в current Region і ще рухається локально до Camp (`Movement.phase` є `final-local` або `retreat-local` з локальною метою `Camp`); leaving-Camp movement і чистий Transit дають `false`. Це проміжна характеристика для інших computed characteristics без ланцюга relationships.
-- `regrouping_progress_rate` — так підібраний, щоб Regrouping тривав рівно `Dt`.
-- `is_command_locked` — true для attacker будь-якої незавершеної CombatSituation та для defender Active CombatSituation; блокує Movement, merge/split, Commander/unit-composition reorganization та інші commands, які могли б змінити participant state. Combat-specific decisions залишаються доступними.
 
 ### User methods
 
@@ -151,17 +165,23 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `control_progress`.
 
-### Обчислювальні характеристики
+### Обчислювальні зв'язки
 
 - `*armies[]` — Army, для яких цей CampInRegion є `Army.camp`.
+
+### Інші обчислювальні характеристики
+
+- `control_progress_rate`, `required_control_progress`, `is_ready_for_annexation`.
+
+
+- `has_eligible_presence` — чи є хоча б одна Army з `state == Camp` (включно з `is_regrouping == true`); `BlockedInCastle` не враховується як зовнішня Camp-presence.
+- `has_valid_adjacent_owned_region` — `player_id in region.valid_connected_neighbor_player_ids[]`; не обходить `Region -> neighbors[] -> Player`.
+- `can_progress` — Annexation progress можливий за ownership/Neutral Defense/adjacency rules, тільки якщо `region.has_active_founding == false` і `region.blocking_camp_presence_player_ids[]` не містить іншого Player. Foreign Transit Army не блокує Annexation, навіть якщо через її Transit у Region існує CombatSituation. Саме foreign Camp/Camp-bound presence, а не наявність CombatSituation, призупиняє progress. Regrouping Army свого Player підтримує progress так само, як Camp Army.
+
 - `player_id` — ID `player`; проміжна scalar characteristic для computed characteristics інших Model без другого relationship hop.
 - `food_consumption` — сума `Army.food_consumption` усіх `armies[]`, включно з Regrouping; для Castle Region локальна частина відокремлюється у `local_food_consumption`.
 - `local_food_consumption` — для звичайної Region дорівнює `food_consumption`; для Castle Region враховує тільки Knight/Unit із `location_state = Camp` (поза Castle), а не Soldier/Unit, що споживають Food із запасів Castle.
-- `has_eligible_presence` — чи є хоча б одна Army з `state == Camp` (включно з `is_regrouping == true`); `BlockedInCastle` не враховується як зовнішня Camp-presence.
 - `food_coin_compensation` — для звичайної Region та для **Occupied Castle Region** обчислюється з локального дефіциту: якщо `region.food_production < region.camp_food_consumption`, частка цього Camp дорівнює `local_food_consumption / region.camp_food_consumption` від непокритого дефіциту, помноженого на `coins_per_food`; інакше `0`. Для неокупованої Castle Region дорівнює `0`: власні Camp Army споживають Food Castle, а не локальний Food.
-- `has_valid_adjacent_owned_region` — `player_id in region.valid_connected_neighbor_player_ids[]`; не обходить `Region -> neighbors[] -> Player`.
-- `can_progress` — Annexation progress можливий за ownership/Neutral Defense/adjacency rules, тільки якщо `region.has_active_founding == false` і `region.blocking_camp_presence_player_ids[]` не містить іншого Player. Foreign Transit Army не блокує Annexation, навіть якщо через її Transit у Region існує CombatSituation. Саме foreign Camp/Camp-bound presence, а не наявність CombatSituation, призупиняє progress. Regrouping Army свого Player підтримує progress так само, як Camp Army.
-- `control_progress_rate`, `required_control_progress`, `is_ready_for_annexation`.
 
 ### User methods
 
@@ -209,11 +229,17 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 
 - `progress`.
 
-### Обчислювальні характеристики
+### Обчислювальні зв'язки
+
+- Немає.
+
+### Інші обчислювальні характеристики
 
 - `progress_rate` — `0`, якщо Movement paused через queued/Active CombatSituation interaction. Для Camp-exit -> next Region entry та entry -> Camp фаза завжди має тривалість `Dt`. Для звичайного Transit без CombatSituation базова тривалість `Dt`, потенційно з майбутнім movement-speed coefficient.
+
 - `direction_reveal_progress` — для Transit досягається після половини local Transit progress; після цього іншим Player, яким доступна ця інформація, може бути показаний лише наступний exit direction Army.
 - `phase_completion_progress`.
+
 
 ### User methods
 
