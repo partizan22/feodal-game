@@ -31,7 +31,7 @@ Long-running construction, recruitment, founding and replacement processes.
 
 - `founder_valid` — founder Knight живий, фізично має потрібний current Camp, `founder_knight.player == player` і не має Soldier. Leave Region/death/отримання Soldier скасовує process.
 - `founder_progress_eligible` — `founder_valid && founder_knight.is_camp_presence`; Regrouping не pause-ить Founding.
-- `can_progress` — `founder_progress_eligible`, Region залишається Neutral, `region.neutral_defense == 0`, `region.blocking_camp_presence_player_ids[]` не містить іншого Player. Foreign Transit Army не блокує Founding, навіть якщо через її Transit у Region існує CombatSituation. Саме foreign Camp/Camp-bound presence, а не наявність CombatSituation, призупиняє Founding.
+- `can_progress` — `founder_progress_eligible`, Region залишається Neutral, `region.neutral_defense == 0`, у Region немає чужої Army у `Camp`/`Regrouping` або з `is_entered_for_camp == true`. Foreign Transit Army не блокує Founding, навіть якщо через її Transit у Region існує CombatSituation. Саме foreign Camp/Camp-bound presence, а не наявність CombatSituation, призупиняє Founding.
 
 ### User methods
 
