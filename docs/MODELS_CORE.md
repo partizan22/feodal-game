@@ -171,7 +171,7 @@ Core world/economy models.
 
 - `neutral_defense_rate` — `neutral_defense_recovery_rate`, обмежена до `0` при досягненні `neutral_defense_full_strength` і при відсутності умов для відновлення; не допускає виходу за межі `0..neutral_defense_full_strength`.
 
-- `camp_player_id` — `CampInRegion.player_id` єдиного active CampInRegion цієї Region або `null`, якщо активного Camp немає. Одночасно в Region може бути лише один active CampInRegion.
+- `camp_player_id` — ID `CampInRegion.player` єдиного active CampInRegion цієї Region або `null`, якщо активного Camp немає. Одночасно в Region може бути лише один active CampInRegion.
 - `player_id` — ID `player`; проміжна scalar characteristic для computed characteristics інших Model без другого relationship hop.
 - `occupier_player` — nullable relationship до Player за `occupier_player_id`; `null` поза Occupation. Потрібний `Movement.determine_target_opponent()`, `CombatSituation.start()` і `Region.restore_owner_control()`, де потрібен Player object, а не лише ID.
 - `valid_connected_neighbor_player_ids[]` — `player_id` сусідніх Owned Region з валідним connection; використовує `neighbors[].player_id`, а не `neighbors[] -> player`.
