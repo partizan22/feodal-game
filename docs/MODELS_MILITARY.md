@@ -174,9 +174,8 @@ Knight разом зі своїми Soldier представляє gameplay Unit
 - `required_control_progress`, `is_ready_for_annexation`.
 
 
-- `has_eligible_presence` — чи є хоча б одна Army з `state == Camp` (включно з `is_regrouping == true`); `BlockedInCastle` не враховується як зовнішня Camp-presence.
 - `has_valid_adjacent_owned_region` — `player_id in region.valid_connected_neighbor_player_ids[]`; не обходить `Region -> neighbors[] -> Player`.
-- `can_progress` — Annexation progress можливий за ownership/Neutral Defense/adjacency rules, тільки якщо `region.has_active_founding == false` і `region.blocking_camp_presence_player_ids[]` не містить іншого Player. Foreign Transit Army не блокує Annexation, навіть якщо через її Transit у Region існує CombatSituation. Саме foreign Camp/Camp-bound presence, а не наявність CombatSituation, призупиняє progress. Regrouping Army свого Player підтримує progress так само, як Camp Army.
+- `can_progress` — Annexation progress можливий за ownership/Neutral Defense/adjacency rules, тільки якщо `region.has_active_founding == false` і у Region немає чужої Army у `Camp`/`Regrouping` або з `is_entered_for_camp == true`. Foreign Transit Army не блокує Annexation, навіть якщо через її Transit у Region існує CombatSituation. Саме foreign Camp/Camp-bound presence, а не наявність CombatSituation, призупиняє progress. Regrouping Army свого Player підтримує progress так само, як Camp Army.
 
 - `player_id` — ID `player`; проміжна scalar characteristic для computed characteristics інших Model без другого relationship hop.
 - `food_consumption` — сума `Army.food_consumption` усіх `armies[]`, включно з Regrouping; для Castle Region локальна частина відокремлюється у `local_food_consumption`.
