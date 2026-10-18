@@ -171,9 +171,7 @@ Core world/economy models.
 
 - `neutral_defense_rate` — `neutral_defense_recovery_rate`, обмежена до `0` при досягненні `neutral_defense_full_strength` і при відсутності умов для відновлення; не допускає виходу за межі `0..neutral_defense_full_strength`.
 
-- `camp_player_ids[]` — `CampInRegion.player_id` для active CampInRegion цієї Region.
-- `eligible_camp_player_ids[]` — `CampInRegion.player_id` для CampInRegion, що мають `has_eligible_presence == true`; `Regrouping` рахується так само, як `Camp`.
-- `blocking_camp_presence_player_ids[]` — `Army.player_id` для Player, які мають у Region хоча б одну Army у `Camp`/`Regrouping` або Army з `is_entered_for_camp == true`. Саме ця характеристика використовується для перевірки foreign Camp/Camp-bound presence в Annexation і Castle Founding; чистий Transit сюди не входить.
+- `camp_player_id` — `CampInRegion.player_id` єдиного active CampInRegion цієї Region або `null`, якщо активного Camp немає. Одночасно в Region може бути лише один active CampInRegion.
 - `player_id` — ID `player`; проміжна scalar characteristic для computed characteristics інших Model без другого relationship hop.
 - `occupier_player` — nullable relationship до Player за `occupier_player_id`; `null` поза Occupation. Потрібний `Movement.determine_target_opponent()`, `CombatSituation.start()` і `Region.restore_owner_control()`, де потрібен Player object, а не лише ID.
 - `valid_connected_neighbor_player_ids[]` — `player_id` сусідніх Owned Region з валідним connection; використовує `neighbors[].player_id`, а не `neighbors[] -> player`.
@@ -217,7 +215,7 @@ Core world/economy models.
 - `set_connection_valid(value)` — змінює збережену характеристику `is_connection_valid` за результатом перерахунку територіального графа; тимчасовий розрив через Occupation не скидає ownership.
 - `can_start_resource_site_upgrade(resource_type, quantity)` — використовує `resource_sites`, `resource_site_upgrades[]`, `player`, `castle`, `is_occupied`, `is_connection_valid` і поточні level buckets. Перевіряє ownership, доступність незарезервованих Site потрібного рівня та layered rule; upfront cost перевіряється через `Castle.can_afford()`; самі reservations не вважаються completed levels.
 - `apply_resource_site_upgrade(resource_type, from_level, target_level, quantity)` — після завершення `ResourceSiteUpgrade.complete()` атомарно переносить рівно зарезервовану кількість Site між level buckets у `resource_sites`, незалежно від поточного ownership; повторне застосування terminal process заборонено.
-- `on_army_presence_changed()` — викликається після `Army.enter_region()`, `Army.enter_camp()`, `Army.leave_camp()`, завершення Retreat, split/merge та знищення Army. Інфраструктура актуалізує system-computed `armies[]`/`camps[]` і залежні `camp_player_ids[]`, `blocking_camp_presence_player_ids[]`, `has_any_troops`, `CampInRegion.can_progress`, `CastleFounding.can_progress`, `neutral_defense_recovery_rate`. Якщо з Camp пішла остання Army поточного occupier, викликає `restore_owner_control(expected_occupier_player)`; **не змінює напряму computed** `is_occupied` чи `active_combat_situation` і не реєструє CombatSituation тільки через факт перерахунку присутності.
+- `on_army_presence_changed()` — викликається після `Army.enter_region()`, `Army.enter_camp()`, `Army.leave_camp()`, завершення Retreat, split/merge та знищення Army. Інфраструктура актуалізує system-computed `armies[]`/`camps[]` і залежні `camp_player_id`, `has_any_troops`, `CampInRegion.can_progress`, `CastleFounding.can_progress`, `neutral_defense_recovery_rate`. Якщо з Camp пішла остання Army поточного occupier, викликає `restore_owner_control(expected_occupier_player)`; **не змінює напряму computed** `is_occupied` чи `active_combat_situation` і не реєструє CombatSituation тільки через факт перерахунку присутності.
 - `destroy_neutral_defense()`.
 
 ### Triggers
