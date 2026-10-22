@@ -103,7 +103,7 @@
 
 ## Додаткові зауваження до інвентаризації
 
-1. **ID і похідні скаляри не є додатковими зв'язками.** Наприклад, `Army.player_id`, `CampInRegion.player_id`, `Region.player_id`, `Region.camp_player_ids[]`, `Region.blocking_camp_presence_player_ids[]`, `Castle.active_knight_replacement_id` не створюють самі по собі окремої пари навігаційних характеристик. Для `active_knight_replacement_id` може знадобитися окремо формалізувати семантику вибору конкретного KnightReplacement.
+1. **ID і похідні скаляри не є додатковими зв'язками.** Наприклад, `Army.player_id`, `CampInRegion.player_id`, `Region.player_id`, `Region.camp_player_id`, `Castle.active_knight_replacement_id` не створюють самі по собі окремої пари навігаційних характеристик. Для `active_knight_replacement_id` може знадобитися окремо формалізувати семантику вибору конкретного KnightReplacement.
 2. **Структуровані поля** на кшталт `CombatSituation.defenders_retreat_decisions` та `locked_combat_parameters` можуть містити ID Army, але специфікації не визначають їх як окремі навігаційні зв'язки. Вони не додані як самостійні зв'язки.
 3. **Похідні проєкції** `Region.active_combat_situation`, `Castle.recruitment` та інші filtered views треба врахувати при формалізації способу отримання ID, але не дублювати незалежними фізичними зв'язками.
 4. **Самозв'язки** підтримуються форматом на рівних правах із міжмодельними. Поточний явний приклад — `Region.neighbors[]`.

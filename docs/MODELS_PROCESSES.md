@@ -14,25 +14,24 @@ Long-running construction, recruitment, founding and replacement processes.
 - `region`.
 - `founder_knight`.
 - `castle_name`.
-- `status`.
-
+ 
 ### Динамічні характеристики
 
 - `progress`.
 
 ### Обчислювальні зв'язки
 
-- Немає.
+- `*player` — обчислювальний зв'язок безпосередньо з Player, власником `castle`; використовується у формулах без ланцюжка relationships.
 
 ### Інші обчислювальні характеристики
 
-- `progress_rate` — швидкість зміни відповідної динамічної характеристики.
+- `progress_rate` — швидкість набору поточного Soldier; `0`, коли `queue` порожня або `can_progress == false`.
 - `required_progress`, `is_complete`.
 
 
 - `founder_valid` — founder Knight живий, фізично має потрібний current Camp, `founder_knight.player == player` і не має Soldier. Leave Region/death/отримання Soldier скасовує process.
 - `founder_progress_eligible` — `founder_valid && founder_knight.is_camp_presence`; Regrouping не pause-ить Founding.
-- `can_progress` — `founder_progress_eligible`, Region залишається Neutral, `region.neutral_defense == 0`, `region.blocking_camp_presence_player_ids[]` не містить іншого Player. Foreign Transit Army не блокує Founding, навіть якщо через її Transit у Region існує CombatSituation. Саме foreign Camp/Camp-bound presence, а не наявність CombatSituation, призупиняє Founding.
+- `can_progress` — `founder_progress_eligible`, Region залишається Neutral, `region.neutral_defense == 0`, у Region немає чужої Army у `Camp`/`Regrouping` або з `is_entered_for_camp == true`. Foreign Transit Army не блокує Founding, навіть якщо через її Transit у Region існує CombatSituation. Саме foreign Camp/Camp-bound presence, а не наявність CombatSituation, призупиняє Founding.
 
 ### User methods
 
@@ -61,7 +60,7 @@ Long-running construction, recruitment, founding and replacement processes.
 
 ## 11. `Recruitment`
 
-Один Castle має одну послідовну FIFO Recruitment Queue. Кожний Soldier проходить окремий повний recruitment cycle.
+Одна постійна Recruitment-модель на Castle із послідовною FIFO-чергою замовлень. Якщо замовлень немає, `queue` порожня, `progress = 0`, а модель зберігається. Кожний Soldier проходить окремий повний recruitment cycle.
 
 ### Прямі характеристики
 
@@ -85,7 +84,7 @@ Long-running construction, recruitment, founding and replacement processes.
 
 
 - `current_order`.
-- `can_progress` — є current order, `castle.empty_food == false`, `castle.player_empty_coins == false`, `castle.barracks_free_capacity > 0`.
+- `can_progress` — є current order, `castle.empty_food == false`, `player.empty_coins == false`, `castle.barracks_free_capacity > 0`.
 
 ### User methods
 
@@ -93,7 +92,7 @@ Long-running construction, recruitment, founding and replacement processes.
 
 ### Domain methods
 
-- `validate_new_order(type, quantity)` — valid Type, `quantity > 0`, `!castle.empty_food`, `!castle.player_empty_coins`, `castle.barracks_free_capacity > 0` та достатньо фактичних local/global resources для **повної** order cost. Capacity для всього quantity не потрібна; artificial max quantity/queue length немає.
+- `validate_new_order(type, quantity)` — valid Type, `quantity > 0`, `!castle.empty_food`, `!player.empty_coins`, `castle.barracks_free_capacity > 0` та достатньо фактичних local/global resources для **повної** order cost. Capacity для всього quantity не потрібна; artificial max quantity/queue length немає.
 - `finish_current_recruit()` — за наявності одного вільного Barracks slot створює рівно 1 Soldier через `Castle.add_recruited_soldier()`, декрементує `remaining_quantity`, скидає per-Soldier progress; при `remaining_quantity == 0` переходить до наступного FIFO order. Якщо slot немає, нічого не створює й лишає completed progress ready.
 
 ### Triggers
@@ -104,7 +103,7 @@ Long-running construction, recruitment, founding and replacement processes.
 ### Trigger methods
 
 - `check_trigger_can_progress()`, `on_trigger_can_progress()` — пасивна boundary-зміна `can_progress`; оновлює effective `progress_rate` та планування наступного завершення.
-- `check_trigger_current_recruit_finished()`, `on_trigger_current_recruit_finished()` — при `status == active`, завершеному per-Soldier `progress` і `castle.barracks_free_capacity > 0` викликає `finish_current_recruit()` рівно один раз, оновлює FIFO order та планує наступний cycle. Якщо Capacity немає, завершений progress зберігається й completion виконується після звільнення місця, без повторного проходження timer.
+- `check_trigger_current_recruit_finished()`, `on_trigger_current_recruit_finished()` — за наявності `current_order`, завершеному per-Soldier `progress` і `castle.barracks_free_capacity > 0` викликає `finish_current_recruit()` рівно один раз, оновлює FIFO order та планує наступний cycle. Якщо Capacity немає, завершений progress зберігається й completion виконується після звільнення місця, без повторного проходження timer.
 
 ---
 
@@ -187,15 +186,16 @@ Long-running construction, recruitment, founding and replacement processes.
 
 ## 14. `KnightReplacement`
 
-Один instance = один replacement **timer** для Palace slot, звільненого death/іншим виходом active Knight із home Castle. Сам Knight при completion timer ще не створюється.
+Одна постійна модель на Castle. Усі заміни однакові й виконуються послідовно, кожна проходить повний timer cycle. Порожня черга не видаляє модель. Завершення timer збільшує кількість готових безіменних Knight у Castle, але живий Knight створюється лише після надання імені.
 
 ### Прямі характеристики
 
-- `castle`, `status` — queued / active / timer_complete.
+- `castle` — Castle, якому належать заміни.
+- `pending_count` — кількість замін у черзі, включно з поточною; `0` за відсутності замін.
 
 ### Динамічні характеристики
 
-- `progress`.
+- `progress` — прогрес поточної заміни; `0`, якщо `pending_count == 0`.
 
 ### Обчислювальні зв'язки
 
@@ -203,16 +203,20 @@ Long-running construction, recruitment, founding and replacement processes.
 
 ### Інші обчислювальні характеристики
 
-- `progress_rate` — ненульовий тільки для active queue head.
-- `is_queue_head` — визначається через `castle.active_knight_replacement_id` серед replacement, timer яких ще не завершився.
-- `required_progress`, `is_complete`.
-
+- `progress_rate` — швидкість поточної заміни, якщо `pending_count > 0`; інакше `0`.
+- `required_progress` — однаковий для кожної заміни.
+- `is_complete` — `pending_count > 0 && progress >= required_progress`.
 
 ### Domain methods
 
-- `complete()` — завершує timer, додає один ready unnamed Knight у `castle.ready_knights_awaiting_name`, звільняє replacement timer queue для наступного queued instance. Очікування Player name не блокує наступний replacement timer; усі ready unnamed Knight разом із ready Knight від Palace upgrade використовують одну спільну FIFO name queue.
+- `enqueue()` — збільшує `pending_count` на 1; якщо черга була порожньою, запускає перший timer cycle.
+- `complete()` — якщо `is_complete`, атомарно збільшує `castle.ready_knights_awaiting_name` на 1, зменшує `pending_count` на 1 і скидає `progress = 0`. Якщо заміни залишилися, починається наступний timer cycle. Очікування імені не блокує наступну заміну. Повторне завершення того самого циклу не додає Knight.
 
-### Triggers / Trigger methods
+### Triggers
 
-- `complete` `[event trigger]`.
-- `check_trigger_complete()`, `on_trigger_complete()` — active event: за `status` незавершеного instance і `progress >= required_progress` викликає `complete()` рівно один раз; атомарно встановлює terminal status, прибирає повторне планування event і оновлює залежні computed characteristics.
+- `is_complete` `[event trigger]`.
+
+### Trigger methods
+
+- `check_trigger_is_complete()` — за `pending_count > 0` прогнозує момент завершення поточного timer cycle.
+- `on_trigger_is_complete()` — за `is_complete` викликає `complete()` рівно один раз; за наявності інших замін планує наступне завершення.
