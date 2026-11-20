@@ -22,7 +22,7 @@
 - стан ініціалізації: `loading / advancing / initialized` (назви довільні, семантика обов'язкова);
 - `initial_external_signature` — незмінний baseline поточної GameEvent;
 - `dfs_visited` — прапорець тільки для поточної GameEvent;
-- облік dirty state, створення/видалення, потрібних relationship projection changes.
+- облік dirty state, створення/видалення, потрібних relationship projection changes (із відкладеним flush).
 
 Runtime-поля не є game characteristics і не потрапляють до serialized game state. Один instance `(model_type, id)` існує в межах однієї GameEvent завдяки реєстру всередині `EventContext`. Жоден mutable runtime state не переноситься між подіями.
 
@@ -70,7 +70,7 @@ Computed characteristic може читати характеристики бе�
 
 **Запис:** setter прямого одиничного relationship приймає Model/`null` або, через `_id`, ID/`null`; обидва маршрути ведуть до одного внутрішнього setter. Для прямої колекції можливі `$model->units = [Model, ...]` і `$model->units_id = [id, ...]`; присвоєння **повністю замінює** склад колекції. Валідуються related type, структура і допустимість змін. System-computed relationships та їхні віртуальні `_id` **read-only**; їхній результат змінюється опосередковано через прямі зв'язки інших Model. Мутація колекції через `[]` або модифікація повернутого масиву не обходить setter; для зміни складу слід присвоювати нову колекцію через контрольований setter.
 
-**SQL-проєкції:** при кожній зміні прямого relationship відповідні FK/junction projections синхронізуються **негайно всередині поточної транзакції GameEvent**, щоб наступний reverse SQL lookup уже бачив зміну. Domain state лишається authoritative, а projection — його відображення. Транзакція охоплює `event_action()`, DFS, trigger checks і фінальний commit; при помилці весь SQL запис відкочується, а інші транзакції не бачать незавершених змін. Якщо зв'язок не має FK/junction projection, зайвий запис SQL не потрібний.
+**SQL-проєкції (flush-before-query):** setter змінює контрольований state і позначає відповідні `fk` / `list-junction` проєкції як dirty, **без негайного SQL-запису**. Перед SQL lookup, результат якого залежить від цих змін (зокрема reverse relationship lookup), persistence infrastructure спочатку виконує `flush` накопичених змін проєкцій у тій самій транзакції GameEvent, а потім сам запит. Перед фінальним commit обов'язково виконується `flush` решти змін. Повторні зміни до flush об'єднуються: проєкція відображає останній стан, а не кожен проміжний. Getter прямого зв'язку читає актуальний state без SQL і без зайвого flush. Для `list-junction` flush повністю замінює рядки конкретної моделі-власника списку. Domain state лишається authoritative; SQL-проєкція — його відображення. Транзакція охоплює `event_action()`, DFS, trigger checks і фінальний commit; при помилці всі SQL-зміни відкочуються. Для `storage: none` SQL-проєкцію не створюємо.
 
 DFS отримує ID актуальних сусідів із тієї самої централізованої декларації та об'єднує їх із `previous_dfs_edges`, накопиченими setter-ом самої Model. За потреби ініціалізує Model через `EventContext`. Окремого механізму завантаження для DFS немає.
 
@@ -80,7 +80,7 @@ DFS отримує ID актуальних сусідів із тієї само
 - перевіряє declaration, тип і допустимість запису;
 - позначає зміну для UnitOfWork / dirty tracking;
 - перед зміною direct relationship накопичує втрачені DFS-ребра в `previous_dfs_edges` самої Model за централізованою декларацією, не стираючи їх при повторних змінах;
-- при зміні direct relationship негайно оновлює відповідні SQL FK/junction projections у відкритій транзакції;
+- при зміні direct relationship позначає відповідні SQL `fk` / `list-junction` проєкції як dirty; синхронізація виконується через `flush-before-query` або перед commit;
 - не дозволяє записувати computed characteristics як звичайні direct values;
 - не допускає прямого запису характеристик іншої Model: викликається її публічний domain method.
 
@@ -136,7 +136,7 @@ dfs(M):
 2. Dynamic characteristics, доведені до `Te`, і нову temporal anchor `T0 = Te`.
 3. **Актуальні computed characteristics:** формули викликаються під час підготовки до збереження, їхні результати записуються як persisted values для наступної GameEvent. Це не кеш поточної події.
 4. Typed references і вкладені структури в серіалізованому вигляді.
-5. Перевірку узгодженості FK/junction projections, які вже актуалізувалися під час setter-ів прямих relationships; це не відкладання їхнього першого оновлення до commit.
+5. `Flush` усіх ще не синхронізованих `fk` / `list-junction` проєкцій (і перевірку їхньої узгодженості) до фінального commit; якщо раніше був залежний SQL lookup, потрібні проєкції вже синхронізовані перед ним.
 6. History snapshot, якщо ввімкнено.
 
 Збереження всіх змінених моделей, projection fields, scheduled trigger checks, статусу GameEvent і history snapshots — **одна узгоджена транзакція**. Не допускається частковий commit. Базова Model не виконує незалежний SQL commit усередині domain method.
@@ -186,8 +186,10 @@ ConcreteModel extends Model:
 - relationship у `external_signature` представлений ID/ID[], а не signature пов'язаних моделей;
 - тригери, створені при `N=0`, не виконуються у поточній GameEvent;
 - після commit persisted computed values доступні наступній GameEvent як saved parameters;
-- setter direct relationship доступний через Model та через `_id`, із негайним SQL projection update;
-- reverse lookup у тій самій GameEvent бачить нові FK/junction, а rollback скасовує їх;
+- setter direct relationship доступний через Model та через `_id` і позначає SQL-проєкцію як dirty без негайного запису;
+- кілька змін одного `fk` або `list-junction` до `flush` об'єднуються в один запис актуального стану;
+- reverse SQL lookup у тій самій GameEvent запускає необхідний `flush` перед запитом і бачить актуальні зв'язки; прямий getter не виконує зайвого SQL;
+- перед commit решта dirty проєкцій синхронізується, а rollback скасовує всі виконані flush;
 - колекція після повторного звернення або нового `foreach` відображає актуальний склад, але поточний `foreach` обходить фіксований ID snapshot;
 - `_id` повертає ID/ID[] без ініціалізації пов'язаних Model, а явно оголошені ID-характеристики не плутаються із relationships;
 - system-computed relationship read-only; direct collection setter замінює всю колекцію;
