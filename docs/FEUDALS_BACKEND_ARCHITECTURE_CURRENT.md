@@ -91,6 +91,14 @@ GameEvent — одна логічно миттєва зміна світу.
 
 Стан EventContext не переноситься як mutable state між різними GameEvent довгоживучого worker-а.
 
+### 5.1. Створення, видалення та публічний контракт
+
+- Нові екземпляри створюються лише через `$context->create(ModelClass::class, $params)`; прямий виклик конструктора доменної Model не допускається. `EventContext` виділяє ID через persistence layer, реєструє instance, задає `T0 = Te` і викликає один раз `protected on_create(array $params): void`. `on_create()` визначає початкові direct/dynamic характеристики через звичайні setters; його аргументи не зобов'язані збігатися з характеристиками. Він може викликати інші доменні методи і створювати моделі, але не commit.
+- Створення застосовує лише явно задекларовані defaults; відсутність обов'язкових значень — помилка. Новий instance доступний як готова Model тільки після успішного завершення `on_create()` і перевірки характеристик. Нова модель бере участь у DFS та trigger checks; для DFS її baseline означає «не існувала на початку події», а не дорівнює новій signature.
+- `$context->delete($model)` виконує логічне видалення. Видалені екземпляри зберігаються лише для rewind, а у звичайній обробці повністю виключені з `get/find`, relationships, DFS і trigger checks. Залежності активних моделей, на які вплинуло видалення, інвалідуються інфраструктурою; доменна логіка видаленої моделі не виконується.
+- Публічні методи: `get(class-string, int): Model` (exception, якщо немає), `find(class-string, int): ?Model`, `create(class-string, array): Model`, `delete(Model): void`, `gameTime(): int`. Доменні моделі не керують транзакцією або SQL безпосередньо. Помилки lifecycle, типів та характеристик переривають GameEvent з rollback.
+- Точний lifecycle, `on_create()`, PHP-контракт, правила SQL-проєкцій та винятків наведено в `docs/BASE_MODEL.md`; конкретне наповнення `relationships.yaml` буде визначено пізніше.
+
 ## 6. Типи характеристик
 
 ### 6.1. Пряма характеристика
@@ -689,7 +697,7 @@ Worker:
     context = new EventContext(Te)
     context.begin_transaction()
 
-    root = context.load(event.model)
+    root = context.get(event.model, event.instance_id)
     root.event_action(event.payload)
 
     roots = snapshot(context.initialized_models)
