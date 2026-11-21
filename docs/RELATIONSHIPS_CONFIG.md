@@ -26,7 +26,7 @@ relationships:
     type: ManyToOne
     characteristics:
       A: { name: related_model, type: direct }
-      B: { name: related_models[], type: system_computed }
+      B: { name: related_models[], type: computed-relation }
     storage:
       type: fk
       # метадані відповідного типу SQL-проєкції
@@ -37,10 +37,10 @@ relationships:
 
 - `models.A`, `models.B` — умовні сторони **цього конкретного запису**, а не глобальна орієнтація моделей.
 - `type` — кардинальність **від A до B**: `OneToOne`, `OneToMany`, `ManyToOne`, `ManyToMany`. Наприклад, `ManyToOne`: багато A можуть посилатися на один B.
-- `characteristics.A/B` — назва характеристики та спосіб отримання: `direct` (зі state) або `system_computed` (визначає інфраструктура). Якщо відповідної характеристики немає, вказуємо `null`. Назви, включно із суфіксом `[]`, зберігаємо буквально.
+- `characteristics.A/B` — назва характеристики та спосіб отримання: `direct` (зі state) або `computed-relation` (визначає інфраструктура). Якщо відповідної характеристики немає, вказуємо `null`. Назви, включно із суфіксом `[]`, зберігаємо буквально.
 - `storage` — SQL-проєкція, **незалежна від DFS**.
 - `dfs.A_depends_on_B: true` означає, що зміна зовнішньої сигнатури **B** може вимагати обходу **A**. `dfs.B_depends_on_A` — аналогічно у зворотному напрямку. Обидва прапорці обов'язкові; допустимі всі чотири комбінації.
-- Для нестандартних `system_computed` зв'язків можна додати `resolver`. Його детальний синтаксис визначимо окремо. Не можна вважати відфільтровану характеристику повним зворотним відображенням прямого списку без окремого правила.
+- Для `computed-relation` стандартний спосіб отримання значення — зворотний SQL lookup. Для нестандартного зв'язку використовується `resolver.type: custom` із методом моделі, який повертає ID пов'язаних моделей. Поле `type` верхнього рівня, як і раніше, описує кардинальність (`OneToOne`, `OneToMany`, `ManyToOne`, `ManyToMany`), а не спосіб обчислення.
 
 ## 3. Типи SQL-проєкцій
 
@@ -84,7 +84,7 @@ storage:
 
 ### `none`
 
-SQL-проєкції немає. Застосовується, якщо зв'язок визначається іншим способом (наприклад, геометрією карти або спеціальним resolver).
+SQL-проєкції немає. Застосовується, якщо зв'язок визначається іншим способом, наприклад через `custom` resolver для геометрії карти.
 
 ```yaml
 storage:
@@ -102,7 +102,7 @@ relationships:
     type: ManyToOne
     characteristics:
       A: { name: player, type: direct }
-      B: { name: "armies[]", type: system_computed }
+      B: { name: "armies[]", type: computed-relation }
     storage:
       type: fk
       table: armies
@@ -134,7 +134,7 @@ relationships:
       B_depends_on_A: false
 ```
 
-`Army.active_defender_combat_situation` повертає лише **активну** ситуацію, тому не є автоматично повним зворотним відображенням `defenders[]`; її resolver/прив'язку слід визначити окремо. Значення DFS тут також лише демонстраційні.
+Значення DFS тут лише демонстраційні. Напрямок зберігання `CombatSituation.defenders[]` / `Army.active_defender_combat_situation` поки не остаточно затверджено.
 
 ### Зв'язок без прямої характеристики
 
@@ -144,11 +144,13 @@ relationships:
     models: { A: Region, B: Region }
     type: ManyToMany
     characteristics:
-      A: { name: "neighbors[]", type: system_computed }
+      A: { name: "neighbors[]", type: computed-relation }
       B: null
     storage:
       type: none
-    resolver: custom  # конкретний контракт resolver ще не затверджено
+    resolver:
+      type: custom
+      method: resolve_neighbors
     dfs:
       A_depends_on_B: false
       B_depends_on_A: false
@@ -163,11 +165,12 @@ relationships:
 - Для `fk` потрібні `table` і `column`; для `list-junction` — `table`, `owner_column`, `target_column`.
 - `list-junction` застосовується до **прямого списку**, а не до обчислювальної колекції.
 - Відсутність зворотної характеристики допустима.
-- Спосіб розв'язання `system_computed` зв'язку повинен бути однозначним: зворотний SQL lookup або явний resolver.
+- Спосіб розв'язання `computed-relation` зв'язку повинен бути однозначним: зворотний SQL lookup або `resolver.type: custom` із назвою методу моделі.
+- Для `custom` resolver метод моделі повертає ID (або список ID) цільових моделей; інфраструктура надає їх через стандартний relationship getter / `LazyCollection`. Для `Region.neighbors[]` це метод `Region::resolve_neighbors()`, що визначає сусідів за координатами. SQL junction-таблиця не потрібна.
 - Напрямки DFS перевіряються за реальними залежностями computed characteristics, а не за формою FK.
 
 ## 6. Межі специфікації
 
-Цей документ фіксує **формат** декларації, але не затверджує повний перелік зв'язків, значення DFS, SQL DDL чи синтаксис нестандартних resolver.
+Цей документ фіксує **формат** декларації, але не затверджує повний перелік зв'язків, значення DFS чи SQL DDL. Для `custom` resolver погоджено мінімальний контракт: метод моделі повертає ID пов'язаних моделей.
 
 **Синхронізація з `BASE_MODEL.md`:** для `fk` і `list-junction` діє однакова стратегія **flush-before-query**. Setter лише змінює state і позначає проєкцію як dirty; перед залежним SQL lookup виконується flush, а перед commit — flush решти. Для `list-junction` flush повністю замінює рядки відповідного власника списку. SQL lookup не повинен бачити застарілу проєкцію.
