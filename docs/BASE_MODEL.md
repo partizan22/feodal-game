@@ -146,9 +146,29 @@ dfs(M):
 
 ## 9. Trigger checks
 
-Після DFS worker перевіряє triggers **усіх initialized моделей**, включно з ініціалізованими під час DFS та trigger checks. Базовий клас може надати generic `check_all_triggers()`, який перебирає declarations і викликає `check_trigger_*` конкретної Model.
+Кожна конкретна Model оголошує тригери статичним методом `protected static function triggers(): array`. Ключ — унікальна назва тригера в межах моделі, значення — **лише** тип `'event'` або `'state'`:
 
-`check_trigger_*` нічого не змінює в game state. Результат: `false/null/-1` — немає прогнозу, `N>0` — перевірка через `N` одиниць Game Time, `N=0` — окрема перевірка на тому самому `Te`. Планування виконує infrastructure; `on_trigger_*` виконується тільки як `event_action()` окремої GameEvent.
+```php
+protected static function triggers(): array
+{
+    return [
+        'completed' => 'event',
+        'food_empty' => 'state',
+    ];
+}
+```
+
+Інших параметрів у декларації немає: ні спеціального виду progress trigger, ні назви відстежуваної характеристики, ні пріоритету. За назвою `{name}` визначаються методи конкретної Model:
+
+- **Обидва типи:** `check_trigger_{name}(): int|false` — чиста перевірка/прогноз; `on_trigger_{name}(): void` — доменна дія в окремій GameEvent.
+- **Лише `state`:** `state_trigger_{name}(): bool` — поточне значення відстежуваної умови. Інфраструктура зберігає попередній boolean окремо від domain characteristics та реагує на обидва переходи `false -> true` і `true -> false`. **Під час створення моделі** початковий стан лише запам'ятовується: початкове `true` не викликає `on_trigger_*`.
+- **`event`:** previous boolean state не використовується; кожне актуальне настання події обробляється окремо.
+
+Після DFS worker перевіряє тригери **усіх initialized моделей**, включно з ініціалізованими під час DFS та trigger checks. Універсальний `Model::check_all_triggers()` перебирає `triggers()` і викликає відповідні методи. Кожен `state` trigger відстежує **рівно одну boolean-умову**: незалежні стани (наприклад, заповнення складу окремими ресурсами) декларуються окремими тригерами.
+
+`check_trigger_*` нічого не змінює в game state. Результат: `false/null/-1` — немає прогнозу, `N>0` — перевірка через `N` мілісекунд Game Time, `N=0` — окрема перевірка на тому самому `Te`. Для `state` фактичне спрацювання потребує переходу boolean state, для `event` — актуальності події. Планування виконує infrastructure; `on_trigger_*` виконується тільки як `event_action()` окремої GameEvent.
+
+Однотипні `check_trigger_*` можуть викликати спільний `protected` helper базового `Model`, наприклад `check_progress_trigger('remaining_time')` для dynamic-характеристики залишку роботи. Конкретний `check_trigger_*` залишається обов'язковою точкою входу; жодних параметрів helper-а в декларації тригера немає.
 
 ## 10. Commit / persistence
 
