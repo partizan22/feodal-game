@@ -478,6 +478,24 @@ Trigger — не synonym для "якщо умова true, встановити 
 
 Підтримуються два види: `[state trigger]` і `[event trigger]`.
 
+### Декларація тригерів Model
+
+Конкретна модель оголошує тригери через `protected static function triggers(): array`. Ключ — назва, значення — **тільки** `'event'` або `'state'`:
+
+```php
+protected static function triggers(): array
+{
+    return [
+        'completed' => 'event',
+        'food_empty' => 'state',
+    ];
+}
+```
+
+Для кожного імені `{name}` обов'язкові `check_trigger_{name}()` і `on_trigger_{name}()`. Для типу `state` додатково обов'язковий `state_trigger_{name}(): bool` — поточна boolean-умова. Тип `event` такого методу не потребує. Базовий `Model::check_all_triggers()` перебирає декларацію; trigger engine відповідає за прогнозування, попередній стан state trigger, чергу та виконання.
+
+У декларації немає додаткових полів, пріоритетів чи спеціальних progress-типів. Спільну перевірку прогресу можна реалізувати `protected` helper-ом базового `Model`, який викликається з індивідуального `check_trigger_{name}()`. Один `state` trigger — одна boolean-умова; для незалежних ресурсів/станів використовуються окремі тригери.
+
 ### 23.1. `[state trigger]`
 
 State trigger прив'язаний до boolean-умови та відстежує зміну її стану. Trigger engine пам'ятає попередній boolean state і реагує на обидва переходи:
@@ -487,7 +505,7 @@ State trigger прив'язаний до boolean-умови та відстеж�
 
 Одна й та сама умова може переходити між станами багато разів, тому state trigger може спрацьовувати багаторазово. Для обох напрямків використовується один `on_trigger_{name}()`; якщо domain behavior залежить від напрямку переходу, method визначає актуальний state/transition.
 
-Technical previous-state state trigger-а зберігається infrastructure і не є domain characteristic Model.
+Technical previous-state state trigger-а зберігається infrastructure і не є domain characteristic Model. Під час створення моделі інфраструктура запам'ятовує результат `state_trigger_{name}()` як початковий стан **без спрацювання**; далі обробляє тільки фактичні переходи.
 
 Типові приклади — `empty_food`, `empty_coins`, досягнення/вихід зі storage capacity та інші boolean boundaries, де важливі обидві зміни стану.
 
